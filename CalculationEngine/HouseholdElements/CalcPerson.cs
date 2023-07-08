@@ -31,6 +31,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Automation;
@@ -135,7 +136,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public bool NewIsBasicallyValidAffordance([JetBrains.Annotations.NotNull] ICalcAffordanceBase aff, bool sickness, bool logDetails)
         {
-            // affordanzen löschen, wo alter nicht passt
+            // affordanzen lé°chen, wo alter nicht passt
             if (_calcPerson.Age > aff.MaximumAge || _calcPerson.Age < aff.MiniumAge) {
                 if (logDetails) {
                     Logger.Debug("Sickness: " + sickness + " Age doesn't fit");
@@ -144,7 +145,7 @@ namespace CalculationEngine.HouseholdElements {
                 return false;
             }
 
-            // affordanzen löschen, wo geschlecht nicht passt
+            // affordanzen lé°chen, wo geschlecht nicht passt
             if (aff.PermittedGender != PermittedGender.All && aff.PermittedGender != _calcPerson.Gender) {
                 if (logDetails) {
                     Logger.Debug("Sickness: " + sickness + " Gender doesn't fit");
@@ -152,7 +153,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 return false;
             }
-            // affordanzen löschen, die nicht mindestens ein bedürfnis der Person befriedigen
+            // affordanzen lé°chen, die nicht mindestens ein bedé»µfnis der Person befriedigen
 
             CalcPersonDesires desires;
             if (sickness) {
@@ -224,7 +225,7 @@ namespace CalculationEngine.HouseholdElements {
 
             ReturnToPreviousActivityIfPreviouslyInterrupted(time);
 
-            // bereits beschäftigt
+            // bereits besché‹tigt
             if (_isBusy[time.InternalStep]) {
                 InterruptIfNeeded(time, isDaylight, false);
                 return;
@@ -250,6 +251,9 @@ namespace CalculationEngine.HouseholdElements {
             //activate new affordance
             var bestaff = FindBestAffordance(time,  persons,
                 simulationSeed);
+            //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
+            Logger.Info(bestaff.ToString());
+            Console.WriteLine(bestaff.ToString());
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
         }
@@ -702,7 +706,7 @@ namespace CalculationEngine.HouseholdElements {
             pa.PotentialInterruptingAffordances.Clear();
             pa.PotentialAffordancesWithSubAffordances.Clear();
             pa.PotentialAffordancesWithInterruptingSubAffordances.Clear();
-            // alle affordanzen finden für alle orte
+            // alle affordanzen finden fé»µ alle orte
             foreach (var loc in locs) {
                 foreach (var calcAffordance in loc.Affordances) {
                     if (NewIsBasicallyValidAffordance(calcAffordance, sickness, false)) {
