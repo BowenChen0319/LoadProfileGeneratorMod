@@ -253,7 +253,8 @@ namespace CalculationEngine.HouseholdElements {
                 simulationSeed);
             //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
             Logger.Info(bestaff.ToString());
-            Console.WriteLine(bestaff.ToString());
+            //System.Console.WriteLine(bestaff.ToString());
+            Debug.WriteLine(bestaff.ToString());
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
         }
@@ -578,8 +579,9 @@ namespace CalculationEngine.HouseholdElements {
                 _calcPerson.Guid,CurrentLocation.Name,CurrentLocation.Guid,CurrentLocation.CalcSite?.Name,
                 CurrentLocation.CalcSite?.Guid,_currentAffordance?.Name,_currentAffordance?.Guid, timestep);
             _calcRepo.OnlineLoggingData.AddPersonStatus(ps);
+            //Console.WriteLine();
         }
-
+        
         [JetBrains.Annotations.NotNull]
         private ICalcAffordanceBase FindBestAffordance([JetBrains.Annotations.NotNull] TimeStep time,
                                                        [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed)
