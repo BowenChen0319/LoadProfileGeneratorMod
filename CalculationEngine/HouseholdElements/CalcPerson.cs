@@ -252,7 +252,7 @@ namespace CalculationEngine.HouseholdElements {
             var bestaff = FindBestAffordance(time,  persons,
                 simulationSeed);
             //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
-            Logger.Info(bestaff.ToString());
+            //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             Debug.WriteLine(bestaff.ToString());
             ActivateAffordance(time, isDaylight,  bestaff);
