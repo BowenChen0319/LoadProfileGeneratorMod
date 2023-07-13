@@ -31,6 +31,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Automation;
 using Automation.ResultFiles;
@@ -70,44 +71,118 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        public void ApplyAffordanceEffect([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
-            [NotNull] string affordance) {
-            while (_lastAffordances.Count > 10) {
-                _lastAffordances.RemoveAt(0);
+        public void ApplyAffordanceEffectPartly([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
+            [NotNull] string affordance, int durationInMinutes, Boolean firsttime) {
+            if (firsttime)
+            {
+                while (_lastAffordances.Count > 10)
+                {
+                    _lastAffordances.RemoveAt(0);
+                }
+                _lastAffordances.Add(affordance);
             }
-            _lastAffordances.Add(affordance);
+            
             foreach (var satisfactionvalue in satisfactionvalues) {
                 if (Desires.ContainsKey(satisfactionvalue.DesireID)) {
-                    Desires[satisfactionvalue.DesireID].Value += satisfactionvalue.Value;
+                    Desires[satisfactionvalue.DesireID].Value += (satisfactionvalue.Value)/durationInMinutes;
                     if (Desires[satisfactionvalue.DesireID].Value > 1) {
                         Desires[satisfactionvalue.DesireID].Value = 1;
                     }
                 }
             }
-            if (randomEffect) {
+
+            if (firsttime)
+            {
+                if (randomEffect)
+                {
+                    var usedDesires = new Dictionary<CalcDesire, bool>();
+                    foreach (var satisfactionvalue in satisfactionvalues)
+                    {
+                        usedDesires.Add(satisfactionvalue, true);
+                    }
+                    var desiresArray = new CalcDesire[Desires.Count];
+                    Desires.Values.CopyTo(desiresArray, 0);
+                    var affectedCount = _calcRepo.Rnd.Next(Desires.Count - usedDesires.Count + 1);
+                    for (var i = 0; i < affectedCount; i++)
+                    {
+                        CalcDesire? d = null;
+                        var loopcount = 0;
+                        while (d == null)
+                        {
+                            var selectedkey = _calcRepo.Rnd.Next(Desires.Count);
+                            d = desiresArray[selectedkey];
+                            loopcount++;
+                            if (usedDesires.ContainsKey(d))
+                            {
+                                d = null;
+                            }
+                            if (loopcount > 500)
+                            {
+                                throw new LPGException("Random result failed after 500 tries...");
+                            }
+                        }
+                        d.Value += (decimal)_calcRepo.Rnd.NextDouble();
+                        if (d.Value > 1)
+                        {
+                            d.Value = 1;
+                        }
+                    }
+                }
+            }
+
+            
+        }
+
+        public void ApplyAffordanceEffect([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
+    [NotNull] string affordance)
+        {
+            while (_lastAffordances.Count > 10)
+            {
+                _lastAffordances.RemoveAt(0);
+            }
+            _lastAffordances.Add(affordance);
+            foreach (var satisfactionvalue in satisfactionvalues)
+            {
+                if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                {
+                    Desires[satisfactionvalue.DesireID].Value += satisfactionvalue.Value;
+                    if (Desires[satisfactionvalue.DesireID].Value > 1)
+                    {
+                        Desires[satisfactionvalue.DesireID].Value = 1;
+                    }
+                }
+            }
+            if (randomEffect)
+            {
                 var usedDesires = new Dictionary<CalcDesire, bool>();
-                foreach (var satisfactionvalue in satisfactionvalues) {
+                foreach (var satisfactionvalue in satisfactionvalues)
+                {
                     usedDesires.Add(satisfactionvalue, true);
                 }
                 var desiresArray = new CalcDesire[Desires.Count];
                 Desires.Values.CopyTo(desiresArray, 0);
                 var affectedCount = _calcRepo.Rnd.Next(Desires.Count - usedDesires.Count + 1);
-                for (var i = 0; i < affectedCount; i++) {
+                for (var i = 0; i < affectedCount; i++)
+                {
                     CalcDesire? d = null;
                     var loopcount = 0;
-                    while (d == null) {
+                    while (d == null)
+                    {
                         var selectedkey = _calcRepo.Rnd.Next(Desires.Count);
                         d = desiresArray[selectedkey];
                         loopcount++;
-                        if (usedDesires.ContainsKey(d)) {
+                        if (usedDesires.ContainsKey(d))
+                        {
                             d = null;
                         }
-                        if (loopcount > 500) {
+                        if (loopcount > 500)
+                        {
                             throw new LPGException("Random result failed after 500 tries...");
                         }
                     }
                     d.Value += (decimal)_calcRepo.Rnd.NextDouble();
-                    if (d.Value > 1) {
+                    if (d.Value > 1)
+                    {
                         d.Value = 1;
                     }
                 }
@@ -119,6 +194,23 @@ namespace CalculationEngine.HouseholdElements {
                 calcDesire.ApplyDecay(timestep);
             }
         }
+
+        public void ApplyDecayWithoutSome([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
+        {
+            // Create a HashSet containing the DesireIDs from satisfactionvalues
+            HashSet<int> satisfactionDesireIDs = new HashSet<int>(satisfactionvalues.Select(sv => sv.DesireID));
+
+            // Apply decay to each desire that is not in the HashSet
+            foreach (var calcDesire in Desires.Values)
+            {
+                if (!satisfactionDesireIDs.Contains(calcDesire.DesireID))
+                {
+                    calcDesire.ApplyDecay(timestep);
+                }
+            }
+        }
+
+
 
         public decimal CalcEffect([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
             [NotNull] string affordanceName) {

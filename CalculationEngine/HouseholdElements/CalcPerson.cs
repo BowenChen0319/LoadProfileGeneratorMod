@@ -44,6 +44,7 @@ using Common.CalcDto;
 using Common.Enums;
 using Common.JSON;
 using Common.SQLResultLogging.InputLoggers;
+using Database.Tables.BasicHouseholds;
 using JetBrains.Annotations;
 
 #endregion
@@ -127,6 +128,14 @@ namespace CalculationEngine.HouseholdElements {
         private TimeStep? TimeToResetActionEntryAfterInterruption { get; set; }
 
         public int ID => _calcPerson.ID;
+
+        public ICalcAffordanceBase _executingAffordance = null;
+
+        public int _remainingExecutionSteps = 0;
+
+        public int _currentDuration = 0;
+
+
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -220,14 +229,41 @@ namespace CalculationEngine.HouseholdElements {
                 PersonDesires.CheckForCriticalThreshold(this, time, _calcRepo.FileFactoryAndTracker, householdKey);
             }
 
-            PersonDesires.ApplyDecay(time);
+            //PersonDesires.ApplyDecay(time);
+            if (_executingAffordance!=null)
+            {
+                PersonDesires.ApplyDecayWithoutSome(time, _executingAffordance.Satisfactionvalues);
+            }
+            else
+            {
+                PersonDesires.ApplyDecay(time);
+            }
+            //PersonDesires.ApplyDecayWithoutSome(time, _executingAffordance.Satisfactionvalues);
             WriteDesiresToLogfileIfNeeded(time, householdKey);
 
             ReturnToPreviousActivityIfPreviouslyInterrupted(time);
 
             // bereits besch鋐tigt
             if (_isBusy[time.InternalStep]) {
+                if (_currentAffordance?.IsInterruptable == false && _executingAffordance != null && _remainingExecutionSteps > 0)
+                {
+                    //Logger.Info("Not interruptable");
+                    //continue with current activity
+
+
+                    //var currentAff = _currentAffordance;
+                    //Debug.WriteLine("Time "+time+" Current: "+currentAff.Name);
+                    //currentAff.GetpersonTimeProfile(time, out var personTimeProfile);
+                    //int durationInMinutes = personTimeProfile.StepValues.Count;
+                    //PersonDesires.ApplyAffordanceEffectPartly(_currentAffordance.Satisfactionvalues, _currentAffordance.RandomEffect, _currentAffordance.Name, durationInMinutes);
+                    Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
+                    _remainingExecutionSteps--;
+                    //here use ApplyAffordanceEffectPartly to get the correct affordance effect
+                    PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false);
+                }
                 InterruptIfNeeded(time, isDaylight, false);
+                //continue with current activity
+
                 return;
             }
 
@@ -254,7 +290,9 @@ namespace CalculationEngine.HouseholdElements {
             //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
-            Debug.WriteLine(bestaff.ToString());
+            //Debug.WriteLine(time);
+            Debug.WriteLine("Running: "+time+" " + bestaff.ToString());
+
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
         }
@@ -543,13 +581,38 @@ namespace CalculationEngine.HouseholdElements {
                 Name, _isCurrentlySick, bestaff.Name,
                 bestaff.Guid, _calcPerson.HouseholdKey,
                 bestaff.AffCategory, bestaff.BodilyActivityLevel);
-            PersonDesires.ApplyAffordanceEffect(bestaff.Satisfactionvalues, bestaff.RandomEffect,  bestaff.Name);
+            
+            
+            //apply the effect
+
+            
+            
             bestaff.Activate(currentTimeStep, Name,  CurrentLocation,
                 out var personTimeProfile);
+
+            //PersonDesires.ApplyAffordanceEffect(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name);
+            int durationInMinutes = personTimeProfile.StepValues.Count;
+            if (bestaff?.IsInterruptable == false)
+            {
+                //for (var i = 0; i <= durationInMinutes; i++)
+                //{
+                    //PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes);
+                //}
+            }
+            PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true);
+            _executingAffordance = bestaff;
+            _remainingExecutionSteps = durationInMinutes - 1;
+            _currentDuration = durationInMinutes;
+            
             CurrentLocation = bestaff.ParentLocation;
             //todo: fix this for transportation
             var duration = SetBusy(currentTimeStep, personTimeProfile, bestaff.ParentLocation, isDaylight,
                 bestaff.NeedsLight);
+
+            
+            //Debug.WriteLine("Duration: " + personTimeProfile.StepValues.Count + " && " + duration);
+            //duration is in minutes ：personTimeProfile.StepValues.Count
+
             _previousAffordances.Add(bestaff);
             _previousAffordancesWithEndTime.Add(
                 new Tuple<ICalcAffordanceBase, TimeStep>(bestaff, currentTimeStep.AddSteps(duration)));

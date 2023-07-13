@@ -28,6 +28,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Automation;
@@ -147,7 +148,10 @@ namespace CalculationEngine {
                 }
 
                 var now = CalcRepo.CalcParameters.InternalStartTime;
+                //Debug.WriteLine("Starting the simulation");
+                
                 var timestep = new TimeStep(0, CalcRepo.CalcParameters);
+                Debug.WriteLine("Starttime: " + now);
                 try {
                     CalcRepo.CalculationProfiler.StartPart(Utili.GetCurrentMethodAndClass() + " - Core Simulation");
                     if (ExitCalcFunction) {
@@ -165,13 +169,16 @@ namespace CalculationEngine {
 
                     while (now < CalcRepo.CalcParameters.InternalEndTime && ContinueRunning) {
                         // ReSharper disable once PossibleNullReferenceException
+                        // Timestep is always running until the end of the simulation, even between the durations of the affordacne 
                         CalcObject.RunOneStep(timestep, now, true);
+                        Debug.WriteLine("TimeNow: "+now+" Timestep: " + timestep);
                         SaveVariableStatesIfNeeded(timestep);
                         CalcRepo.OnlineLoggingData.SaveIfNeeded(timestep);
                         now += CalcRepo.CalcParameters.InternalStepsize;
                         timestep = timestep.AddSteps(1);
                     }
-
+                    
+                    Debug.WriteLine("Endtime: " + now);
                     Logger.Info("Finished the simulation");
                 }
                 finally {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Automation;
 using JetBrains.Annotations;
@@ -305,6 +306,7 @@ namespace Common.JSON {
         public CalcParameters SetEndDate(DateTime enddate)
         {
             OfficialEndTime = enddate;
+            Debug.WriteLine("Enddate: " + enddate);
             InitializeTimeSteps();
             return this;
         }
@@ -376,6 +378,7 @@ namespace Common.JSON {
         public CalcParameters SetStartDate(DateTime startdate)
         {
             OfficialStartTime = startdate;
+            Debug.WriteLine("Startdate: " + startdate);
             InitializeTimeSteps();
             return this;
         }
