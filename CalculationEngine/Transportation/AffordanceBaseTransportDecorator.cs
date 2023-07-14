@@ -231,6 +231,11 @@ namespace CalculationEngine.Transportation {
             return _sourceAffordance.AreThereDuplicateEnergyProfiles();
         }
 
+        public int GetDuration()
+        {
+            return _sourceAffordance.GetDuration();
+        }
+
         public string? AreDeviceProfilesEmpty()
         {
             return _sourceAffordance.AreDeviceProfilesEmpty();

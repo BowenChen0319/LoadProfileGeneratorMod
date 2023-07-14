@@ -112,6 +112,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public abstract bool AreThereDuplicateEnergyProfiles();
 
+        public abstract int GetDuration();
+
         public int CalcAffordanceSerial { get; }
 
         public CalcAffordanceType CalcAffordanceType { get; }

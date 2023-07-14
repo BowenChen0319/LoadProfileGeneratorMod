@@ -245,18 +245,9 @@ namespace CalculationEngine.HouseholdElements {
 
             // bereits besch鋐tigt
             if (_isBusy[time.InternalStep]) {
-                if (_currentAffordance?.IsInterruptable == false && _executingAffordance != null && _remainingExecutionSteps > 0)
+                if (_executingAffordance != null && _remainingExecutionSteps > 0)
                 {
-                    //Logger.Info("Not interruptable");
-                    //continue with current activity
-
-
-                    //var currentAff = _currentAffordance;
-                    //Debug.WriteLine("Time "+time+" Current: "+currentAff.Name);
-                    //currentAff.GetpersonTimeProfile(time, out var personTimeProfile);
-                    //int durationInMinutes = personTimeProfile.StepValues.Count;
-                    //PersonDesires.ApplyAffordanceEffectPartly(_currentAffordance.Satisfactionvalues, _currentAffordance.RandomEffect, _currentAffordance.Name, durationInMinutes);
-                    Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
+                    //Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
                     _remainingExecutionSteps--;
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
                     PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false);
@@ -291,7 +282,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            Debug.WriteLine("Running: "+time+" " + bestaff.ToString());
+            //Debug.WriteLine("Running: "+time+" " + bestaff.ToString());
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -371,8 +362,11 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances);
+                    var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances, true);
+                    Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     ActivateAffordance(time, isDaylight,  bestAffordance);
+                    
+                    
                     switch (bestAffordance.AfterInterruption) {
                         case ActionAfterInterruption.LookForNew:
                             var currentTime = time;
@@ -581,17 +575,19 @@ namespace CalculationEngine.HouseholdElements {
                 Name, _isCurrentlySick, bestaff.Name,
                 bestaff.Guid, _calcPerson.HouseholdKey,
                 bestaff.AffCategory, bestaff.BodilyActivityLevel);
-            
-            
+
+
             //apply the effect
 
-            
-            
+            var dura = bestaff.GetDuration();
+            Debug.WriteLine("Activating " + bestaff.Name+" Time: "+dura);
+            //Debug.WriteLine(bestaff.GetDuration);
             bestaff.Activate(currentTimeStep, Name,  CurrentLocation,
                 out var personTimeProfile);
-
+            
             //PersonDesires.ApplyAffordanceEffect(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name);
             int durationInMinutes = personTimeProfile.StepValues.Count;
+            //int testDuration = 
             if (bestaff?.IsInterruptable == false)
             {
                 //for (var i = 0; i <= durationInMinutes; i++)
@@ -718,19 +714,24 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromList(time,  allAffordances);
+            return GetBestAffordanceFromList(time,  allAffordances, false);
         }
 
         [JetBrains.Annotations.NotNull]
         private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances)
+                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
         {
             var bestdiff = decimal.MaxValue;
             var bestaff = allAvailableAffordances[0];
             var bestaffordances = new List<ICalcAffordanceBase>();
             foreach (var affordance in allAvailableAffordances) {
-                var desireDiff =
-                    PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
+                //var desireDiff =
+                    //PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
+                
+                //var duration = affordance.CalcAffordanceSerial.ToString();
+                var desireDiff = 
+                    PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, 
+                                                    affordance.Name, affordance.IsInterruptable, careForAll);
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
                     if (//_lf == null ||
                         _calcRepo.Logfile.ThoughtsLogFile1 == null) {

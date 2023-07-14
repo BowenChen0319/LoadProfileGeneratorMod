@@ -195,6 +195,11 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
+         /// <summary>
+         /// Test
+         /// </summary>
+         /// <param name="timestep"></param>
+         /// <param name="satisfactionvalues"></param>
         public void ApplyDecayWithoutSome([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
         {
             // Create a HashSet containing the DesireIDs from satisfactionvalues
@@ -241,6 +246,67 @@ namespace CalculationEngine.HouseholdElements {
             return CalcTotalDeviation(out thoughtstring);
         }
 
+        public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
+            [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll)
+        {
+            // calc decay
+            foreach (var calcDesire in Desires.Values)
+            {
+                calcDesire.TempValue = calcDesire.Value;
+            }
+            decimal modifier = 1;
+            if (_lastAffordances.Contains(affordanceName))
+            {
+                var index = _lastAffordances.IndexOf(affordanceName);
+                for (var i = index; i >= 0; i--)
+                {
+                    modifier *= 0.9m;
+                }
+            }
+            // add value
+            foreach (var satisfactionvalue in satisfactionvalues)
+            {
+                if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                {
+                    var desire = Desires[satisfactionvalue.DesireID];
+                    if (desire.TempValue + satisfactionvalue.Value > 1)
+                    {
+                        if (interruptable == true)
+                        {
+                            desire.TempValue += (satisfactionvalue.Value / modifier) /120m;
+                        }
+                        else
+                        {
+                            desire.TempValue += satisfactionvalue.Value / modifier;
+                        }
+                        //desire.TempValue += satisfactionvalue.Value / modifier;
+                    }
+                    else
+                    {
+                        if (interruptable == true)
+                        {
+                            desire.TempValue += (satisfactionvalue.Value * modifier) /120m;
+                        }
+                        else
+                        {
+                            desire.TempValue += satisfactionvalue.Value * modifier;
+                        }
+                        //desire.TempValue += satisfactionvalue.Value * modifier;
+                    }
+                }
+            }
+            // get results
+            if (careForAll == true)
+            {
+                return CalcTotalDeviationAll(out thoughtstring);
+            }
+            else
+            {
+                return CalcTotalDeviation(out thoughtstring);
+            }
+            //return CalcTotalDeviation(out thoughtstring);
+        }
+
         private decimal CalcTotalDeviation(out string? thoughtstring) {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -272,6 +338,49 @@ namespace CalculationEngine.HouseholdElements {
                 thoughtstring = sb.ToString();
             }
             else {
+                thoughtstring = null;
+            }
+            return totalDeviation;
+        }
+
+        private decimal CalcTotalDeviationAll(out string? thoughtstring)
+        {
+            decimal totalDeviation = 0;
+            StringBuilder? sb = null;
+            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
+            if (makeThoughts)
+            {
+                sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
+            }
+
+            foreach (var calcDesire in Desires.Values)
+            {
+                if (true)
+                {
+                    var deviation = (1 - calcDesire.TempValue) * 100;
+                    var desirevalue = deviation * deviation * calcDesire.Weight;
+                    totalDeviation += desirevalue;
+                    if (sb != null)
+                    {
+                        sb.Append(calcDesire.Name);
+                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
+                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
+                        sb.Append("*");
+                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
+                        sb.Append("*");
+                        sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
+                        sb.Append(_calcRepo.CalcParameters.CSVCharacter);
+                        sb.Append(desirevalue.ToString("0#.#", Config.CultureInfo));
+                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
+                    }
+                }
+            }
+            if (sb != null)
+            {
+                thoughtstring = sb.ToString();
+            }
+            else
+            {
                 thoughtstring = null;
             }
             return totalDeviation;

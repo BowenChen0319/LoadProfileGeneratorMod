@@ -147,6 +147,9 @@ namespace CalculationEngine {
                     CalcRepo.CalculationProfiler.StopPart(Utili.GetCurrentMethodAndClass() + " - Preperation");
                 }
 
+                int coreCount = Environment.ProcessorCount;
+                Debug.WriteLine($"CPU Core Total：{coreCount}");
+
                 var now = CalcRepo.CalcParameters.InternalStartTime;
                 //Debug.WriteLine("Starting the simulation");
                 
@@ -171,7 +174,7 @@ namespace CalculationEngine {
                         // ReSharper disable once PossibleNullReferenceException
                         // Timestep is always running until the end of the simulation, even between the durations of the affordacne 
                         CalcObject.RunOneStep(timestep, now, true);
-                        Debug.WriteLine("TimeNow: "+now+" Timestep: " + timestep);
+                        //Debug.WriteLine("TimeNow: "+now+" Timestep: " + timestep);
                         SaveVariableStatesIfNeeded(timestep);
                         CalcRepo.OnlineLoggingData.SaveIfNeeded(timestep);
                         now += CalcRepo.CalcParameters.InternalStepsize;

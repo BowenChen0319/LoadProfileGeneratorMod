@@ -123,6 +123,11 @@ namespace CalculationEngine.HouseholdElements {
         public override string SourceTrait { get; }
         public override string? TimeLimitName { get; }
         public override bool AreThereDuplicateEnergyProfiles() => false;
+        public override int GetDuration()
+        {
+            //var duration = _personProfile.StepValues.Count;
+            return _durations;
+        }
 
         [NotNull]
         public override string AreDeviceProfilesEmpty()

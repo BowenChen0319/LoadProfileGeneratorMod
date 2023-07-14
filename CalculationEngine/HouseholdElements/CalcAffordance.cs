@@ -31,6 +31,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Automation;
@@ -116,8 +117,18 @@ namespace CalculationEngine.HouseholdElements {
         [JetBrains.Annotations.NotNull]
         public override string TimeLimitName { get; }
 
-        public override void Activate(TimeStep startTime, string activatorName, CalcLocation personSourceLocation, out ICalcProfile personTimeProfile)
+        public override int GetDuration()
         {
+            var duration = _personProfile.StepValues.Count;
+            return duration;
+            
+        }
+
+        public override void Activate(TimeStep startTime, string activatorName, CalcLocation personSourceLocation, out ICalcProfile personTimeProfile)
+        {   
+            //Debug.WriteLine("Activating " + Name + " at " + startTime.InternalStep);
+            //Debug.WriteLine("activate: "+_personProfile.StepValues.Count);
+
             TimeStep timeLastDeviceEnds = startTime.GetAbsoluteStep(0);
             //flexibility
             var allDevices = Energyprofiles.Select(x => x.CalcDevice).Distinct().ToList();
@@ -133,8 +144,12 @@ namespace CalculationEngine.HouseholdElements {
                     if (dpt.Probability > _probabilitiesForTimes[startTime.InternalStep]) {
                         //_calcDevice.SetTimeprofile(tbp, startidx + TimeOffsetInSteps, loadType, timeFactor, affordancename,activatorName, _multiplier);
                         CalcProfile adjustedProfile = dpt.TimeProfile.CompressExpandDoubleArray(_timeFactorsForTimes[startTime.InternalStep]);
+
+                        //Debug.WriteLine("adjustedProfile: " + adjustedProfile);
+
                         var endtime = dpt.CalcDevice.SetTimeprofile(adjustedProfile, startTime.AddSteps(dpt.TimeOffsetInSteps), dpt.LoadType, Name,
                             activatorName, dpt.Multiplier, false, out var finalValues);
+                        //Debug.WriteLine("Affordance " + device.Name + " started at " + startTime + " and ended at " + endtime);
                         if (endtime > timeLastDeviceEnds) {
                             timeLastDeviceEnds = endtime;
                         }
@@ -198,6 +213,13 @@ namespace CalculationEngine.HouseholdElements {
             personTimeProfile = _personProfile.CompressExpandDoubleArray(tf);
             //return tf ;
         }
+
+        //public void GetPersonTimeProfile(TimeStep startTime, out ICalcProfile personTimeProfile)
+        //{
+        //    var tf = _timeFactorsForTimes[startTime.InternalStep];
+        //    personTimeProfile = _personProfile.CompressExpandDoubleArray(tf);
+        //}
+
 
         public void AddDeviceTuple([JetBrains.Annotations.NotNull] CalcDevice dev, [JetBrains.Annotations.NotNull] CalcProfile newprof,
                                    [JetBrains.Annotations.NotNull] CalcLoadType lt, decimal timeoffset, TimeSpan internalstepsize, double multiplier,
