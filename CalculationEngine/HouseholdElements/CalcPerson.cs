@@ -579,8 +579,8 @@ namespace CalculationEngine.HouseholdElements {
 
             //apply the effect
 
-            var dura = bestaff.GetDuration();
-            Debug.WriteLine("Activating " + bestaff.Name+" Time: "+dura);
+            //var dura = bestaff.GetDuration();
+            //Debug.WriteLine("Activating " + bestaff.Name+" Time: "+dura);
             //Debug.WriteLine(bestaff.GetDuration);
             bestaff.Activate(currentTimeStep, Name,  CurrentLocation,
                 out var personTimeProfile);
@@ -729,9 +729,10 @@ namespace CalculationEngine.HouseholdElements {
                     //PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
                 
                 //var duration = affordance.CalcAffordanceSerial.ToString();
+                var duration = affordance.GetDuration();
                 var desireDiff = 
                     PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, 
-                                                    affordance.Name, affordance.IsInterruptable, careForAll);
+                                                    affordance.Name, affordance.IsInterruptable, careForAll, duration);
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
                     if (//_lf == null ||
                         _calcRepo.Logfile.ThoughtsLogFile1 == null) {

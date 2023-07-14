@@ -247,7 +247,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
-            [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll)
+            [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration)
         {
             // calc decay
             foreach (var calcDesire in Desires.Values)
@@ -273,7 +273,7 @@ namespace CalculationEngine.HouseholdElements {
                     {
                         if (interruptable == true)
                         {
-                            desire.TempValue += (satisfactionvalue.Value / modifier) /120m;
+                            desire.TempValue += (satisfactionvalue.Value / modifier) /duration;
                         }
                         else
                         {
@@ -285,7 +285,7 @@ namespace CalculationEngine.HouseholdElements {
                     {
                         if (interruptable == true)
                         {
-                            desire.TempValue += (satisfactionvalue.Value * modifier) /120m;
+                            desire.TempValue += (satisfactionvalue.Value * modifier) /duration;
                         }
                         else
                         {
