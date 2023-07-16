@@ -282,7 +282,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            //Debug.WriteLine("Running: "+time+" " + bestaff.ToString());
+            Debug.WriteLine("Running: "+time+" " + bestaff.Name);
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -714,7 +714,7 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromList(time,  allAffordances, false);
+            return GetBestAffordanceFromList(time,  allAffordances, true);
         }
 
         [JetBrains.Annotations.NotNull]
@@ -730,9 +730,11 @@ namespace CalculationEngine.HouseholdElements {
                 
                 //var duration = affordance.CalcAffordanceSerial.ToString();
                 var duration = affordance.GetDuration();
-                var desireDiff = 
-                    PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, 
-                                                    affordance.Name, affordance.IsInterruptable, careForAll, duration);
+                
+                
+                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration);
+                //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
+                
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
                     if (//_lf == null ||
                         _calcRepo.Logfile.ThoughtsLogFile1 == null) {

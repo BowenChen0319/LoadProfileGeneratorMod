@@ -91,7 +91,12 @@ namespace CalculationEngine.HouseholdElements {
 
         public decimal CriticalThreshold { get; }
 
-        // public decimal DecayRate => _decayRate;
+        //public decimal GetDecayRate => _decayRate;
+        public decimal GetDecayRate()
+        {
+            var decayRate = _decayRate;
+            return decayRate;
+        }
 
         public decimal DecayTime { get; }
 
@@ -170,5 +175,7 @@ namespace CalculationEngine.HouseholdElements {
 
         [NotNull]
         public override string ToString() => "desire:" + _name;
+
+        
     }
 }
