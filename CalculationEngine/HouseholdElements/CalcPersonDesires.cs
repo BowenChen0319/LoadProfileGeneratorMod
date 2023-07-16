@@ -52,6 +52,9 @@ namespace CalculationEngine.HouseholdElements {
         [ItemNotNull]
         [NotNull]
         private readonly List<string> _lastAffordances = new List<string>();
+        [ItemNotNull]
+        [NotNull]
+        private readonly List<TimeStep> _timeOfLastAffordance = new List<TimeStep>();
         [NotNull]
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
@@ -73,14 +76,19 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         public void ApplyAffordanceEffectPartly([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
-            [NotNull] string affordance, int durationInMinutes, Boolean firsttime) {
+            [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep) {
             if (firsttime)
             {
                 while (_lastAffordances.Count > 10)
                 {
                     _lastAffordances.RemoveAt(0);
+                    _timeOfLastAffordance.RemoveAt(0);
+                    
                 }
+                TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
+                _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
+
             }
             
             foreach (var satisfactionvalue in satisfactionvalues) {
@@ -248,7 +256,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
-            [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration)
+            [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
         {
             var satisfactionvalueRAW = satisfactionvalues;
             // calc decay
@@ -257,13 +265,22 @@ namespace CalculationEngine.HouseholdElements {
                 calcDesire.TempValue = calcDesire.Value;
             }
             decimal modifier = 1;
+            TimeStep edge = new TimeStep(120,0,false);
+            Boolean alreadyUsed = false;
             if (_lastAffordances.Contains(affordanceName))
             {
-                var index = _lastAffordances.IndexOf(affordanceName);
-                for (var i = index; i >= 0; i--)
+                var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
+                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge)
                 {
-                    modifier *= 0.9m;
-                    //modifier *= 0.1m;
+                    modifier *= 0.1m;
+                    alreadyUsed = true;
+                    //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                    
+
+                }
+                else
+                {
+                    modifier *= 0.5m;
                 }
             }
             // add value
@@ -315,7 +332,7 @@ namespace CalculationEngine.HouseholdElements {
                 //    return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring);
                 //}
                 //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring);
-                return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring);
+                return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
             }
             else
             {
@@ -324,7 +341,7 @@ namespace CalculationEngine.HouseholdElements {
             //return CalcTotalDeviation(out thoughtstring);
         }
 
-        private decimal CalcTotalDeviationAll(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring)
+        private decimal CalcTotalDeviationAll(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, Boolean alreadyUsed)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -399,9 +416,9 @@ namespace CalculationEngine.HouseholdElements {
                 thoughtstring = null;
             }
 
-            if (duration < 10)
+            if (duration < 2 || alreadyUsed==true)
             {
-                return 100000000000;
+                return 10000000000000;
             }
             else
             {

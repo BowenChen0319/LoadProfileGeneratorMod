@@ -250,7 +250,7 @@ namespace CalculationEngine.HouseholdElements {
                     //Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
                     _remainingExecutionSteps--;
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
-                    PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false);
+                    PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time);
                 }
                 InterruptIfNeeded(time, isDaylight, false);
                 //continue with current activity
@@ -282,7 +282,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            Debug.WriteLine("Running: "+time+" " + bestaff.Name);
+            Debug.WriteLine(_calcPerson.Name+"Running: "+time.InternalStep+" " + bestaff.Name);
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -595,7 +595,7 @@ namespace CalculationEngine.HouseholdElements {
                     //PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes);
                 //}
             }
-            PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true);
+            PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep);
             _executingAffordance = bestaff;
             _remainingExecutionSteps = durationInMinutes - 1;
             _currentDuration = durationInMinutes;
@@ -732,7 +732,7 @@ namespace CalculationEngine.HouseholdElements {
                 var duration = affordance.GetDuration();
                 
                 
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration);
+                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration,time);
                 //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
                 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
