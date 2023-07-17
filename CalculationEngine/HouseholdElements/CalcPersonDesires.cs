@@ -281,7 +281,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 else if (affordanceName == "go to the toilet")
                 {
-                    modifier *= 1m;
+                    modifier *= 0.8m;
                 }
                 else
                 {
