@@ -282,7 +282,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            Debug.WriteLine(_calcPerson.Name+"Running: "+time.InternalStep+" " + bestaff.Name);
+            Debug.WriteLine(_calcPerson.Name+"Running: "+ bestaff.Name);
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;

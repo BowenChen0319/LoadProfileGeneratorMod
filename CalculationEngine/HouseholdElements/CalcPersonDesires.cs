@@ -265,12 +265,13 @@ namespace CalculationEngine.HouseholdElements {
                 calcDesire.TempValue = calcDesire.Value;
             }
             decimal modifier = 1;
-            TimeStep edge = new TimeStep(120,0,false);
+            //TimeStep edge = new TimeStep(120,0,false);
+            TimeStep edge = new TimeStep(960, 0, false);
             Boolean alreadyUsed = false;
             if (_lastAffordances.Contains(affordanceName))
             {
                 var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
-                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge)
+                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && affordanceName != "go to the toilet")
                 {
                     modifier *= 0.1m;
                     alreadyUsed = true;
@@ -278,10 +279,15 @@ namespace CalculationEngine.HouseholdElements {
                     
 
                 }
+                else if (affordanceName == "go to the toilet")
+                {
+                    modifier *= 1m;
+                }
                 else
                 {
                     modifier *= 0.5m;
                 }
+
             }
             // add value
             
@@ -331,8 +337,9 @@ namespace CalculationEngine.HouseholdElements {
                 //{
                 //    return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring);
                 //}
-                //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring);
-                return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+
+                return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                //return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
             }
             else
             {
@@ -428,7 +435,7 @@ namespace CalculationEngine.HouseholdElements {
             
         }
 
-        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring)
+        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, Boolean alreadyUsed)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -466,7 +473,7 @@ namespace CalculationEngine.HouseholdElements {
                         durationLess = duration - durationMore;
                     }
 
-                    var desirevalue = (decimal)durationLess * (1 - currentvalueraw) * desire.Weight/ 2 ;
+                    var desirevalue = (decimal)durationLess * (1 - currentvalueraw) * desire.Weight * desire.Weight * desire.Weight/ 2 ;
 
                     //var desirevalue = (decimal)areaall * desire.Weight;
                     totalDeviation += desirevalue;
@@ -494,7 +501,7 @@ namespace CalculationEngine.HouseholdElements {
                     double doubleDecayrate = (double)decayrate;
                     double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
                     double afterValue = (double)currentvalue * doubleAfterDecayrate;
-                    var desirevalue = (decimal)((((1 - currentvalue) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
+                    var desirevalue = (decimal)((((1 - currentvalue) * (1 - afterValue))) * duration / 2) * calcDesire.Weight * calcDesire.Weight * calcDesire.Weight;
                     //var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
                     var deviation = (((1 - currentvalueraw)+(1 - (decimal)afterValue)) / 2 ) * 100;
 
@@ -524,9 +531,9 @@ namespace CalculationEngine.HouseholdElements {
                 thoughtstring = null;
             }
 
-            if (duration < 10)
+            if (duration < 2 || alreadyUsed == true)
             {
-                return 100000000000;
+                return 10000000000000;
             }
             else
             {

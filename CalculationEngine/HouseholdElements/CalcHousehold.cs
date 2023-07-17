@@ -30,6 +30,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -417,10 +418,11 @@ namespace CalculationEngine.HouseholdElements {
             if (_autoDevs == null) {
                 throw new LPGException("_autoDevs should not be null");
             }
-
+            
             foreach (var p in _persons) {
                 p.NextStep(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed);
+                Debug.WriteLine("Time: " + now);
             }
 
             /*    if ((timestep % RangeCleaningFrequency) == 0)
