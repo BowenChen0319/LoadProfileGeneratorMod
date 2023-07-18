@@ -79,7 +79,7 @@ namespace CalculationEngine.HouseholdElements {
             [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep) {
             if (firsttime)
             {
-                while (_lastAffordances.Count > 10)
+                while (_lastAffordances.Count > 35)
                 {
                     _lastAffordances.RemoveAt(0);
                     _timeOfLastAffordance.RemoveAt(0);
@@ -88,6 +88,7 @@ namespace CalculationEngine.HouseholdElements {
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
                 _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
+                Debug.WriteLine("currentTimeStep " + currentTimeStep + "  duration" + durationAsTimestep + "End " + (currentTimeStep + durationAsTimestep));
 
             }
             
@@ -266,31 +267,31 @@ namespace CalculationEngine.HouseholdElements {
             }
             decimal modifier = 1;
             //TimeStep edge = new TimeStep(120,0,false);
-            TimeStep edge = new TimeStep(960, 0, false);
+            TimeStep edge = new TimeStep(1440, 0, false);
             Boolean alreadyUsed = false;
+            List<string> specialAffordances = new List<string> { "go to the toilet", "work", "office", "sleep bed", "Office","study" };
+
             if (_lastAffordances.Contains(affordanceName))
             {
                 var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
-                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && affordanceName != "go to the toilet")
+                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !specialAffordances.Any(affordanceName.Contains))
                 {
                     modifier *= 0.1m;
                     alreadyUsed = true;
                     //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
-                    
-
                 }
-                else if (affordanceName == "go to the toilet")
+                else if (specialAffordances.Any(affordanceName.Contains))
                 {
-                    modifier *= 0.8m;
+                    modifier *= 1;
                 }
                 else
                 {
-                    modifier *= 0.5m;
+                    modifier *= 1;
                 }
-
             }
+
             // add value
-            
+
             foreach (var satisfactionvalue in satisfactionvalues)
             {
                 if (Desires.ContainsKey(satisfactionvalue.DesireID))
