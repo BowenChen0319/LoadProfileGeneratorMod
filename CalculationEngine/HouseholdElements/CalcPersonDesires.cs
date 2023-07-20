@@ -146,7 +146,7 @@ namespace CalculationEngine.HouseholdElements {
         public void ApplyAffordanceEffect([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
     [NotNull] string affordance)
         {
-            while (_lastAffordances.Count > 10)
+            while (_lastAffordances.Count > 35)
             {
                 _lastAffordances.RemoveAt(0);
             }
@@ -255,6 +255,43 @@ namespace CalculationEngine.HouseholdElements {
             // get results
             return CalcTotalDeviation(out thoughtstring);
         }
+        public static bool CompareStrings(string s1, string s2)
+        {
+            var words1 = s1.Split(' ');
+            var words2 = s2.Split(' ');
+
+            if (words1.Length < 3 || words2.Length < 3)
+            {   
+                Debug.WriteLine("CompareStrings: False! Because too short" + s2);
+                return false; // If either string has less than 3 words, return false
+            }
+            else
+            {
+                Boolean isSame = true;
+                for (int i = 0; i < 3; i++)
+                {
+                    if (!words1[i].Equals(words2[i]))
+                    {
+                        isSame = isSame && true;
+                    }
+                    else
+                    {
+                        isSame = isSame && false;
+                    }
+                        //return false; // If the words don't match, return false
+                }
+                if (isSame)
+                {
+                    Debug.WriteLine("CompareStrings: True! Because same" +s1+"  "+ s2);
+                }
+                else
+                {
+                    Debug.WriteLine("CompareStrings: False! Because not same" + s1 + "  " + s2);
+                }   
+                return isSame;
+            }
+
+        }
 
         public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
             [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
@@ -266,29 +303,55 @@ namespace CalculationEngine.HouseholdElements {
                 calcDesire.TempValue = calcDesire.Value;
             }
             decimal modifier = 1;
+            
+            
+            //Cooling Down Function
             //TimeStep edge = new TimeStep(120,0,false);
             TimeStep edge = new TimeStep(1440, 0, false);
             Boolean alreadyUsed = false;
             List<string> specialAffordances = new List<string> { "go to the toilet", "work", "office", "sleep bed", "Office","study" };
 
-            if (_lastAffordances.Contains(affordanceName))
+            if (specialAffordances.Any(affordanceName.Contains))
             {
-                var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
-                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !specialAffordances.Any(affordanceName.Contains))
+                alreadyUsed = false;
+            }
+            else
+            {
+                if (_lastAffordances.Contains(affordanceName))
                 {
-                    modifier *= 0.1m;
-                    alreadyUsed = true;
-                    //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                    //var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
+                    //if (lastIndex == -1)
+                    //{
+                    //    lastIndex = _lastAffordances.FindLastIndex(lastAffordance => CompareStrings(lastAffordance, affordanceName));
+                    //}
+
+                    var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
+                    //var lastIndex = Math.Max(lastIndex1, lastIndex2);
+                    if (_timeOfLastAffordance[lastIndex] >= currentTime || (currentTime - _timeOfLastAffordance[lastIndex]) < edge) 
+                    {
+                        modifier *= 0.1m;
+                        alreadyUsed = true;
+                        //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                    }
+
                 }
-                else if (specialAffordances.Any(affordanceName.Contains))
+                else if (_lastAffordances.Any(lastAffordance => CompareStrings(lastAffordance, affordanceName)))
                 {
-                    modifier *= 1;
+                    var lastIndex = _lastAffordances.FindLastIndex(lastAffordance => CompareStrings(lastAffordance, affordanceName));
+                    if ((_timeOfLastAffordance[lastIndex] >= currentTime || (currentTime - _timeOfLastAffordance[lastIndex]) < edge) && !specialAffordances.Any(affordanceName.Contains))
+                    {
+                        modifier *= 0.1m;
+                        alreadyUsed = true;
+                        //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                    }
+
                 }
                 else
                 {
-                    modifier *= 1;
+                    alreadyUsed = false;
                 }
             }
+            
 
             // add value
 
