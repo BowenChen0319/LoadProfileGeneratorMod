@@ -277,6 +277,7 @@ namespace CalculationEngine.HouseholdElements {
                     else
                     {
                         isSame = isSame && false;
+                        //break;
                     }
                         //return false; // If the words don't match, return false
                 }
@@ -499,7 +500,8 @@ namespace CalculationEngine.HouseholdElements {
             
         }
 
-        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, Boolean alreadyUsed)
+        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, 
+            out string? thoughtstring, Boolean alreadyUsed)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
