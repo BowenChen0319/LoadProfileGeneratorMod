@@ -89,7 +89,7 @@ namespace CalculationEngine.HouseholdElements {
                 _lastAffordances.Add(affordance);
                 _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
                 Debug.WriteLine("currentTimeStep " + currentTimeStep + "  duration" + durationAsTimestep + "End " + (currentTimeStep + durationAsTimestep));
-
+                //
             }
             
             foreach (var satisfactionvalue in satisfactionvalues) {
