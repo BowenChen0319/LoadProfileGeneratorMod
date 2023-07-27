@@ -245,3 +245,4 @@ ModelManifest.xml
 .fake/
 
 /.sonarqube
+/WpfApplication1/profilegenerator-latest.db3
