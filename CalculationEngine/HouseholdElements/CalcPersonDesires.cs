@@ -88,7 +88,7 @@ namespace CalculationEngine.HouseholdElements {
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
                 _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
-                Debug.WriteLine("currentTimeStep " + currentTimeStep + "  duration" + durationAsTimestep + "End " + (currentTimeStep + durationAsTimestep));
+                Debug.WriteLine("                            duration" + durationAsTimestep);
                 //
             }
             
@@ -330,16 +330,16 @@ namespace CalculationEngine.HouseholdElements {
             // get results
             if (careForAll == true)
             {
-                //if (interruptable == true)
-                //{
-                //    return CalcTotalDeviationAll(1, satisfactionvalues, out thoughtstring);
-                //}
-                //else
-                //{
-                //    return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring);
-                //}
+                if (interruptable == true)
+                {
+                    return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, alreadyUsed);
+                }
+                else
+                {
+                    return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                }
 
-                return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
                 //return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
             }
             else
@@ -447,6 +447,8 @@ namespace CalculationEngine.HouseholdElements {
             }
             foreach (var calcDesire in Desires.Values)
             {
+                
+
                 var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
                 if (satisfactionValue != null)
                 {
@@ -466,18 +468,27 @@ namespace CalculationEngine.HouseholdElements {
                     double heightMore = currentvalue + (double)satisfactionvalueRAW - 1;
                     //double areaLess = 0;
                     double durationLess = duration;
+                    var desirevalue = (decimal)0;
                     if (heightMore > 0)
                     {
                         double durationMore = (heightMore / (double)satisfactionvalueRAW) * duration;
                         //var areaMore = (durationMore * heightMore) / 2;
                         //areaall = areaall - areaMore;
                         durationLess = duration - durationMore;
+                        desirevalue = (decimal)durationLess * (1 - currentvalueraw) * desire.Weight / 2;
+                    }
+                    else
+                    {
+                        desirevalue = ((1 - currentvalueraw) + (1 - currentvalueraw - satisfactionvalueRAW)) * duration * desire.Weight/2;
                     }
 
-                    var desirevalue = (decimal)durationLess * (1 - currentvalueraw) * desire.Weight * desire.Weight * desire.Weight/ 2 ;
+                    desirevalue = desirevalue / duration;
+                    //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
+                    //desirevalue = (decimal)Math.Exp(-1*0.1*duration)*desirevalue;
 
                     //var desirevalue = (decimal)areaall * desire.Weight;
                     totalDeviation += desirevalue;
+                    
 
                     var deviation = (((1 - currentvalueraw) + (1 - (decimal)afterValue)) / 2) * 100;
                     if (sb != null)
@@ -502,11 +513,16 @@ namespace CalculationEngine.HouseholdElements {
                     double doubleDecayrate = (double)decayrate;
                     double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
                     double afterValue = (double)currentvalue * doubleAfterDecayrate;
-                    var desirevalue = (decimal)((((1 - currentvalue) * (1 - afterValue))) * duration / 2) * calcDesire.Weight * calcDesire.Weight * calcDesire.Weight;
+                    var desirevalue = (decimal)((((1 - currentvalue) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
                     //var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
                     var deviation = (((1 - currentvalueraw)+(1 - (decimal)afterValue)) / 2 ) * 100;
 
+                    desirevalue = desirevalue / duration;
+                    //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
+                    //desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
+
                     totalDeviation += desirevalue;
+                    
                     if (sb != null)
                     {
                         sb.Append(calcDesire.Name);
@@ -521,6 +537,8 @@ namespace CalculationEngine.HouseholdElements {
                         sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                     }
                 }
+                
+                
             }
 
             if (sb != null)
@@ -531,8 +549,9 @@ namespace CalculationEngine.HouseholdElements {
             {
                 thoughtstring = null;
             }
-
-            if (duration < 2 || alreadyUsed == true)
+            
+            //if (duration < 2 || alreadyUsed == true)
+            if (alreadyUsed == true)
             {
                 return 10000000000000;
             }

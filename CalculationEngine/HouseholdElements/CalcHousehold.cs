@@ -421,8 +421,8 @@ namespace CalculationEngine.HouseholdElements {
             
             foreach (var p in _persons) {
                 p.NextStep(timestep, _locations, _daylightArray,
-                    _householdKey, _persons, _simulationSeed);
-                Debug.WriteLine("Time: " + now);
+                    _householdKey, _persons, _simulationSeed,now);
+                //Debug.WriteLine("Time: " + now);
             }
 
             /*    if ((timestep % RangeCleaningFrequency) == 0)

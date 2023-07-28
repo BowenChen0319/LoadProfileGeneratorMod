@@ -62,6 +62,9 @@ namespace CalculationEngine.HouseholdElements {
         private readonly string _sourceTrait;
         private decimal _value;
 
+        private double _logVal;
+        //private double _inverseTimestepsPerHour;
+
         public CalcDesire([NotNull] string name, int desireID, decimal threshold, decimal decayTime, decimal value,
             decimal weight,
             int timestepsPerHour, decimal criticalThreshold, SharedDesireValue? sharedDesireValue,
@@ -73,7 +76,7 @@ namespace CalculationEngine.HouseholdElements {
             DesireID = desireID;
             Threshold = threshold;
             if (decayTime > 0) {
-                _decayRate = GetRate(decayTime);
+                _decayRate = (decimal)GetRateDouble(decayTime);
             }
             _sourceTrait = sourceTrait;
             _desireCategory = desireCategory;
@@ -81,6 +84,9 @@ namespace CalculationEngine.HouseholdElements {
             TempValue = 0;
             Weight = weight;
             DecayTime = decayTime;
+
+            _logVal = Math.Log(0.5);
+            //_inverseTimestepsPerHour = 1 / _timestepsPerHour;
 
             CriticalThreshold = criticalThreshold;
             _sharedDesireValue = sharedDesireValue;
@@ -96,6 +102,11 @@ namespace CalculationEngine.HouseholdElements {
         {
             var decayRate = _decayRate;
             return decayRate;
+        }
+        public double GetDecayRateDoulbe()
+        {
+            var decayRateDouble = GetRateDouble(DecayTime);
+            return decayRateDouble;
         }
 
         public decimal DecayTime { get; }
@@ -166,10 +177,25 @@ namespace CalculationEngine.HouseholdElements {
 
         private decimal GetRate(decimal decayTime)
         {
-            var logVal = (decimal) Math.Log(0.5);
+            var logVal = (decimal)Math.Log(0.5);
             var decayTimesteps = decayTime * _timestepsPerHour;
-            var exponent = (double) (logVal / decayTimesteps);
-            var factor = (decimal) Math.Exp(exponent);
+            var exponent = (double)(logVal / decayTimesteps);
+            var factor = (decimal)Math.Exp(exponent);
+
+            //var decayTimesteps = decayTime * _inverseTimestepsPerHour;
+            //var exponent = _logVal * decayTimesteps;
+            //var factor = (decimal)Math.Exp((double)exponent);
+
+            return factor;
+        }
+
+        private double GetRateDouble(decimal decayTime)
+        {
+            //var logVal = Math.Log(0.5);
+            var decayTimesteps = decayTime * _timestepsPerHour;
+            var exponent = (_logVal / (double)decayTimesteps);
+            var factor = Math.Exp(exponent);
+
             return factor;
         }
 

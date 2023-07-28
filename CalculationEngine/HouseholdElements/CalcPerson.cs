@@ -31,6 +31,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -208,7 +209,7 @@ namespace CalculationEngine.HouseholdElements {
         public void NextStep([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                              [JetBrains.Annotations.NotNull] HouseholdKey householdKey,
                              [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
-                             int simulationSeed)
+                             int simulationSeed,DateTime now)
         {
             if (_calcRepo.Logfile == null) {
                 throw new LPGException("Logfile was null.");
@@ -252,7 +253,7 @@ namespace CalculationEngine.HouseholdElements {
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
                     PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time);
                 }
-                InterruptIfNeeded(time, isDaylight, false);
+                InterruptIfNeeded(time, isDaylight, false,now);
                 //continue with current activity
 
                 return;
@@ -282,7 +283,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            Debug.WriteLine(_calcPerson.Name+"Running: "+ bestaff.Name);
+            Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name);
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -347,7 +348,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         private void InterruptIfNeeded([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
-                                       bool ignoreAlreadyExecutedActivities)
+                                       bool ignoreAlreadyExecutedActivities, DateTime now)
         {
             if (_currentAffordance?.IsInterruptable == true &&
                 !_isCurrentlyPriorityAffordanceRunning) {
@@ -363,7 +364,8 @@ namespace CalculationEngine.HouseholdElements {
                     NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
                     var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances, true);
-                    Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
+                    //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
+                    Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
                     ActivateAffordance(time, isDaylight,  bestAffordance);
                     
                     
