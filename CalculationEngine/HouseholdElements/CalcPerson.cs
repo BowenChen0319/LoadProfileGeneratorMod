@@ -283,7 +283,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            //Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name);
+            Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name);
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -365,7 +365,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (availableInterruptingAffordances.Count != 0) {
                     var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances, true);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
-                    //Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
+                    Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
                     ActivateAffordance(time, isDaylight,  bestAffordance);
                     
                     
