@@ -62,7 +62,7 @@ namespace CalculationEngine.HouseholdElements {
         private readonly string _sourceTrait;
         private decimal _value;
 
-        private double _logVal;
+        static double _logVal;
         //private double _inverseTimestepsPerHour;
 
         public CalcDesire([NotNull] string name, int desireID, decimal threshold, decimal decayTime, decimal value,
