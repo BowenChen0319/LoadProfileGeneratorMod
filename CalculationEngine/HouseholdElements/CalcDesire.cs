@@ -192,7 +192,7 @@ namespace CalculationEngine.HouseholdElements {
         private double GetRateDouble(decimal decayTime)
         {
             //var logVal = Math.Log(0.5);
-            var decayTimesteps = decayTime * _timestepsPerHour;
+            var decayTimesteps = decayTime * _timestepsPerHour; // =T_i
             var exponent = (_logVal / (double)decayTimesteps);
             var factor = Math.Exp(exponent);
 

@@ -452,45 +452,54 @@ namespace CalculationEngine.HouseholdElements {
                 var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
                 if (satisfactionValue != null)
                 {
-                    var desire = Desires[satisfactionValue.DesireID];
-                    var decayrate = desire.GetDecayRate();
+                    //var desire = Desires[satisfactionValue.DesireID];
+                    var desire = calcDesire;
+                    //var decayrate = desire.GetDecayRate();
+                    double decayrate = desire.GetDecayRateDoulbe();
                     var satisfactionvalueRAW = satisfactionValue.Value;
-                    var currentvalueraw = desire.TempValue;
+                    double satisfactionvalueDBL = (double)satisfactionvalueRAW;
+                    var currentValueRAW = desire.TempValue;
+                    var weight = desire.Weight;
+                    double weightDBL = (double)weight;
+                    double currentValueDBL = (double)currentValueRAW;
+                    //double decayrate = (double)decayrate;
 
-                    var currentvalue = (double)currentvalueraw;
-                    double doubleDecayrate = (double)decayrate;
-                    double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
-                    double afterValue = (double)currentvalue * doubleAfterDecayrate;
 
-                    double height = (currentvalue - afterValue) + (double)satisfactionvalueRAW;
+
+                    double decayrateAfterDBL = Math.Pow(decayrate, duration);
+                    double afterValueDBL = currentValueDBL * decayrateAfterDBL;
+
+                    double height = (currentValueDBL - afterValueDBL) + satisfactionvalueDBL;
                     //double areaall = (height * duration) / 2;
                     
-                    double heightMore = currentvalue + (double)satisfactionvalueRAW - 1;
+                    double heightMore = currentValueDBL + satisfactionvalueDBL - 1;
                     //double areaLess = 0;
                     double durationLess = duration;
-                    var desirevalue = (decimal)0;
+                    
+                    double profitValue = 0;
                     if (heightMore > 0)
                     {
-                        double durationMore = (heightMore / (double)satisfactionvalueRAW) * duration;
+                        double durationMore = (heightMore / satisfactionvalueDBL) * duration;
                         //var areaMore = (durationMore * heightMore) / 2;
                         //areaall = areaall - areaMore;
                         durationLess = duration - durationMore;
-                        desirevalue = (decimal)durationLess * (1 - currentvalueraw) * desire.Weight / 2;
+                        profitValue = durationLess * (1 - currentValueDBL) * weightDBL / 2;
                     }
                     else
                     {
-                        desirevalue = ((1 - currentvalueraw) + (1 - currentvalueraw - satisfactionvalueRAW)) * duration * desire.Weight/2;
+                        profitValue = ((1 - currentValueDBL) + (1 - currentValueDBL - satisfactionvalueDBL)) * duration * weightDBL/2;
                     }
 
-                    desirevalue = desirevalue / duration;
+                    profitValue = profitValue / duration;
                     //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
                     //desirevalue = (decimal)Math.Exp(-1*0.1*duration)*desirevalue;
 
                     //var desirevalue = (decimal)areaall * desire.Weight;
-                    totalDeviation += desirevalue;
-                    
+                    //totalDeviation += (decimal)profitValue;
+                    totalDeviation += TunningDeviation(profitValue, duration);
 
-                    var deviation = (((1 - currentvalueraw) + (1 - (decimal)afterValue)) / 2) * 100;
+
+                    var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
                     if (sb != null)
                     {
                         sb.Append(calcDesire.Name);
@@ -501,28 +510,57 @@ namespace CalculationEngine.HouseholdElements {
                         sb.Append("*");
                         sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
                         sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                        sb.Append(desirevalue.ToString("0#.#", Config.CultureInfo));
+                        sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
                         sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                     }
                 }
                 else
                 {
-                    var decayrate = calcDesire.GetDecayRate();
-                    var currentvalueraw = calcDesire.TempValue;
-                    var currentvalue = (double)currentvalueraw;
-                    double doubleDecayrate = (double)decayrate;
-                    double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
-                    double afterValue = (double)currentvalue * doubleAfterDecayrate;
-                    var desirevalue = (decimal)((((1 - currentvalue) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
-                    //var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
-                    var deviation = (((1 - currentvalueraw)+(1 - (decimal)afterValue)) / 2 ) * 100;
+                    //var decayrate = calcDesire.GetDecayRate();
+                    //var currentValueRAW = calcDesire.TempValue;
+                    //var currentValueDBL = (double)currentValueRAW;
+                    //double doubleDecayrate = (double)decayrate;
+                    //double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
+                    //double afterValue = (double)currentValueDBL * doubleAfterDecayrate;
+                    //var desirevalue = (decimal)((((1 - currentValueDBL) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
+                    ////var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
+                    //var deviation = (((1 - currentValueRAW)+(1 - (decimal)afterValue)) / 2 ) * 100;
 
-                    desirevalue = desirevalue / duration;
+                    //desirevalue = desirevalue / duration;
+                    ////desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
+                    ////desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
+
+                    //totalDeviation += desirevalue;
+
+                    var decayrate = calcDesire.GetDecayRateDoulbe();
+                    var currentValueRAW = calcDesire.TempValue;
+                    var currentValueDBL = (double)currentValueRAW;
+                    double weightDBL = (double)calcDesire.Weight;
+                    //double doubleDecayrate = (double)decayrate;
+                    double doubleAfterDecayrate = Math.Pow(decayrate, duration);
+                    double afterValue = currentValueDBL * doubleAfterDecayrate;
+                    //var desirevalue = (decimal)((((1 - currentValueDBL) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
+                    //var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
+                    var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValue)) / 2) * 100;
+
+                    double profitValue = 0;
+                    profitValue = (1 - currentValueDBL);
+                    double updateValue = currentValueDBL;
+                    for(var i = 0;i < duration; i++)
+                    {
+                        updateValue = updateValue * decayrate;
+                        double diff = (1 - updateValue);
+                        profitValue = profitValue+diff;
+                        
+                    }
+
+                    profitValue = profitValue * weightDBL / duration;
                     //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
                     //desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
 
-                    totalDeviation += desirevalue;
-                    
+                    //totalDeviation += (decimal)profitValue;
+                    totalDeviation += TunningDeviation(profitValue,duration);
+
                     if (sb != null)
                     {
                         sb.Append(calcDesire.Name);
@@ -533,7 +571,7 @@ namespace CalculationEngine.HouseholdElements {
                         sb.Append("*");
                         sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
                         sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                        sb.Append(desirevalue.ToString("0#.#", Config.CultureInfo));
+                        sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
                         sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                     }
                 }
@@ -559,6 +597,13 @@ namespace CalculationEngine.HouseholdElements {
             {
                 return totalDeviation;
             }
+        }
+
+        static decimal TunningDeviation(double deviationRAW, int duration)
+        {
+            double tunning = (2 - Math.Exp(-duration));
+            double result = deviationRAW*tunning;
+            return (decimal)result;
         }
 
         private decimal CalcTotalDeviation(out string? thoughtstring) {
