@@ -88,7 +88,7 @@ namespace CalculationEngine.HouseholdElements {
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
                 _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
-                Debug.WriteLine("                            duration" + durationAsTimestep);
+                //Debug.WriteLine("                            duration" + durationAsTimestep);
                 //
             }
             
