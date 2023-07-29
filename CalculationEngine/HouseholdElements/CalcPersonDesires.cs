@@ -34,6 +34,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Automation;
 using Automation.ResultFiles;
 using Common;
@@ -445,9 +446,13 @@ namespace CalculationEngine.HouseholdElements {
             {
                 sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
             }
-            foreach (var calcDesire in Desires.Values)
+
+            object lockObject = new object();
+
+            //foreach (var calcDesire in Desires.Values)
+            Parallel.ForEach(Desires.Values, calcDesire =>
             {
-                
+
 
                 var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
                 if (satisfactionValue != null)
@@ -471,11 +476,11 @@ namespace CalculationEngine.HouseholdElements {
 
                     double height = (currentValueDBL - afterValueDBL) + satisfactionvalueDBL;
                     //double areaall = (height * duration) / 2;
-                    
+
                     double heightMore = currentValueDBL + satisfactionvalueDBL - 1;
                     //double areaLess = 0;
                     double durationLess = duration;
-                    
+
                     double profitValue = 0;
                     if (heightMore > 0)
                     {
@@ -487,7 +492,7 @@ namespace CalculationEngine.HouseholdElements {
                     }
                     else
                     {
-                        profitValue = ((1 - currentValueDBL) + (1 - currentValueDBL - satisfactionvalueDBL)) * duration * weightDBL/2;
+                        profitValue = ((1 - currentValueDBL) + (1 - currentValueDBL - satisfactionvalueDBL)) * duration * weightDBL / 2;
                     }
 
                     profitValue = profitValue / duration;
@@ -496,7 +501,11 @@ namespace CalculationEngine.HouseholdElements {
 
                     //var desirevalue = (decimal)areaall * desire.Weight;
                     //totalDeviation += (decimal)profitValue;
-                    totalDeviation += TunningDeviation(profitValue, duration);
+                    lock (lockObject)
+                    {
+                        totalDeviation += TunningDeviation(profitValue, duration);
+                    }
+                    //totalDeviation += TunningDeviation(profitValue, duration);
 
 
                     var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
@@ -568,7 +577,7 @@ namespace CalculationEngine.HouseholdElements {
                     //{
                     //    Debug.WriteLine(Diff+"         V1:  " + profitValue + "     V2:   " + profitValue1+"   ti:   "+t_i+"    dur:    "+duration+"      curr:    "+currentValueDBL+"      rate:   "+decayrate);
                     //}
-                    
+
 
 
                     profitValue = profitValue * weightDBL / duration;
@@ -576,7 +585,12 @@ namespace CalculationEngine.HouseholdElements {
                     //desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
 
                     //totalDeviation += (decimal)profitValue;
-                    totalDeviation += TunningDeviation(profitValue,duration);
+
+                    //totalDeviation += TunningDeviation(profitValue,duration);
+                    lock (lockObject)
+                    {
+                        totalDeviation += TunningDeviation(profitValue, duration);
+                    }
 
                     if (sb != null)
                     {
@@ -592,9 +606,9 @@ namespace CalculationEngine.HouseholdElements {
                         sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                     }
                 }
-                
-                
-            }
+
+
+            });
 
             if (sb != null)
             {
