@@ -30,11 +30,13 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading.Tasks;
 using Automation;
 using Automation.ResultFiles;
 using CalculationEngine.Helper;
@@ -720,56 +722,100 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         [JetBrains.Annotations.NotNull]
+        //private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
+        //{
+        //    var bestdiff = decimal.MaxValue;
+        //    var bestaff = allAvailableAffordances[0];
+        //    var bestaffordances = new List<ICalcAffordanceBase>();
+        //    foreach (var affordance in allAvailableAffordances) {
+        //        //var desireDiff =
+        //            //PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
+
+        //        //var duration = affordance.CalcAffordanceSerial.ToString();
+        //        var duration = affordance.GetDuration();
+
+
+        //        var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration,time);
+        //        //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
+
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
+        //            if (//_lf == null ||
+        //                _calcRepo.Logfile.ThoughtsLogFile1 == null) {
+        //                throw new LPGException("Logfile was null.");
+        //            }
+
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
+
+        //        if (desireDiff < bestdiff) {
+        //            bestdiff = desireDiff;
+        //            bestaff = affordance;
+        //            bestaffordances.Clear();
+        //        }
+
+        //        if (desireDiff == bestdiff) {
+        //            bestaffordances.Add(affordance);
+        //        }
+        //    }
+
+        //    if (bestaffordances.Count > 1) {
+        //        //if (_lf == null) {throw new LPGException("Logfile was null.");}
+
+        //        bestaff = PickRandomAffordanceFromEquallyAttractiveOnes(bestaffordances,  time,
+        //            this, _calcPerson.HouseholdKey);
+        //    }
+
+        //    return bestaff;
+        //}
+
+        //Parallel Compute
         private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
+                                                  [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
         {
-            var bestdiff = decimal.MaxValue;
-            var bestaff = allAvailableAffordances[0];
-            var bestaffordances = new List<ICalcAffordanceBase>();
-            foreach (var affordance in allAvailableAffordances) {
-                //var desireDiff =
-                    //PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
-                
-                //var duration = affordance.CalcAffordanceSerial.ToString();
+            ConcurrentBag<Tuple<decimal, ICalcAffordanceBase>> results = new ConcurrentBag<Tuple<decimal, ICalcAffordanceBase>>();
+
+            Parallel.ForEach(allAvailableAffordances, affordance =>
+            {
                 var duration = affordance.GetDuration();
-                
-                
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration,time);
-                //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
-                
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
-                    if (//_lf == null ||
-                        _calcRepo.Logfile.ThoughtsLogFile1 == null) {
+                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
+
+                // Log thoughts
+                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+                {
+                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+                    {
                         throw new LPGException("Logfile was null.");
                     }
 
                     _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
                         new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+                        "Desirediff for " + affordance.Name + " is :" +
+                        desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
                         _calcPerson.HouseholdKey);
                 }
 
-                if (desireDiff < bestdiff) {
-                    bestdiff = desireDiff;
-                    bestaff = affordance;
-                    bestaffordances.Clear();
-                }
+                results.Add(Tuple.Create(desireDiff, affordance));
+            });
 
-                if (desireDiff == bestdiff) {
-                    bestaffordances.Add(affordance);
-                }
-            }
+            var bestResult = results.OrderBy(r => r.Item1).First();
+            var bestdiff = bestResult.Item1;
+            var bestaff = bestResult.Item2;
+            var bestaffordances = results.Where(r => r.Item1 == bestdiff).Select(r => r.Item2).ToList();
 
-            if (bestaffordances.Count > 1) {
-                //if (_lf == null) {throw new LPGException("Logfile was null.");}
-
-                bestaff = PickRandomAffordanceFromEquallyAttractiveOnes(bestaffordances,  time,
-                    this, _calcPerson.HouseholdKey);
+            // if multiple best
+            if (bestaffordances.Count > 1)
+            {
+                bestaff = PickRandomAffordanceFromEquallyAttractiveOnes(bestaffordances, time, this, _calcPerson.HouseholdKey);
             }
 
             return bestaff;
         }
+
 
         private void Init([JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] PotentialAffs pa, bool sickness)
         {
