@@ -103,6 +103,12 @@ namespace CalculationEngine.HouseholdElements {
             var decayRate = _decayRate;
             return decayRate;
         }
+
+        public decimal GetDecayTimeSteps()
+        {
+            var t_i = DecayTime * _timestepsPerHour;
+            return t_i;// = Ti
+        }
         public double GetDecayRateDoulbe()
         {
             var decayRateDouble = GetRateDouble(DecayTime);
@@ -188,6 +194,8 @@ namespace CalculationEngine.HouseholdElements {
 
             return factor;
         }
+
+        
 
         private double GetRateDouble(decimal decayTime)
         {

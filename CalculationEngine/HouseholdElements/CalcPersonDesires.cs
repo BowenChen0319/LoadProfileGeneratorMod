@@ -544,15 +544,32 @@ namespace CalculationEngine.HouseholdElements {
                     var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValue)) / 2) * 100;
 
                     double profitValue = 0;
+
+                    //old way to cal the area
                     profitValue = (1 - currentValueDBL);
                     double updateValue = currentValueDBL;
-                    for(var i = 0;i < duration; i++)
+                    for (var i = 0; i < duration; i++)
                     {
                         updateValue = updateValue * decayrate;
                         double diff = (1 - updateValue);
-                        profitValue = profitValue+diff;
-                        
+                        profitValue = profitValue + diff;
+
                     }
+
+
+                    //new way to calc area with Integration
+                    //double t_i = (double)calcDesire.GetDecayTimeSteps();
+                    //double profitValue1 = (duration) - ((currentValueDBL * t_i)/(Math.Log(2)))*(1-Math.Pow(0.5,(duration)/t_i));
+
+
+                    //var Diff = profitValue - profitValue1;
+                    //Debug.WriteLine("Diff:  " + Diff+"    duration:    "+duration);
+                    //if (Math.Abs(Diff) > 2)
+                    //{
+                    //    Debug.WriteLine(Diff+"         V1:  " + profitValue + "     V2:   " + profitValue1+"   ti:   "+t_i+"    dur:    "+duration+"      curr:    "+currentValueDBL+"      rate:   "+decayrate);
+                    //}
+                    
+
 
                     profitValue = profitValue * weightDBL / duration;
                     //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
