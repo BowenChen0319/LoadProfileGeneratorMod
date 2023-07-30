@@ -446,20 +446,24 @@ namespace CalculationEngine.HouseholdElements {
                 sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
             }
 
-            object lockObject = new object();
+            //object lockObject = new object();
+
+            var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value);
+
 
             foreach (var calcDesire in Desires.Values)
             {
-                
 
-                var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
-                if (satisfactionValue != null)
+                var desireID = calcDesire.DesireID;
+                if (satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueRAW))
+                //var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
+                //if (satisfactionValue != null)
                 {
                     //var desire = Desires[satisfactionValue.DesireID];
                     var desire = calcDesire;
                     //var decayrate = desire.GetDecayRate();
                     double decayrate = desire.GetDecayRateDoulbe();
-                    var satisfactionvalueRAW = satisfactionValue.Value;
+                    //var satisfactionvalueRAW = satisfactionValue.Value;
                     double satisfactionvalueDBL = (double)satisfactionvalueRAW;
                     var currentValueRAW = desire.TempValue;
                     var weight = desire.Weight;
