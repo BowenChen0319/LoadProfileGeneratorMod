@@ -735,7 +735,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 //var duration = affordance.CalcAffordanceSerial.ToString();
                 var duration = affordance.GetDuration();
-
+                //String category = affordance.AffCategory;
 
                 var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
                 //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  

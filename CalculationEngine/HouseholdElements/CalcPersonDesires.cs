@@ -625,8 +625,13 @@ namespace CalculationEngine.HouseholdElements {
 
         static decimal TunningDeviation(double deviationRAW, int duration)
         {
-            double tunning = (2 - Math.Exp(-duration));
-            double result = deviationRAW*tunning;
+            //double tunning = (2 - Math.Exp(-duration));
+            //double result = deviationRAW*tunning;
+            //return (decimal)result;
+            double rate = duration / (24 * 60);
+            double alpha = 1;
+            double tunning = (2 - Math.Exp(-alpha*rate));
+            double result = deviationRAW * tunning;
             return (decimal)result;
         }
 
