@@ -461,51 +461,45 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     //var desire = Desires[satisfactionValue.DesireID];
                     var desire = calcDesire;
-                    //var decayrate = desire.GetDecayRate();
                     double decayrate = desire.GetDecayRateDoulbe();
-                    //var satisfactionvalueRAW = satisfactionValue.Value;
                     double satisfactionvalueDBL = (double)satisfactionvalueRAW;
                     var currentValueRAW = desire.TempValue;
                     var weight = desire.Weight;
                     double weightDBL = (double)weight;
                     double currentValueDBL = (double)currentValueRAW;
-                    //double decayrate = (double)decayrate;
 
+                    //double decayrateAfterDBL = Math.Pow(decayrate, duration);
+                    //double afterValueDBL = currentValueDBL * decayrateAfterDBL;
+                    //double height = (currentValueDBL - afterValueDBL) + satisfactionvalueDBL;
+                    //double heightMore = currentValueDBL + satisfactionvalueDBL - 1;
+                    //double durationLess = duration;
 
+                    //double profitValue = 0;
+                    //if (heightMore > 0)
+                    //{
+                    //    double durationMore = (heightMore / satisfactionvalueDBL) * duration;
+                    //    durationLess = duration - durationMore;
+                    //    profitValue = durationLess * (1 - currentValueDBL) * weightDBL / 2;
+                    //}
+                    //else
+                    //{
+                    //    profitValue = ((1 - currentValueDBL) + (1 - currentValueDBL - satisfactionvalueDBL)) * duration * weightDBL/2;
+                    //}
 
-                    double decayrateAfterDBL = Math.Pow(decayrate, duration);
-                    double afterValueDBL = currentValueDBL * decayrateAfterDBL;
-
-                    double height = (currentValueDBL - afterValueDBL) + satisfactionvalueDBL;
-                    //double areaall = (height * duration) / 2;
-                    
-                    double heightMore = currentValueDBL + satisfactionvalueDBL - 1;
-                    //double areaLess = 0;
-                    double durationLess = duration;
-                    
                     double profitValue = 0;
-                    if (heightMore > 0)
+                    profitValue = (1 - currentValueDBL);
+                    double updateValue = currentValueDBL;
+                    for (var i = 0; i < duration; i++)
                     {
-                        double durationMore = (heightMore / satisfactionvalueDBL) * duration;
-                        //var areaMore = (durationMore * heightMore) / 2;
-                        //areaall = areaall - areaMore;
-                        durationLess = duration - durationMore;
-                        profitValue = durationLess * (1 - currentValueDBL) * weightDBL / 2;
-                    }
-                    else
-                    {
-                        profitValue = ((1 - currentValueDBL) + (1 - currentValueDBL - satisfactionvalueDBL)) * duration * weightDBL/2;
-                    }
+                        updateValue = Math.Min(1, updateValue + satisfactionvalueDBL/duration);
+                        double diff = (1 - updateValue);
+                        profitValue = profitValue + diff;
 
-                    profitValue = profitValue / duration;
-                    //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
-                    //desirevalue = (decimal)Math.Exp(-1*0.1*duration)*desirevalue;
+                    }
+                    double afterValueDBL = updateValue;
 
-                    //var desirevalue = (decimal)areaall * desire.Weight;
-                    //totalDeviation += (decimal)profitValue;
+                    profitValue = (profitValue*weightDBL) / duration;
                     totalDeviation += TunningDeviation(profitValue, duration);
-
-
                     var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
                     if (sb != null)
                     {
