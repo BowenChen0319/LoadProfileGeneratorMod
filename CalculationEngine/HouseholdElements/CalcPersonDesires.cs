@@ -59,6 +59,8 @@ namespace CalculationEngine.HouseholdElements {
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
 
+        public static Boolean _useNewAlgo = false;
+
         public CalcPersonDesires(CalcRepo calcRepo) {
             _calcRepo = calcRepo;
             Desires = new Dictionary<int, CalcDesire>();
@@ -79,12 +81,25 @@ namespace CalculationEngine.HouseholdElements {
             [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep) {
             if (firsttime)
             {
-                while (_lastAffordances.Count > 35)
+                if(_useNewAlgo == true)
                 {
-                    _lastAffordances.RemoveAt(0);
-                    _timeOfLastAffordance.RemoveAt(0);
-                    
+                    while (_lastAffordances.Count > 35)
+                    {
+                        _lastAffordances.RemoveAt(0);
+                        _timeOfLastAffordance.RemoveAt(0);
+
+                    }
                 }
+                else
+                {
+                    while (_lastAffordances.Count > 10)
+                    {
+                        _lastAffordances.RemoveAt(0);
+                        _timeOfLastAffordance.RemoveAt(0);
+
+                    }
+                }
+                
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
                 _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
@@ -259,94 +274,105 @@ namespace CalculationEngine.HouseholdElements {
         public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
             [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
         {
-            var satisfactionvalueRAW = satisfactionvalues;
-            // calc decay
-            foreach (var calcDesire in Desires.Values)
-            {
-                calcDesire.TempValue = calcDesire.Value;
-            }
-            decimal modifier = 1;
-            //TimeStep edge = new TimeStep(120,0,false);
-            TimeStep edge = new TimeStep(1440, 0, false);
-            Boolean alreadyUsed = false;
-            List<string> specialAffordances = new List<string> { "go to the toilet", "work", "office", "sleep bed", "Office","study" };
+            //var useNewAlgo = false;
 
-            if (_lastAffordances.Contains(affordanceName))
+            if(_useNewAlgo == true)
             {
-                var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
-                if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !specialAffordances.Any(affordanceName.Contains))
+                var satisfactionvalueRAW = satisfactionvalues;
+                // calc decay
+                foreach (var calcDesire in Desires.Values)
                 {
-                    modifier *= 0.1m;
-                    alreadyUsed = true;
-                    //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                    calcDesire.TempValue = calcDesire.Value;
                 }
-                else if (specialAffordances.Any(affordanceName.Contains))
-                {
-                    modifier *= 1;
-                }
-                else
-                {
-                    modifier *= 1;
-                }
-            }
+                decimal modifier = 1;
+                //TimeStep edge = new TimeStep(120,0,false);
+                TimeStep edge = new TimeStep(1440, 0, false);
+                Boolean alreadyUsed = false;
+                List<string> specialAffordances = new List<string> { "go to the toilet", "work", "office", "sleep bed", "Office", "study" };
 
-            // add value
-
-            foreach (var satisfactionvalue in satisfactionvalues)
-            {
-                if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                if (_lastAffordances.Contains(affordanceName))
                 {
-                    var desire = Desires[satisfactionvalue.DesireID];
-                    if (desire.TempValue + satisfactionvalue.Value > 1)
+                    var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
+                    if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !specialAffordances.Any(affordanceName.Contains))
                     {
-                        //if (interruptable == true)
-                        //{
-                        //    //desire.TempValue += (satisfactionvalue.Value / modifier) /duration;
-                        //    satisfactionvalue.Value = (satisfactionvalue.Value / modifier) / duration;
-                        //}
-                        //else
-                        //{
-                        //    //desire.TempValue += satisfactionvalue.Value / modifier;
-                        //    satisfactionvalue.Value = satisfactionvalue.Value / modifier;
-                        //}
-                        desire.TempValue += satisfactionvalue.Value / modifier;
+                        modifier *= 0.1m;
+                        alreadyUsed = true;
+                        //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                    }
+                    else if (specialAffordances.Any(affordanceName.Contains))
+                    {
+                        modifier *= 1;
                     }
                     else
                     {
-                        //if (interruptable == true)
-                        //{
-                        //    //desire.TempValue += (satisfactionvalue.Value * modifier) /duration;
-                        //    satisfactionvalue.Value = (satisfactionvalue.Value * modifier) / duration;
-                        //}
-                        //else
-                        //{
-                        //    //desire.TempValue += satisfactionvalue.Value * modifier;
-                        //    satisfactionvalue.Value = satisfactionvalue.Value * modifier;
-                        //}
-                        desire.TempValue += satisfactionvalue.Value * modifier;
+                        modifier *= 1;
                     }
                 }
-            }
-            // get results
-            if (careForAll == true)
-            {
-                if (interruptable == true)
+
+                // add value
+
+                foreach (var satisfactionvalue in satisfactionvalues)
                 {
-                    return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, alreadyUsed);
+                    if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                    {
+                        var desire = Desires[satisfactionvalue.DesireID];
+                        if (desire.TempValue + satisfactionvalue.Value > 1)
+                        {
+                            //if (interruptable == true)
+                            //{
+                            //    //desire.TempValue += (satisfactionvalue.Value / modifier) /duration;
+                            //    satisfactionvalue.Value = (satisfactionvalue.Value / modifier) / duration;
+                            //}
+                            //else
+                            //{
+                            //    //desire.TempValue += satisfactionvalue.Value / modifier;
+                            //    satisfactionvalue.Value = satisfactionvalue.Value / modifier;
+                            //}
+                            desire.TempValue += satisfactionvalue.Value / modifier;
+                        }
+                        else
+                        {
+                            //if (interruptable == true)
+                            //{
+                            //    //desire.TempValue += (satisfactionvalue.Value * modifier) /duration;
+                            //    satisfactionvalue.Value = (satisfactionvalue.Value * modifier) / duration;
+                            //}
+                            //else
+                            //{
+                            //    //desire.TempValue += satisfactionvalue.Value * modifier;
+                            //    satisfactionvalue.Value = satisfactionvalue.Value * modifier;
+                            //}
+                            desire.TempValue += satisfactionvalue.Value * modifier;
+                        }
+                    }
+                }
+                // get results
+                if (careForAll == true)
+                {
+                    if (interruptable == true)
+                    {
+                        return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, alreadyUsed);
+                    }
+                    else
+                    {
+                        return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                    }
+
+                    //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                    //return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
                 }
                 else
                 {
-                    return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                    return CalcEffect(satisfactionvalues, out thoughtstring, affordanceName);
                 }
-
-                //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
-                //return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                //return CalcTotalDeviation(out thoughtstring);
             }
             else
             {
                 return CalcEffect(satisfactionvalues, out thoughtstring, affordanceName);
             }
-            //return CalcTotalDeviation(out thoughtstring);
+
+
         }
 
         private decimal CalcTotalDeviationAll(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, Boolean alreadyUsed)
