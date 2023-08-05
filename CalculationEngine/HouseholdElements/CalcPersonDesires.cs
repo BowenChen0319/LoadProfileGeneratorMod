@@ -51,15 +51,16 @@ namespace CalculationEngine.HouseholdElements {
             new Dictionary<Tuple<string, HouseholdKey>, int>();
         [ItemNotNull]
         [NotNull]
-        private readonly List<string> _lastAffordances = new List<string>();
+        private List<string> _lastAffordances = new List<string>();
         [ItemNotNull]
         [NotNull]
-        private readonly List<TimeStep> _timeOfLastAffordance = new List<TimeStep>();
+        //private List<TimeStep> _timeOfLastAffordance = new List<TimeStep>();
+        private Dictionary<string, TimeStep> _lastAffordanceTime = new Dictionary<string, TimeStep>();
         [NotNull]
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
 
-        public static Boolean _useNewAlgo = false;
+        public static Boolean _useNewAlgo = true;
 
         public CalcPersonDesires(CalcRepo calcRepo) {
             _calcRepo = calcRepo;
@@ -86,7 +87,7 @@ namespace CalculationEngine.HouseholdElements {
                     while (_lastAffordances.Count > 35)
                     {
                         _lastAffordances.RemoveAt(0);
-                        _timeOfLastAffordance.RemoveAt(0);
+                        //_timeOfLastAffordance.RemoveAt(0);
 
                     }
                 }
@@ -95,14 +96,24 @@ namespace CalculationEngine.HouseholdElements {
                     while (_lastAffordances.Count > 10)
                     {
                         _lastAffordances.RemoveAt(0);
-                        _timeOfLastAffordance.RemoveAt(0);
+                        //_timeOfLastAffordance.RemoveAt(0);
 
                     }
                 }
                 
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
-                _timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
+                //_timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
+                //_timeOfLastAffordance.Add(currentTimeStep);
+                if (_lastAffordanceTime.ContainsKey(affordance))
+                {
+                    _lastAffordanceTime[affordance] = currentTimeStep; // 更新时间
+                }
+                else
+                {
+                    _lastAffordances.Add(affordance); // 只有在 affordance 不存在时才添加到 _lastAffordances 列表
+                    _lastAffordanceTime.Add(affordance, currentTimeStep); // 添加新条目
+                }
                 Debug.WriteLine("                              duration" + durationAsTimestep);
                 //
             }
@@ -286,31 +297,58 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 decimal modifier = 1;
                 //TimeStep edge = new TimeStep(120,0,false);
-                TimeStep edge = new TimeStep(1440, 0, false);
-                Boolean alreadyUsed = false;
-                List<string> specialAffordances = new List<string> { "go to the toilet", "work", "office", "sleep bed", "Office", "study" };
+                TimeStep edge = new TimeStep(3*1440, 0, false);
+                int priorityInfo = 1;
+                List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
 
-                if (_lastAffordances.Contains(affordanceName))
+                //if (_lastAffordances.Contains(affordanceName))
+                //{
+                //    var lastIndex = _lastAffordances.FindLastIndex(a => String.Equals(a, affordanceName, StringComparison.OrdinalIgnoreCase));
+                //    if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                //    {
+                //        modifier *= 0.1m;
+                //        priorityInfo = 0;
+                //        if(affordanceName == "visit the theater")
+                //        {
+                //            Debug.WriteLine(affordanceName + " already used" + currentTime + "    last:  " + _timeOfLastAffordance[lastIndex]);
+                //        }
+                        
+                //    }
+                //    else if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                //    {
+                //        modifier *= 1;
+                //        priorityInfo = 2;
+                //    }
+                //    else
+                //    {
+                //        modifier *= 1;
+                //    }
+                //}
+
+                TimeStep lastTime;
+                if (_lastAffordanceTime.TryGetValue(affordanceName, out lastTime))
                 {
-                    var lastIndex = _lastAffordances.FindLastIndex(a => a == affordanceName);
-                    if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !specialAffordances.Any(affordanceName.Contains))
+                    if ((currentTime - lastTime) < edge && !whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
                     {
                         modifier *= 0.1m;
-                        alreadyUsed = true;
-                        //Debug.WriteLine(affordanceName + " already used" + (currentTime - _timeOfLastAffordance[lastIndex]));
+                        priorityInfo = 0;
+                        //if (affordanceName == "visit the theater")
+                        //{
+                        //    Debug.WriteLine(affordanceName + " already used" + currentTime + "    last:  " + _timeOfLastAffordance[lastIndex]);
+                        //}
                     }
-                    else if (specialAffordances.Any(affordanceName.Contains))
-                    {
-                        modifier *= 1;
-                    }
-                    else
-                    {
-                        modifier *= 1;
-                    }
+                }
+                else if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                {
+                    modifier *= 1;
+                    priorityInfo = 2;
+                }
+                else
+                {
+                    modifier *= 1;
                 }
 
                 // add value
-
                 foreach (var satisfactionvalue in satisfactionvalues)
                 {
                     if (Desires.ContainsKey(satisfactionvalue.DesireID))
@@ -351,11 +389,11 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     if (interruptable == true)
                     {
-                        return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, alreadyUsed);
+                        return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, priorityInfo);
                     }
                     else
                     {
-                        return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                        return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, priorityInfo);
                     }
 
                     //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
@@ -462,7 +500,7 @@ namespace CalculationEngine.HouseholdElements {
             
         }
 
-        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, Boolean alreadyUsed)
+        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -524,8 +562,9 @@ namespace CalculationEngine.HouseholdElements {
                     }
                     double afterValueDBL = updateValue;
 
-                    profitValue = (profitValue*weightDBL) / duration;
-                    totalDeviation += TunningDeviation(profitValue, duration);
+                    profitValue = (profitValue * weightDBL) / duration;
+                    //totalDeviation += TunningDeviation(profitValue, duration);
+                    totalDeviation += (decimal)profitValue;
                     var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
                     if (sb != null)
                     {
@@ -598,12 +637,12 @@ namespace CalculationEngine.HouseholdElements {
                     
 
 
-                    profitValue = profitValue * weightDBL / duration;
+                    profitValue = (profitValue * weightDBL) / duration;
                     //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
                     //desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
 
-                    //totalDeviation += (decimal)profitValue;
-                    totalDeviation += TunningDeviation(profitValue,duration);
+                    totalDeviation += (decimal)profitValue;
+                    //totalDeviation += TunningDeviation(profitValue,duration);
 
                     if (sb != null)
                     {
@@ -633,13 +672,17 @@ namespace CalculationEngine.HouseholdElements {
             }
             
             //if (duration < 2 || alreadyUsed == true)
-            if (alreadyUsed == true)
+            if (priorityInfo == 0)
             {
-                return 10000000000000;
+                return 1000000000000000;
+            }
+            else if(priorityInfo == 2)
+            {
+                return totalDeviation;
             }
             else
             {
-                return totalDeviation;
+                return TunningDeviation((double)totalDeviation, duration);
             }
         }
 
@@ -648,10 +691,12 @@ namespace CalculationEngine.HouseholdElements {
             //double tunning = (2 - Math.Exp(-duration));
             //double result = deviationRAW*tunning;
             //return (decimal)result;
+
             double rate = duration / (24 * 60);
-            double alpha = 1;
+            double alpha = 3.8;
             double tunning = (2 - Math.Exp(-alpha*rate));
             double result = deviationRAW * tunning;
+            //double result = deviationRAW;
             return (decimal)result;
         }
 

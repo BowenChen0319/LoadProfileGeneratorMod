@@ -727,6 +727,7 @@ namespace CalculationEngine.HouseholdElements {
         {
             var bestdiff = decimal.MaxValue;
             var bestaff = allAvailableAffordances[0];
+
             var bestaffordances = new List<ICalcAffordanceBase>();
             foreach (var affordance in allAvailableAffordances)
             {
@@ -738,6 +739,10 @@ namespace CalculationEngine.HouseholdElements {
                 //String category = affordance.AffCategory;
 
                 var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
+                if(desireDiff == 1000000000000000)
+                {
+                    continue;
+                }
                 //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
