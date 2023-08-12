@@ -84,7 +84,7 @@ namespace CalculationEngine.HouseholdElements {
             {
                 if(_useNewAlgo == true)
                 {
-                    while (_lastAffordances.Count > 35)
+                    while (_lastAffordances.Count > 10)
                     {
                         _lastAffordances.RemoveAt(0);
                         //_timeOfLastAffordance.RemoveAt(0);
@@ -105,14 +105,16 @@ namespace CalculationEngine.HouseholdElements {
                 _lastAffordances.Add(affordance);
                 //_timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
                 //_timeOfLastAffordance.Add(currentTimeStep);
-                if (_lastAffordanceTime.ContainsKey(affordance))
+                var words = affordance.Split(' ');
+                string affordanceKey = string.Join(" ", words.Take(3)); // 取 affordance 中的前三个单词
+
+                if (_lastAffordanceTime.ContainsKey(affordanceKey))
                 {
-                    _lastAffordanceTime[affordance] = currentTimeStep; // 更新时间
+                    _lastAffordanceTime[affordanceKey] = currentTimeStep; // 更新时间
                 }
                 else
                 {
-                    _lastAffordances.Add(affordance); // 只有在 affordance 不存在时才添加到 _lastAffordances 列表
-                    _lastAffordanceTime.Add(affordance, currentTimeStep); // 添加新条目
+                    _lastAffordanceTime.Add(affordanceKey, currentTimeStep); // 添加新条目
                 }
                 Debug.WriteLine("                              duration" + durationAsTimestep);
                 //
@@ -282,11 +284,19 @@ namespace CalculationEngine.HouseholdElements {
             return CalcTotalDeviation(out thoughtstring);
         }
 
+        public decimal CalcEffectPartlyNew(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring)
+        {
+            //var restTime = affordance.GetRestTimeWindows(currentTime);
+            Debug.WriteLine("   Rest TimeWindow；  "+affordance.GetRestTimeWindows(currentTime));
+            return CalcEffectPartly(affordance.Satisfactionvalues, out thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, affordance.GetDuration(), currentTime);
+            
+        }
+
         public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
             [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
         {
             //var useNewAlgo = false;
-
+            Debug.WriteLine("     aff: " + affordanceName);
             if(_useNewAlgo == true)
             {
                 var satisfactionvalueRAW = satisfactionvalues;
@@ -297,57 +307,47 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 decimal modifier = 1;
                 //TimeStep edge = new TimeStep(120,0,false);
-                TimeStep edge = new TimeStep(3*1440, 0, false);
+                TimeStep edge = new TimeStep(1440, 0, false);
+                TimeStep edge1 = new TimeStep(180, 0, false);
                 int priorityInfo = 1;
                 List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
 
-                //if (_lastAffordances.Contains(affordanceName))
-                //{
-                //    var lastIndex = _lastAffordances.FindLastIndex(a => String.Equals(a, affordanceName, StringComparison.OrdinalIgnoreCase));
-                //    if ((currentTime - _timeOfLastAffordance[lastIndex]) < edge && !whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
-                //    {
-                //        modifier *= 0.1m;
-                //        priorityInfo = 0;
-                //        if(affordanceName == "visit the theater")
-                //        {
-                //            Debug.WriteLine(affordanceName + " already used" + currentTime + "    last:  " + _timeOfLastAffordance[lastIndex]);
-                //        }
-                        
-                //    }
-                //    else if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
-                //    {
-                //        modifier *= 1;
-                //        priorityInfo = 2;
-                //    }
-                //    else
-                //    {
-                //        modifier *= 1;
-                //    }
-                //}
-
                 TimeStep lastTime;
-                if (_lastAffordanceTime.TryGetValue(affordanceName, out lastTime))
+                var words = affordanceName.Split(' ');
+                string affordanceKey = string.Join(" ", words.Take(3));
+                if (_lastAffordanceTime.TryGetValue(affordanceKey, out lastTime))
                 {
-                    if ((currentTime - lastTime) < edge && !whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                    if(whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
                     {
-                        modifier *= 0.1m;
-                        priorityInfo = 0;
-                        //if (affordanceName == "visit the theater")
-                        //{
-                        //    Debug.WriteLine(affordanceName + " already used" + currentTime + "    last:  " + _timeOfLastAffordance[lastIndex]);
-                        //}
+                        if((currentTime - lastTime) < edge1)
+                        {
+                            priorityInfo = 0;
+                        }
+                        else
+                        {
+                            modifier *= 1;
+                            priorityInfo = 2;
+                        }
                     }
-                }
-                else if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
-                {
-                    modifier *= 1;
-                    priorityInfo = 2;
+                    else
+                    {
+                        if((currentTime - lastTime) < edge)
+                        {
+                            modifier *= 0.1m;
+                            priorityInfo = 0;
+                        }
+                    }
                 }
                 else
                 {
-                    modifier *= 1;
+                    if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                    {
+                        modifier *= 1;
+                        priorityInfo = 2;
+                    }
+                    
                 }
-
+                
                 // add value
                 foreach (var satisfactionvalue in satisfactionvalues)
                 {
@@ -500,7 +500,7 @@ namespace CalculationEngine.HouseholdElements {
             
         }
 
-        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo)
+        private decimal CalcTotalDeviationAllasAreaOld(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -686,6 +686,103 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
+        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo)
+        {
+            decimal totalDeviation = 0;
+            StringBuilder? sb = null;
+            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
+            if (makeThoughts)
+            {
+                sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
+            }
+
+            var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value);
+
+            double weight_sum = 0;
+            foreach (var calcDesire in Desires.Values)
+            {
+                var desireID = calcDesire.DesireID;
+                double satisfactionvalueDBL;
+                if (satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueRAW))
+                {
+                    satisfactionvalueDBL = (double)satisfactionvalueRAW;
+                }
+                else
+                {
+                    satisfactionvalueDBL = 0;
+                }
+
+                var desire = calcDesire;
+                double decayrate = desire.GetDecayRateDoulbe();
+                var currentValueRAW = desire.TempValue;
+                var weight = desire.Weight;
+                double weightDBL = (double)weight;
+
+                if(satisfactionvalueDBL > 0)
+                {
+                    weight_sum += weightDBL;
+                }
+                
+
+                double currentValueDBL = (double)currentValueRAW;
+
+                double profitValue = 0;
+                profitValue = (1 - currentValueDBL);
+                double updateValue = currentValueDBL;
+                for (var i = 0; i < duration; i++)
+                {
+                    updateValue = satisfactionvalueDBL > 0 ? Math.Min(1, updateValue + satisfactionvalueDBL / duration) : updateValue * decayrate;
+                    double diff = (1 - updateValue);
+                    profitValue = profitValue + diff;
+                }
+                double afterValueDBL = updateValue;
+
+                profitValue = (profitValue * weightDBL) / duration;
+                totalDeviation += (decimal)profitValue;
+                var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
+                if (sb != null)
+                {
+                    sb.Append(calcDesire.Name);
+                    sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
+                    sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
+                    sb.Append("*");
+                    sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
+                    sb.Append("*");
+                    sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
+                    sb.Append(_calcRepo.CalcParameters.CSVCharacter);
+                    sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
+                    sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
+                }
+            }
+            Debug.WriteLine("    weight-sum:  " + weight_sum);
+            if (weight_sum < 1)
+            {
+                weight_sum = 1;
+            }
+            if (sb != null)
+            {
+                thoughtstring = sb.ToString();
+            }
+            else
+            {
+                thoughtstring = null;
+            }
+
+            if (priorityInfo == 0)
+            {
+                return 1000000000000000;
+            }
+            else if (priorityInfo == 2)
+            {
+                //return totalDeviation/(decimal)weight_sum;
+                return TunningDeviation((double)totalDeviation, duration) / (decimal)weight_sum;
+            }
+            else
+            {
+                return TunningDeviation((double)totalDeviation, duration) / (decimal)weight_sum;
+            }
+        }
+
         static decimal TunningDeviation(double deviationRAW, int duration)
         {
             //double tunning = (2 - Math.Exp(-duration));
@@ -693,7 +790,7 @@ namespace CalculationEngine.HouseholdElements {
             //return (decimal)result;
 
             double rate = duration / (24 * 60);
-            double alpha = 3.8;
+            double alpha = 8;
             double tunning = (2 - Math.Exp(-alpha*rate));
             double result = deviationRAW * tunning;
             //double result = deviationRAW;

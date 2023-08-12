@@ -729,6 +729,13 @@ namespace CalculationEngine.HouseholdElements {
             var bestaff = allAvailableAffordances[0];
 
             var bestaffordances = new List<ICalcAffordanceBase>();
+
+            //decimal DiffWork = 0;
+            //decimal DiffTheater = 0;
+            //bool foundWorkAsTeacher = allAvailableAffordances.Any(a => a.Name == "work as teacher");
+            //bool foundVisitTheTheater = allAvailableAffordances.Any(a => a.Name == "visit the theater");
+
+
             foreach (var affordance in allAvailableAffordances)
             {
                 //var desireDiff =
@@ -739,6 +746,17 @@ namespace CalculationEngine.HouseholdElements {
                 //String category = affordance.AffCategory;
 
                 var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
+                
+                //if(affordance.Name == "visit the theater")
+                //{
+                //    DiffTheater = desireDiff;
+                //}
+
+                //if(affordance.Name == "work as teacher")
+                //{
+                //    DiffWork = desireDiff;
+                //}
+
                 if(desireDiff == 1000000000000000)
                 {
                     continue;
@@ -781,6 +799,10 @@ namespace CalculationEngine.HouseholdElements {
                     this, _calcPerson.HouseholdKey);
             }
 
+            //if(bestaff.Name == "visit the theater" || bestaff.Name == "work as teacher")
+            //{
+            //    Debug.WriteLine("     work: " + DiffWork + foundWorkAsTeacher + "   theater:  " + DiffTheater + foundVisitTheTheater);
+            //}
             return bestaff;
         }
 
@@ -876,6 +898,7 @@ namespace CalculationEngine.HouseholdElements {
                                                                             bool getOnlyInterrupting,
                                                                             [JetBrains.Annotations.NotNull] PotentialAffs potentialAffs, bool tryHarder)
         {
+            
             var getOnlyRelevantDesires = getOnlyInterrupting; // just for clarity
             // normal affs
             var resultingAff = new List<ICalcAffordanceBase>();
@@ -886,15 +909,30 @@ namespace CalculationEngine.HouseholdElements {
             else {
                 srcList = potentialAffs.PotentialAffordances;
             }
+            
+            //bool foundWorkAsTeacher1 = srcList.Any(a => a.Name == "work as teacher");
+            //bool foundVisit1 = srcList.Any(a => a.Name == "visit the theater");
+
 
             foreach (var calcAffordanceBase in srcList) {
                 if (NewIsAvailableAffordance(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
                     CurrentLocation.CalcSite, tryHarder)) {
                     resultingAff.Add(calcAffordanceBase);
                 }
+                //here exist a filter!!!
             }
+            bool foundWorkAsTeacher2 = resultingAff.Any(a => a.Name == "work as teacher");
+            bool foundVisit2 = resultingAff.Any(a => a.Name == "visit the theater");
+
+            //if(getOnlyInterrupting == false)
+            //{
+            //    Debug.WriteLine("Found worker before " + foundWorkAsTeacher1 + "    found worker after " + foundWorkAsTeacher2
+            //    + "  Found visit before  " + foundVisit1 + "   found visit after  " + foundVisit2);
+            //}
+            
 
             // subaffs
+
             List<ICalcAffordanceBase> subSrcList;
             if (getOnlyInterrupting) {
                 subSrcList = potentialAffs.PotentialAffordancesWithInterruptingSubAffordances;
@@ -932,28 +970,34 @@ namespace CalculationEngine.HouseholdElements {
                                               AffordanceStatusClass? errors, bool checkForRelevance,
                                               CalcSite? srcSite, bool ignoreAlreadyExecutedActivities)
         {
+            //Debug.WriteLine(aff.Name);
             if (_calcRepo.CalcParameters.TransportationEnabled) {
                 if (aff.Site != srcSite && !(aff is AffordanceBaseTransportDecorator)) {
                     //person is not at the right place and can't transport -> not available.
+                    //Debug.WriteLine("   Not at the right place");
                     return false;
                 }
             }
 
-            if (!ignoreAlreadyExecutedActivities && _previousAffordances.Contains(aff)) {
-                if (errors != null) {
-                    errors.Reasons.Add(new AffordanceStatusTuple(aff, "Just did this."));
-                }
+            //if (!ignoreAlreadyExecutedActivities && _previousAffordances.Contains(aff)) {
+            //    if (errors != null) {
+            //        errors.Reasons.Add(new AffordanceStatusTuple(aff, "Just did this."));
+            //    }
 
-                return false;
-            }
+            //    return false;
+            //}
+
+            Debug.WriteLine(aff.Name);
 
             var busynessResult = aff.IsBusy(timeStep, CurrentLocation, _calcPerson);
+            //Debug.WriteLine(busynessResult);
             if (busynessResult != BusynessType.NotBusy) {
                 if (errors != null) {
                     errors.Reasons.Add(new AffordanceStatusTuple(aff, "Affordance is busy:" + busynessResult.ToString()));
                 }
-
+                //Debug.WriteLine("   Affordance is busy");
                 return false;
+                //here is a filter
             }
 
             if (checkForRelevance && !PersonDesires.HasAtLeastOneDesireBelowThreshold(aff)) {
@@ -961,7 +1005,7 @@ namespace CalculationEngine.HouseholdElements {
                     errors.Reasons.Add(new AffordanceStatusTuple(aff,
                         "Person has no desires below the threshold for this affordance, so it is not relevant right now."));
                 }
-
+                //Debug.WriteLine("   No desires below");
                 return false;
             }
 

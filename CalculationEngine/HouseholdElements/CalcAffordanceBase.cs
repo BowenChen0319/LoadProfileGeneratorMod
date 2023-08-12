@@ -26,11 +26,15 @@
 
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Automation;
 using Automation.ResultFiles;
+using CalculationEngine.HouseholdElements;
 using CalculationEngine.Transportation;
 using Common;
 using Common.CalcDto;
@@ -39,7 +43,8 @@ using Common.JSON;
 using Common.SQLResultLogging.Loggers;
 using JetBrains.Annotations;
 
-namespace CalculationEngine.HouseholdElements {
+namespace CalculationEngine.HouseholdElements
+{
     [SuppressMessage("ReSharper", "ConvertToAutoProperty")]
     public abstract class CalcAffordanceBase : CalcBase, ICalcAffordanceBase, IHouseholdKey {
         private static int _calcAffordanceBaseSerialTracker;
@@ -132,6 +137,8 @@ namespace CalculationEngine.HouseholdElements {
         public abstract BusynessType IsBusy(TimeStep time,
                                     CalcLocation srcLocation, CalcPersonDto calcPerson,
                                     bool clearDictionaries = true);
+
+        public abstract int GetRestTimeWindows(TimeStep time);
 
         public bool IsInterruptable { get; }
 

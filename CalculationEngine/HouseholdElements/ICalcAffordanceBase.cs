@@ -71,6 +71,8 @@ namespace CalculationEngine.HouseholdElements
         bool AreThereDuplicateEnergyProfiles();
         int GetDuration();
         string? AreDeviceProfilesEmpty();
+        int GetRestTimeWindows(TimeStep time);
+        
 
         CalcSite? Site { get; }
 

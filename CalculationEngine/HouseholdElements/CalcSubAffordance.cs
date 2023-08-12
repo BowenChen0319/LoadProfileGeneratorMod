@@ -29,6 +29,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Automation;
 using Automation.ResultFiles;
 using Common;
@@ -79,6 +80,10 @@ namespace CalculationEngine.HouseholdElements {
         public override void Activate(TimeStep startTime, string activatorName, CalcLocation personSourceLocation,
              out ICalcProfile personTimeProfile)
         {
+            //Debug.WriteLine(activatorName);
+            //Debug.WriteLine(startTime);
+            //Debug.WriteLine(PersonProfileDuration);
+            
             for (var i = 0; i < PersonProfileDuration && i + startTime.InternalStep < IsBusyArray.Length; i++) {
                 IsBusyArray[i + startTime.InternalStep] = true;
             }
@@ -141,5 +146,10 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         public override string ToString() => "Sub-Affordance:" + Name;
+
+        public override int GetRestTimeWindows(TimeStep time)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

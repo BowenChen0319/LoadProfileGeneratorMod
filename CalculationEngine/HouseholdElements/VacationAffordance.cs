@@ -74,5 +74,10 @@ namespace CalculationEngine.HouseholdElements {
                                     CalcLocation srcLocation, CalcPersonDto calcPerson,
                                     bool clearDictionaries = true) =>
             throw new LPGException("This function should never be called");
+
+        public override int GetRestTimeWindows(TimeStep time)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

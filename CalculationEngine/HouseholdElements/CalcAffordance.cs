@@ -172,6 +172,10 @@ namespace CalculationEngine.HouseholdElements {
                 _timeFactorsForTimes[startTime.InternalStep]);
             _startTimeStep = startTime;
             _endTimeStep = startTime.AddSteps(personsteps);
+            //Debug.WriteLine(_startTimeStep);
+            //Debug.WriteLine(personsteps);
+            //Debug.WriteLine(_endTimeStep);
+            //personstps = duration
             if (DoubleCheckBusyArray) {
                 for (var i = 0; i < personsteps && i + startTime.InternalStep < CalcRepo.CalcParameters.InternalTimesteps; i++) {
                     if (IsBusyArray[i + startTime.InternalStep]) {
@@ -283,6 +287,28 @@ namespace CalculationEngine.HouseholdElements {
             return result;
         }
 
+        public override int GetRestTimeWindows(TimeStep time)
+        {
+            if (IsBusyArray[time.InternalStep] == false)
+            {
+                int stepsUntilTrue = -1; // 默认值为-1，表示在给定的startIndex之后未找到true值
+                for (int i = time.InternalStep + 1; i < IsBusyArray.Count; i++)
+                {
+                    if (IsBusyArray[i])
+                    {
+                        stepsUntilTrue = i - time.InternalStep;
+                        break;
+                    }
+                }
+                return stepsUntilTrue;
+            }
+            else
+            {
+                return -100;
+            }
+            
+        }
+
         public override BusynessType IsBusy(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true)
         {
             if (!_timeFactorsForTimes.ContainsKey(time.InternalStep)) {
@@ -318,7 +344,35 @@ namespace CalculationEngine.HouseholdElements {
                 return BusynessType.BeyondTimeLimit;
             }
 
-            if (IsBusyArray[time.InternalStep]) {
+            //Debug.WriteLine(time.InternalStep);
+            //if (IsBusyArray[time.InternalStep] == false)
+            //{
+            //    // 在给定的time.InternalStep之后的多少step之后的IsBusyArray才变为true
+            //    int stepsUntilTrue = -1; // 默认值为-1，表示在给定的startIndex之后未找到true值
+            //    for (int i = time.InternalStep + 1; i < IsBusyArray.Count; i++)
+            //    {
+            //        if (IsBusyArray[i])
+            //        {
+            //            stepsUntilTrue = i - time.InternalStep;
+            //            break;
+            //        }
+            //    }
+
+            //    Debug.WriteLine($"          IsBusyAfter  {stepsUntilTrue}   steps ");
+            //    // 这里可以添加逻辑来返回其他的BusynessType，例如:
+            //    // return BusynessType.Free;
+            //}
+            if (IsBusyArray[time.InternalStep])
+            {
+                //Debug.WriteLine(IsBusyArray);
+                //string output = "IsBusy: ";
+                //for (int i = 0; i < IsBusyArray.Count; i++)
+                //{
+                //    output += IsBusyArray[i] ? '1' : '0';
+                //}
+                //Debug.WriteLine(output);
+                
+
                 return BusynessType.Occupied;
             }
 
@@ -326,6 +380,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (dpt.Probability > _probabilitiesForTimes[time.InternalStep]) {
                     if (dpt.CalcDevice.IsBusyDuringTimespan(time.AddSteps(dpt.TimeOffsetInSteps), dpt.TimeProfile.StepValues.Count,
                         _timeFactorsForTimes[time.InternalStep], dpt.LoadType)) {
+                        //Debug.WriteLine("dpt.CalcDevice.IsBusyDuringTimespan");
                         return BusynessType.Occupied;
                     }
                 }

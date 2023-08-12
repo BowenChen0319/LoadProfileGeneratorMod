@@ -241,6 +241,11 @@ namespace CalculationEngine.Transportation {
             return _sourceAffordance.AreDeviceProfilesEmpty();
         }
 
+        public int GetRestTimeWindows(TimeStep time)
+        {
+            throw new NotImplementedException();
+        }
+
         public int Weight => _sourceAffordance.Weight;
     }
 }
