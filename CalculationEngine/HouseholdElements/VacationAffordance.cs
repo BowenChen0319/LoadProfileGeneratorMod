@@ -77,7 +77,24 @@ namespace CalculationEngine.HouseholdElements {
 
         public override int GetRestTimeWindows(TimeStep time)
         {
-            throw new NotImplementedException();
+            if (IsBusyArray[time.InternalStep] == false)
+            {
+                int stepsUntilTrue = -1; // 默认值为-1，表示在给定的startIndex之后未找到true值
+                for (int i = time.InternalStep + 1; i < IsBusyArray.Count; i++)
+                {
+                    if (IsBusyArray[i])
+                    {
+                        stepsUntilTrue = i - time.InternalStep;
+                        break;
+                    }
+                }
+                return stepsUntilTrue;
+            }
+            else
+            {
+                return -100;
+            }
+
         }
     }
 }

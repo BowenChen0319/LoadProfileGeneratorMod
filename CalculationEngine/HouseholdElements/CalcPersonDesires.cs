@@ -284,19 +284,20 @@ namespace CalculationEngine.HouseholdElements {
             return CalcTotalDeviation(out thoughtstring);
         }
 
-        public decimal CalcEffectPartlyNew(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring)
-        {
-            //var restTime = affordance.GetRestTimeWindows(currentTime);
-            Debug.WriteLine("   Rest TimeWindow；  "+affordance.GetRestTimeWindows(currentTime));
-            return CalcEffectPartly(affordance.Satisfactionvalues, out thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, affordance.GetDuration(), currentTime);
-            
-        }
 
-        public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
-            [NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
+        //public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
+        //[NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
+        public decimal CalcEffectPartly(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring)
         {
             //var useNewAlgo = false;
-            Debug.WriteLine("     aff: " + affordanceName);
+            
+            var satisfactionvalues = affordance.Satisfactionvalues;
+            var affordanceName = affordance.Name;
+            var interruptable = affordance.IsInterruptable;
+            var duration = affordance.GetDuration();
+            var restTime = affordance.GetRestTimeWindows(currentTime);
+            
+            //Debug.WriteLine("     aff: " + affordanceName + "   restTime:  "+restTime);
             if(_useNewAlgo == true)
             {
                 var satisfactionvalueRAW = satisfactionvalues;
@@ -389,11 +390,11 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     if (interruptable == true)
                     {
-                        return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, priorityInfo);
+                        return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, priorityInfo,restTime);
                     }
                     else
                     {
-                        return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, priorityInfo);
+                        return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
                     }
 
                     //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
@@ -682,11 +683,11 @@ namespace CalculationEngine.HouseholdElements {
             }
             else
             {
-                return TunningDeviation((double)totalDeviation, duration);
+                return totalDeviation;
             }
         }
 
-        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo)
+        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -754,7 +755,14 @@ namespace CalculationEngine.HouseholdElements {
                     sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                 }
             }
-            Debug.WriteLine("    weight-sum:  " + weight_sum);
+            //Debug.WriteLine("    weight-sum:  " + weight_sum);
+
+            //decimal UrgencyRate = 1;
+            //if (restTime > 0)
+            //{
+            //    UrgencyRate = restTime / duration;
+            //}
+
             if (weight_sum < 1)
             {
                 weight_sum = 1;
@@ -775,15 +783,18 @@ namespace CalculationEngine.HouseholdElements {
             else if (priorityInfo == 2)
             {
                 //return totalDeviation/(decimal)weight_sum;
-                return TunningDeviation((double)totalDeviation, duration) / (decimal)weight_sum;
+
+                return TunningDeviation((double)totalDeviation, duration, weight_sum);
+                //return TunningDeviation((double)totalDeviation, duration) * UrgencyRate;
             }
             else
             {
-                return TunningDeviation((double)totalDeviation, duration) / (decimal)weight_sum;
+                return TunningDeviation((double)totalDeviation, duration, weight_sum);
+                //return TunningDeviation((double)totalDeviation, duration) * UrgencyRate;
             }
         }
 
-        static decimal TunningDeviation(double deviationRAW, int duration)
+        static decimal TunningDeviation(double deviationRAW, int duration, double weight_sum)
         {
             //double tunning = (2 - Math.Exp(-duration));
             //double result = deviationRAW*tunning;
@@ -794,7 +805,7 @@ namespace CalculationEngine.HouseholdElements {
             double tunning = (2 - Math.Exp(-alpha*rate));
             double result = deviationRAW * tunning;
             //double result = deviationRAW;
-            return (decimal)result;
+            return (decimal)result/ (decimal)weight_sum;
         }
 
         private decimal CalcTotalDeviation(out string? thoughtstring) {

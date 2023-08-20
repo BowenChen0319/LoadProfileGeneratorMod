@@ -243,7 +243,7 @@ namespace CalculationEngine.Transportation {
 
         public int GetRestTimeWindows(TimeStep time)
         {
-            throw new NotImplementedException();
+            return _sourceAffordance.GetRestTimeWindows(time);
         }
 
         public int Weight => _sourceAffordance.Weight;

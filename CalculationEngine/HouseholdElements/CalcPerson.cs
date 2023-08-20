@@ -138,6 +138,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public int _currentDuration = 0;
 
+        public static Boolean _useNewAlgo = true;
+
 
 
         [JetBrains.Annotations.NotNull]
@@ -722,7 +724,77 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         [JetBrains.Annotations.NotNull]
+
         private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
+                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
+        {
+            var bestDiff = decimal.MaxValue;
+            var bestAffordance = allAvailableAffordances[0];
+
+            var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int>>();
+
+            foreach (var affordance in allAvailableAffordances)
+            {
+                var duration = affordance.GetDuration();
+                var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+
+                if (desireDiff == 1000000000000000)
+                {
+                    continue;
+                }
+
+                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+                {
+                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+                    {
+                        throw new LPGException("Logfile was null.");
+                    }
+
+                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+                        new ThoughtEntry(this, time,
+                            "Desirediff for " + affordance.Name + " is :" +
+                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+                        _calcPerson.HouseholdKey);
+                }
+
+                var restTimeWindows = affordance.GetRestTimeWindows(time);
+                affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows);
+
+                if (desireDiff < bestDiff)
+                {
+                    bestDiff = desireDiff;
+                    bestAffordance = affordance;
+                }
+            }
+            //Look back
+            //if(_useNewAlgo == true)
+            //{
+            //    int threshold = 120;
+            //    var ratio = 0.7;
+            //    int bestRestTime = bestAffordance.GetRestTimeWindows(time);
+            //    if (bestAffordance.GetDuration() > threshold && bestRestTime > 30)
+            //    {
+            //        var suitableAffordances = affordanceDetails.Where(a => a.Value.Item2 < bestRestTime - 45 && a.Value.Item3 < bestRestTime && a.Value.Item3 > 0)
+            //                                                    .OrderBy(a => a.Value.Item1)
+            //                                                    .Select(a => allAvailableAffordances.FirstOrDefault(aff => aff.Name == a.Key))
+            //                                                    .FirstOrDefault();
+
+            //        if (suitableAffordances != null)
+            //        {
+            //            Debug.WriteLine("   Rather  " + bestAffordance.Name + "  be  " + suitableAffordances.Name);
+            //            return suitableAffordances;
+            //        }
+            //    }
+            //}
+
+
+
+            return bestAffordance;
+        }
+
+
+
+        private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
         {
             var bestdiff = decimal.MaxValue;
@@ -743,10 +815,11 @@ namespace CalculationEngine.HouseholdElements {
 
                 //var duration = affordance.CalcAffordanceSerial.ToString();
                 var duration = affordance.GetDuration();
+                var restTime = affordance.GetRestTimeWindows(time);
                 //String category = affordance.AffCategory;
-
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
                 
+                //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
+                var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
                 //if(affordance.Name == "visit the theater")
                 //{
                 //    DiffTheater = desireDiff;
@@ -757,7 +830,7 @@ namespace CalculationEngine.HouseholdElements {
                 //    DiffWork = desireDiff;
                 //}
 
-                if(desireDiff == 1000000000000000)
+                if (desireDiff == 1000000000000000)
                 {
                     continue;
                 }
@@ -815,8 +888,8 @@ namespace CalculationEngine.HouseholdElements {
             Parallel.ForEach(allAvailableAffordances, affordance =>
             {
                 var duration = affordance.GetDuration();
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
-
+                //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
+                var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
                 // Log thoughts
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
                 {
@@ -987,7 +1060,7 @@ namespace CalculationEngine.HouseholdElements {
             //    return false;
             //}
 
-            Debug.WriteLine(aff.Name);
+            //Debug.WriteLine(aff.Name);
 
             var busynessResult = aff.IsBusy(timeStep, CurrentLocation, _calcPerson);
             //Debug.WriteLine(busynessResult);
