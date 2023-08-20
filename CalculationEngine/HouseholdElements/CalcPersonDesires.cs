@@ -309,7 +309,7 @@ namespace CalculationEngine.HouseholdElements {
                 decimal modifier = 1;
                 //TimeStep edge = new TimeStep(120,0,false);
                 TimeStep edge = new TimeStep(1440, 0, false);
-                TimeStep edge1 = new TimeStep(180, 0, false);
+                TimeStep edge1 = new TimeStep(180, 0, false);//diff
                 int priorityInfo = 1;
                 List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
 
