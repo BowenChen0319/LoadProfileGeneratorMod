@@ -287,7 +287,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
         //[NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
-        public decimal CalcEffectPartly(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring)
+        public (decimal totalDeviation, double WeightSum) CalcEffectPartly(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring)
         {
             //var useNewAlgo = false;
             
@@ -310,6 +310,7 @@ namespace CalculationEngine.HouseholdElements {
                 //TimeStep edge = new TimeStep(120,0,false);
                 TimeStep edge = new TimeStep(1440, 0, false);
                 TimeStep edge1 = new TimeStep(180, 0, false);//diff
+                TimeStep edgeWeek = new TimeStep(60*24*7,0, false);
                 int priorityInfo = 1;
                 List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
 
@@ -333,6 +334,11 @@ namespace CalculationEngine.HouseholdElements {
                     else
                     {
                         if((currentTime - lastTime) < edge)
+                        {
+                            modifier *= 0.1m;
+                            priorityInfo = 0;
+                        }
+                        if(duration>120 && (currentTime - lastTime) < edgeWeek)//action, which too long
                         {
                             modifier *= 0.1m;
                             priorityInfo = 0;
@@ -402,13 +408,13 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 else
                 {
-                    return CalcEffect(satisfactionvalues, out thoughtstring, affordanceName);
+                    return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName),-1);
                 }
                 //return CalcTotalDeviation(out thoughtstring);
             }
             else
             {
-                return CalcEffect(satisfactionvalues, out thoughtstring, affordanceName);
+                return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName),-1);
             }
 
 
@@ -687,7 +693,7 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        private decimal CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
+        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -778,35 +784,38 @@ namespace CalculationEngine.HouseholdElements {
 
             if (priorityInfo == 0)
             {
-                return 1000000000000000;
+                return (1000000000000000, weight_sum);
             }
             else if (priorityInfo == 2)
             {
                 //return totalDeviation/(decimal)weight_sum;
 
-                return TunningDeviation((double)totalDeviation, duration, weight_sum);
+                //return (TunningDeviation((double)totalDeviation, duration), weight_sum);
                 //return TunningDeviation((double)totalDeviation, duration) * UrgencyRate;
+                return (totalDeviation, weight_sum);
             }
             else
             {
-                return TunningDeviation((double)totalDeviation, duration, weight_sum);
+                //return (TunningDeviation((double)totalDeviation, duration), weight_sum);
                 //return TunningDeviation((double)totalDeviation, duration) * UrgencyRate;
+                return (totalDeviation, weight_sum);
             }
         }
 
-        static decimal TunningDeviation(double deviationRAW, int duration, double weight_sum)
-        {
-            //double tunning = (2 - Math.Exp(-duration));
-            //double result = deviationRAW*tunning;
-            //return (decimal)result;
+        //static decimal TunningDeviation(double deviationRAW, int duration)
+        //{
+        //    //double tunning = (2 - Math.Exp(-duration));
+        //    //double result = deviationRAW*tunning;
+        //    //return (decimal)result;
 
-            double rate = duration / (24 * 60);
-            double alpha = 8;
-            double tunning = (2 - Math.Exp(-alpha*rate));
-            double result = deviationRAW * tunning;
-            //double result = deviationRAW;
-            return (decimal)result/ (decimal)weight_sum;
-        }
+        //    double rate = duration / (24 * 60);
+        //    double alpha = 4;//8
+        //    double tunning = (2 - Math.Exp(-alpha*rate));
+        //    double result = deviationRAW * tunning;
+        //    //double result = deviationRAW;
+        //    //return (decimal)result/ (decimal)weight_sum;
+        //    return (decimal)result;
+        //}
 
         private decimal CalcTotalDeviation(out string? thoughtstring) {
             decimal totalDeviation = 0;

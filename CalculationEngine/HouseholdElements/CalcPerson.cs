@@ -287,7 +287,7 @@ namespace CalculationEngine.HouseholdElements {
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
-            Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name);
+            Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name + "  restTime:  "+bestaff.GetRestTimeWindows(time));
 
             ActivateAffordance(time, isDaylight,  bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -730,18 +730,25 @@ namespace CalculationEngine.HouseholdElements {
         {
             var bestDiff = decimal.MaxValue;
             var bestAffordance = allAvailableAffordances[0];
+            double bestWeightSum = -1;
 
-            var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int>>();
+            var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int, double>>();
 
             foreach (var affordance in allAvailableAffordances)
             {
                 var duration = affordance.GetDuration();
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var desireDiff = calcTotalDeviationResult.totalDeviation;
+                var weightSum = calcTotalDeviationResult.WeightSum;
 
                 if (desireDiff == 1000000000000000)
                 {
                     continue;
                 }
+
+                desireDiff = TunningDeviation((double)desireDiff, duration);
+
+                //desireDiff = desireDiff / (decimal)weightSum;
 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
                 {
@@ -758,40 +765,94 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 var restTimeWindows = affordance.GetRestTimeWindows(time);
-                affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows);
+                affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows, weightSum);
 
                 if (desireDiff < bestDiff)
                 {
                     bestDiff = desireDiff;
                     bestAffordance = affordance;
+                    bestWeightSum = weightSum;
                 }
             }
-            //Look back
-            //if(_useNewAlgo == true)
-            //{
-            //    int threshold = 120;
-            //    var ratio = 0.7;
-            //    int bestRestTime = bestAffordance.GetRestTimeWindows(time);
-            //    if (bestAffordance.GetDuration() > threshold && bestRestTime > 30)
-            //    {
-            //        var suitableAffordances = affordanceDetails.Where(a => a.Value.Item2 < bestRestTime - 45 && a.Value.Item3 < bestRestTime && a.Value.Item3 > 0)
-            //                                                    .OrderBy(a => a.Value.Item1)
-            //                                                    .Select(a => allAvailableAffordances.FirstOrDefault(aff => aff.Name == a.Key))
-            //                                                    .FirstOrDefault();
-
-            //        if (suitableAffordances != null)
-            //        {
-            //            Debug.WriteLine("   Rather  " + bestAffordance.Name + "  be  " + suitableAffordances.Name);
-            //            return suitableAffordances;
-            //        }
-            //    }
-            //}
 
 
+            // Look back
+            if (_useNewAlgo == true)
+            {
+                int bestRestTime = bestAffordance.GetRestTimeWindows(time);
+                int bestDuration = bestAffordance.GetDuration();
+
+                // If the importance of the best affordance exceeds 100, return it immediately.
+                if (bestWeightSum >= 100)
+                {
+                    return bestAffordance;
+                }
+                else
+                {
+                    ICalcAffordanceBase? suitableAffordance = null;
+                    double mostWeighted = -1;
+                    double? smallestDesireDiff = double.MaxValue; // Initialize to maximum value.
+
+                    foreach (var kvp in affordanceDetails)
+                    {
+                        var weightSum = kvp.Value.Item4;
+                        var restTimeWindows = kvp.Value.Item3;
+                        var thisDuration = kvp.Value.Item1; // Assuming Item1 is Duration
+
+                        if (weightSum >= 100 && restTimeWindows < 0)
+                        {
+                            if (bestDuration <= 60)
+                            {
+                                return bestAffordance;
+                            }
+                            else
+                            {
+                                var desireDiff = kvp.Value.Item2;  // Assuming Item2 is desireDiff
+                                if (thisDuration <= 60 && desireDiff < smallestDesireDiff)
+                                {
+                                    smallestDesireDiff = desireDiff;
+                                    suitableAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == kvp.Key);
+                                }
+                            }
+                        }
+                        else if (weightSum >= 100 && restTimeWindows < 3 * bestDuration && restTimeWindows > 0 && kvp.Key != bestAffordance.Name)
+                        {
+                            if (weightSum >= mostWeighted)
+                            {
+                                mostWeighted = weightSum;
+                                suitableAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == kvp.Key);
+                            }
+                        }
+                    }
+
+                    if (suitableAffordance != null)
+                    {
+                        Debug.WriteLine("   Rather:  " + bestAffordance.Name + "  be:  " + suitableAffordance.Name);
+                        return suitableAffordance;
+                    }
+                }
+            }
 
             return bestAffordance;
+
+
+
         }
 
+        static decimal TunningDeviation(double deviationRAW, int duration)
+        {
+            //double tunning = (2 - Math.Exp(-duration));
+            //double result = deviationRAW*tunning;
+            //return (decimal)result;
+
+            double rate = duration / (24 * 60);
+            double alpha = 4;//8
+            double tunning = (2 - Math.Exp(-alpha * rate));
+            double result = deviationRAW * tunning;
+            //double result = deviationRAW;
+            //return (decimal)result/ (decimal)weight_sum;
+            return (decimal)result;
+        }
 
 
         private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
@@ -817,9 +878,12 @@ namespace CalculationEngine.HouseholdElements {
                 var duration = affordance.GetDuration();
                 var restTime = affordance.GetRestTimeWindows(time);
                 //String category = affordance.AffCategory;
-                
+
                 //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                //var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var desireDiff = calcTotalDeviationResult.totalDeviation;
+                var weightSum = calcTotalDeviationResult.WeightSum;
                 //if(affordance.Name == "visit the theater")
                 //{
                 //    DiffTheater = desireDiff;
@@ -889,7 +953,10 @@ namespace CalculationEngine.HouseholdElements {
             {
                 var duration = affordance.GetDuration();
                 //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
-                var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                //var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var desireDiff = calcTotalDeviationResult.totalDeviation;
+                var weightSum = calcTotalDeviationResult.WeightSum;
                 // Log thoughts
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
                 {
