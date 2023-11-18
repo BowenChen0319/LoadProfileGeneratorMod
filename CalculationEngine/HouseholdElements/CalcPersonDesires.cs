@@ -56,6 +56,7 @@ namespace CalculationEngine.HouseholdElements {
         [NotNull]
         //private List<TimeStep> _timeOfLastAffordance = new List<TimeStep>();
         private Dictionary<string, TimeStep> _lastAffordanceTime = new Dictionary<string, TimeStep>();
+        private Dictionary<string, DateTime> _lastAffordanceDate = new Dictionary<string, DateTime>();
         [NotNull]
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
@@ -79,7 +80,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         public void ApplyAffordanceEffectPartly([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
-            [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep) {
+            [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep, DateTime now) {
             if (firsttime)
             {
                 if(_useNewAlgo == true)
@@ -116,6 +117,18 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     _lastAffordanceTime.Add(affordanceKey, currentTimeStep); // 添加新条目
                 }
+
+
+                if (_lastAffordanceDate.ContainsKey(affordanceKey))
+                {
+                    _lastAffordanceDate[affordanceKey] = now; // 更新时间
+                }
+                else
+                {
+                    _lastAffordanceDate.Add(affordanceKey, now); // 添加新条目
+                }
+
+
                 Debug.WriteLine("                              duration" + durationAsTimestep);
                 //
             }
@@ -287,7 +300,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
         //[NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
-        public (decimal totalDeviation, double WeightSum) CalcEffectPartly(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring)
+        public (decimal totalDeviation, double WeightSum) CalcEffectPartly(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now)
         {
             //var useNewAlgo = false;
             
@@ -317,6 +330,9 @@ namespace CalculationEngine.HouseholdElements {
                 TimeStep lastTime;
                 var words = affordanceName.Split(' ');
                 string affordanceKey = string.Join(" ", words.Take(3));
+                DateTime lastDate;
+                
+
                 if (_lastAffordanceTime.TryGetValue(affordanceKey, out lastTime))
                 {
                     if(whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))

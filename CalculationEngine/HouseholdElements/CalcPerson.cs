@@ -255,7 +255,7 @@ namespace CalculationEngine.HouseholdElements {
                     //Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
                     _remainingExecutionSteps--;
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
-                    PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time);
+                    PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time, now);
                 }
                 InterruptIfNeeded(time, isDaylight, false,now);
                 //continue with current activity
@@ -282,14 +282,14 @@ namespace CalculationEngine.HouseholdElements {
 
             //activate new affordance
             var bestaff = FindBestAffordance(time,  persons,
-                simulationSeed);
+                simulationSeed, now);
             //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
             //Logger.Info(bestaff.ToString());
             //System.Console.WriteLine(bestaff.ToString());
             //Debug.WriteLine(time);
             Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name + "  restTime:  "+bestaff.GetRestTimeWindows(time));
 
-            ActivateAffordance(time, isDaylight,  bestaff);
+            ActivateAffordance(time, isDaylight,  bestaff, now);
             _isCurrentlyPriorityAffordanceRunning = false;
         }
 
@@ -367,10 +367,10 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances, true);
+                    var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances, true, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
-                    ActivateAffordance(time, isDaylight,  bestAffordance);
+                    ActivateAffordance(time, isDaylight,  bestAffordance, now);
                     
                     
                     switch (bestAffordance.AfterInterruption) {
@@ -547,7 +547,7 @@ namespace CalculationEngine.HouseholdElements {
         public override string ToString() => "Person:" + Name;
 
         private void ActivateAffordance([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
-                                         [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff)
+                                         [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff, DateTime now)
         {
             if (_calcRepo.Logfile == null) {
                 throw new LPGException("Logfile was null.");
@@ -601,7 +601,7 @@ namespace CalculationEngine.HouseholdElements {
                     //PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes);
                 //}
             }
-            PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep);
+            PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
             _executingAffordance = bestaff;
             _remainingExecutionSteps = durationInMinutes - 1;
             _currentDuration = durationInMinutes;
@@ -649,7 +649,7 @@ namespace CalculationEngine.HouseholdElements {
         
         [JetBrains.Annotations.NotNull]
         private ICalcAffordanceBase FindBestAffordance([JetBrains.Annotations.NotNull] TimeStep time,
-                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed)
+                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed, DateTime now)
         {
             var allAffs = IsSick[time.InternalStep] ? _sicknessPotentialAffs : _normalPotentialAffs;
 
@@ -720,13 +720,13 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromList(time,  allAffordances, true);
+            return GetBestAffordanceFromList(time,  allAffordances, true, now);
         }
 
         [JetBrains.Annotations.NotNull]
 
         private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
+                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
             var bestDiff = decimal.MaxValue;
             var bestAffordance = allAvailableAffordances[0];
@@ -737,7 +737,7 @@ namespace CalculationEngine.HouseholdElements {
             foreach (var affordance in allAvailableAffordances)
             {
                 var duration = affordance.GetDuration();
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring,now);
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
                 var weightSum = calcTotalDeviationResult.WeightSum;
 
@@ -747,6 +747,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 desireDiff = TunningDeviation((double)desireDiff, duration);
+                
 
                 //desireDiff = desireDiff / (decimal)weightSum;
 
@@ -842,6 +843,7 @@ namespace CalculationEngine.HouseholdElements {
                 // If the importance of the best affordance exceeds 100 and its restTimeWindows is negative
                 //int bestWeightRestTime = bestWeightAffordance.GetRestTimeWindows(time);
                 //int bestWeightDuration = bestWeightAffordance.GetDuration();
+                DateTime newTime = now.AddMinutes(bestDuration);
                 if (suitableAffordance != null)
                 {
                     Debug.WriteLine("case 3"+ "   Rather:  " + bestAffordance.Name + "  be:  " + suitableAffordance.Name);
@@ -860,7 +862,10 @@ namespace CalculationEngine.HouseholdElements {
                         return bestShortAffordance;
                     }
                 }
-
+                else if(bestDuration>120 && newTime.TimeOfDay> new TimeSpan(1, 0, 0) && newTime.Date>now.Date && bestShortAffordance != null)
+                {
+                    return bestShortAffordance;//avoid no slepp at night
+                }
                 // If found an affordance that meets the criteria, return it.
 
             }
@@ -879,6 +884,7 @@ namespace CalculationEngine.HouseholdElements {
             double rate = duration / (24 * 60);
             double alpha = 4;//8
             double tunning = (2 - Math.Exp(-alpha * rate));
+            //double result = deviationRAW * tunning;
             double result = deviationRAW * tunning;
             //double result = deviationRAW;
             //return (decimal)result/ (decimal)weight_sum;
@@ -887,7 +893,7 @@ namespace CalculationEngine.HouseholdElements {
 
 
         private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
+                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
             var bestdiff = decimal.MaxValue;
             var bestaff = allAvailableAffordances[0];
@@ -912,7 +918,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
                 //var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring, now);
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
                 var weightSum = calcTotalDeviationResult.WeightSum;
                 //if(affordance.Name == "visit the theater")
@@ -976,7 +982,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //Parallel Compute
         private ICalcAffordanceBase GetBestAffordanceFromListParallel([JetBrains.Annotations.NotNull] TimeStep time,
-                                                  [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll)
+                                                  [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
             ConcurrentBag<Tuple<decimal, ICalcAffordanceBase>> results = new ConcurrentBag<Tuple<decimal, ICalcAffordanceBase>>();
 
@@ -985,7 +991,7 @@ namespace CalculationEngine.HouseholdElements {
                 var duration = affordance.GetDuration();
                 //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
                 //var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring, now);
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
                 var weightSum = calcTotalDeviationResult.WeightSum;
                 // Log thoughts
@@ -1092,8 +1098,9 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 //here exist a filter!!!
             }
-            bool foundWorkAsTeacher2 = resultingAff.Any(a => a.Name == "work as teacher");
-            bool foundVisit2 = resultingAff.Any(a => a.Name == "visit the theater");
+            
+            //bool foundWorkAsTeacher2 = resultingAff.Any(a => a.Name == "work as teacher");
+            //bool foundVisit2 = resultingAff.Any(a => a.Name == "visit the theater");
 
             //if(getOnlyInterrupting == false)
             //{
