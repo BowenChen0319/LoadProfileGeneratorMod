@@ -331,7 +331,7 @@ namespace CalculationEngine.HouseholdElements {
                 var words = affordanceName.Split(' ');
                 string affordanceKey = string.Join(" ", words.Take(3));
                 DateTime lastDate;
-                
+                _lastAffordanceDate.TryGetValue(affordanceKey, out lastDate);
 
                 if (_lastAffordanceTime.TryGetValue(affordanceKey, out lastTime))
                 {
@@ -351,8 +351,14 @@ namespace CalculationEngine.HouseholdElements {
                     {
                         if((currentTime - lastTime) < edge)
                         {
-                            modifier *= 0.1m;
-                            priorityInfo = 0;
+                            //modifier *= 0.1m;
+                            //priorityInfo = 0;
+                            if (now.Date == lastDate.Date)
+                            {
+                                
+                                modifier *= 0.1m;
+                                priorityInfo = 0;
+                            }
                         }
                         if(duration>120 && (currentTime - lastTime) < edgeWeek)//action, which too long
                         {
