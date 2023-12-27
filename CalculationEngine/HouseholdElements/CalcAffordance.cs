@@ -388,6 +388,72 @@ namespace CalculationEngine.HouseholdElements {
 
             return BusynessType.NotBusy;
         }
+        
+        //IsBusyOld is the old version of IsBusy, which is used to compare with the new version of IsBusy
+        public BusynessType IsBusyOld(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true)
+        {
+            if (!_timeFactorsForTimes.ContainsKey(time.InternalStep))
+            {
+                if (clearDictionaries)
+                {
+                    //        _timeFactorsForTimes.Clear();
+                }
+
+                _timeFactorsForTimes[time.InternalStep] = CalcRepo.NormalRandom.NextDouble(1, _timeStandardDeviation);
+                if (_timeFactorsForTimes[time.InternalStep] < 0)
+                {
+                    throw new DataIntegrityException("The duration standard deviation on " + Name + " is too large: a negative value of " +
+                                                     _timeFactorsForTimes[time.InternalStep] + " came up. The standard deviation is " +
+                                                     _timeStandardDeviation);
+                }
+            }
+
+            if (!_probabilitiesForTimes.ContainsKey(time.InternalStep))
+            {
+                if (clearDictionaries)
+                {
+                    //      _probabilitiesForTimes.Clear();
+                }
+
+                _probabilitiesForTimes[time.InternalStep] = CalcRepo.Rnd.NextDouble();
+            }
+
+            if (_variableRequirements.Count > 0)
+            {
+                foreach (var requirement in _variableRequirements)
+                {
+                    if (!requirement.IsMet())
+                    {
+                        return BusynessType.VariableRequirementsNotMet; // return is busy right now and not available.
+                    }
+                }
+            }
+
+            if (time.InternalStep >= IsBusyArray.Length)
+            {
+                return BusynessType.BeyondTimeLimit;
+            }
+
+            if (IsBusyArray[time.InternalStep])
+            {
+                return BusynessType.Occupied;
+            }
+
+            foreach (var dpt in Energyprofiles)
+            {
+                if (dpt.Probability > _probabilitiesForTimes[time.InternalStep])
+                {
+                    if (dpt.CalcDevice.IsBusyDuringTimespan(time.AddSteps(dpt.TimeOffsetInSteps), dpt.TimeProfile.StepValues.Count,
+                        _timeFactorsForTimes[time.InternalStep], dpt.LoadType))
+                    {
+                        return BusynessType.Occupied;
+                    }
+                }
+            }
+
+            return BusynessType.NotBusy;
+        }
+
 
         public override string ToString() => "Affordance:" + Name;
 

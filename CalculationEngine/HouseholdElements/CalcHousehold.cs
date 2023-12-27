@@ -425,6 +425,13 @@ namespace CalculationEngine.HouseholdElements {
                 //Debug.WriteLine("Time: " + now);
             }
 
+            //Old version
+            //foreach (var p in _persons)
+            //{
+            //    p.NextStep(timestep, _locations, _daylightArray,
+            //        _householdKey, _persons, _simulationSeed);
+            //}
+
             /*    if ((timestep % RangeCleaningFrequency) == 0)
             {
                 foreach (CalcDevice device in _devices)
@@ -432,7 +439,7 @@ namespace CalculationEngine.HouseholdElements {
                 foreach (CalcAutoDev autoDev in _autoDevs)
                     autoDev.ClearExpiredRanges(timestep);
             }*/
-            if(Logger.Threshold > Severity.Information) {
+            if (Logger.Threshold > Severity.Information) {
                 if (timestep.InternalStep % 5000 == 0 || (DateTime.Now - _lastDisplay).TotalSeconds > 5) {
                     var timeelapesed = DateTime.Now - _startSimulation;
                     var speed = timestep.InternalStep / timeelapesed.TotalSeconds;

@@ -293,6 +293,499 @@ namespace CalculationEngine.HouseholdElements {
             _isCurrentlyPriorityAffordanceRunning = false;
         }
 
+        public void NextStepOld([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+                             [JetBrains.Annotations.NotNull] HouseholdKey householdKey,
+                             [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
+                             int simulationSeed)
+        {
+            if (_calcRepo.Logfile == null)
+            {
+                throw new LPGException("Logfile was null.");
+            }
+
+            if (time.InternalStep == 0)
+            {
+                Init(locs, _sicknessPotentialAffs, true);
+                Init(locs, _normalPotentialAffs, false);
+            }
+
+            if (_previousAffordances.Count > _calcRepo.CalcParameters.AffordanceRepetitionCount)
+            {
+                _previousAffordances.RemoveAt(0);
+            }
+
+            if (_calcRepo.CalcParameters.IsSet(CalcOption.CriticalViolations))
+            {
+                //if (_lf == null) {                    throw new LPGException("Logfile was null.");                }
+
+                PersonDesires.CheckForCriticalThreshold(this, time, _calcRepo.FileFactoryAndTracker, householdKey);
+            }
+
+            PersonDesires.ApplyDecay(time);
+            WriteDesiresToLogfileIfNeeded(time, householdKey);
+
+            ReturnToPreviousActivityIfPreviouslyInterrupted(time);
+
+            // bereits besch鋐tigt
+            if (_isBusy[time.InternalStep])
+            {
+                InterruptIfNeededOld(time, isDaylight, false);
+                return;
+            }
+
+            if (IsOnVacation[time.InternalStep])
+            {
+                BeOnVacation(time);
+
+                return;
+            }
+
+            _alreadyloggedvacation = false;
+            if (!_isCurrentlySick && IsSick[time.InternalStep])
+            {
+                // neue krank geworden
+                BecomeSick(time);
+            }
+
+            if (_isCurrentlySick && !IsSick[time.InternalStep])
+            {
+                // neue gesund geworden
+                BecomeHealthy(time);
+            }
+
+            //activate new affordance
+            var bestaff = FindBestAffordanceOld(time, persons,
+                simulationSeed);
+            //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
+            Logger.Info(bestaff.ToString());
+            Console.WriteLine(bestaff.ToString());
+            ActivateAffordanceOld(time, isDaylight, bestaff);
+            _isCurrentlyPriorityAffordanceRunning = false;
+        }
+
+        private ICalcAffordanceBase FindBestAffordanceOld([JetBrains.Annotations.NotNull] TimeStep time,
+                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed)
+        {
+            var allAffs = IsSick[time.InternalStep] ? _sicknessPotentialAffs : _normalPotentialAffs;
+
+            if (_calcRepo.Rnd == null)
+            {
+                throw new LPGException("Random number generator was not initialized");
+            }
+
+            var allAffordances =
+                NewGetAllViableAffordancesAndSubsOld(time, null, false, allAffs, false);
+            if (allAffordances.Count == 0 && (time.ExternalStep < 0 || _calcRepo.CalcParameters.IgnorePreviousActivitesWhenNeeded))
+            {
+                allAffordances =
+                    NewGetAllViableAffordancesAndSubsOld(time, null, false, allAffs, true);
+            }
+            allAffordances.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
+            //no affordances, so search again for the error messages
+            if (allAffordances.Count == 0)
+            {
+
+                var status = new AffordanceStatusClass();
+                NewGetAllViableAffordancesAndSubsOld(time, status, false, allAffs, false);
+                var ts = new TimeSpan(0, 0, 0,
+                    (int)_calcRepo.CalcParameters.InternalStepsize.TotalSeconds * time.InternalStep);
+                var dt = _calcRepo.CalcParameters.InternalStartTime.Add(ts);
+                var s = "At Timestep " + time.ExternalStep + " (" + dt.ToLongDateString() + " " + dt.ToShortTimeString() + ")" +
+                        " not a single affordance was available for " + Name +
+                        " in the household " + _calcPerson.HouseholdName + "." + Environment.NewLine +
+                        "Since the people in this simulation can't do nothing, calculation can not continue." +
+                        " The simulation seed was " + simulationSeed + ". " + Environment.NewLine + Name + " was ";
+                if (IsSick[time.InternalStep])
+                {
+                    s += " sick at the time." + Environment.NewLine;
+                }
+                else
+                {
+                    s += " not sick at the time." + Environment.NewLine;
+                }
+
+                s += _calcPerson.Name + " was at " + CurrentLocation.Name + "." + Environment.NewLine;
+                s += "The setting for the number of required unique affordances in a row was set to " + _calcRepo.CalcParameters.AffordanceRepetitionCount + "." + Environment.NewLine;
+                if (status.Reasons.Count > 0)
+                {
+                    s += " The status of each affordance is as follows:" + Environment.NewLine;
+                    foreach (var reason in status.Reasons)
+                    {
+                        s = s + Environment.NewLine + reason.Affordance.Name + ":" + reason.Reason;
+                    }
+                }
+                else
+                {
+                    s += " Not a single viable affordance was found.";
+                }
+
+                s += Environment.NewLine + Environment.NewLine + "The last activity of each Person was:";
+                foreach (var calcPerson in persons)
+                {
+                    var name = "(none)";
+                    if (calcPerson._currentAffordance != null)
+                    {
+                        name = calcPerson._currentAffordance.Name;
+                    }
+
+                    s += Environment.NewLine + calcPerson.Name + ": " + name;
+                }
+                if (_calcRepo.CalcParameters.EnableIdlemode)
+                {
+                    var idleaff = CurrentLocation.IdleAffs[this];
+                    idleaff.IsBusy(time, CurrentLocation, _calcPerson);
+                    //Logger.Info(s);
+                    return idleaff;
+                }
+                throw new DataIntegrityException(s);
+            }
+
+            if (_calcRepo.Rnd == null)
+            {
+                throw new LPGException("Random number generator was not initialized");
+            }
+
+            return GetBestAffordanceFromListOld(time, allAffordances);
+        }
+
+        private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
+                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances)
+        {
+            var bestdiff = decimal.MaxValue;
+            var bestaff = allAvailableAffordances[0];
+            var bestaffordances = new List<ICalcAffordanceBase>();
+            foreach (var affordance in allAvailableAffordances)
+            {
+                var desireDiff =
+                    PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
+                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+                {
+                    if (//_lf == null ||
+                        _calcRepo.Logfile.ThoughtsLogFile1 == null)
+                    {
+                        throw new LPGException("Logfile was null.");
+                    }
+
+                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+                        new ThoughtEntry(this, time,
+                            "Desirediff for " + affordance.Name + " is :" +
+                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+                        _calcPerson.HouseholdKey);
+                }
+
+                if (desireDiff < bestdiff)
+                {
+                    bestdiff = desireDiff;
+                    bestaff = affordance;
+                    bestaffordances.Clear();
+                }
+
+                if (desireDiff == bestdiff)
+                {
+                    bestaffordances.Add(affordance);
+                }
+            }
+
+            if (bestaffordances.Count > 1)
+            {
+                //if (_lf == null) {throw new LPGException("Logfile was null.");}
+
+                bestaff = PickRandomAffordanceFromEquallyAttractiveOnes(bestaffordances, time,
+                    this, _calcPerson.HouseholdKey);
+            }
+
+            return bestaff;
+        }
+
+        private void ActivateAffordanceOld([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+                                         [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff)
+        {
+            if (_calcRepo.Logfile == null)
+            {
+                throw new LPGException("Logfile was null.");
+            }
+
+            if (_calcRepo.CalcParameters.TransportationEnabled)
+            {
+                if (!(bestaff is AffordanceBaseTransportDecorator))
+                {
+                    throw new LPGException(
+                        "Trying to activate a non-transport affordance in a household that has transportation enabled. This is a bug and should never happen. The affordance was: " +
+                        bestaff.Name + ". Affordance Type: " + bestaff.GetType().FullName);
+                }
+            }
+
+            _calcRepo.OnlineLoggingData.AddLocationEntry(
+                new LocationEntry(_calcPerson.HouseholdKey,
+                    _calcPerson.Name,
+                    _calcPerson.Guid,
+                     currentTimeStep,
+                    bestaff.ParentLocation.Name,
+                    bestaff.ParentLocation.Guid));
+            if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+            {
+                if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+                {
+                    throw new LPGException("Logfile was null.");
+                }
+
+                _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(new ThoughtEntry(this, currentTimeStep, "Action selected:" + bestaff),
+                    _calcPerson.HouseholdKey);
+            }
+
+            _calcRepo.OnlineLoggingData.AddActionEntry(currentTimeStep, Guid,
+                Name, _isCurrentlySick, bestaff.Name,
+                bestaff.Guid, _calcPerson.HouseholdKey,
+                bestaff.AffCategory, bestaff.BodilyActivityLevel);
+            PersonDesires.ApplyAffordanceEffect(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name);
+            bestaff.Activate(currentTimeStep, Name, CurrentLocation,
+                out var personTimeProfile);
+            CurrentLocation = bestaff.ParentLocation;
+            //todo: fix this for transportation
+            var duration = SetBusy(currentTimeStep, personTimeProfile, bestaff.ParentLocation, isDaylight,
+                bestaff.NeedsLight);
+            _previousAffordances.Add(bestaff);
+            _previousAffordancesWithEndTime.Add(
+                new Tuple<ICalcAffordanceBase, TimeStep>(bestaff, currentTimeStep.AddSteps(duration)));
+            while (_previousAffordancesWithEndTime.Count > 5)
+            {
+                _previousAffordancesWithEndTime.RemoveAt(0);
+            }
+
+            if (bestaff is CalcSubAffordance subaff)
+            {
+                _previousAffordances.Add(subaff.ParentAffordance);
+            }
+
+            _currentAffordance = bestaff;
+            //else {
+            //    if (_calcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
+            //        if(_lf == null) {
+            //            throw new LPGException("Logfile was null");
+            //        }
+            //        _lf.ThoughtsLogFile1.WriteEntry(new ThoughtEntry(this, time, "No Action selected"),
+            //            _householdKey);
+            //    }
+            //}
+        }
+
+        private void InterruptIfNeededOld([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+                                       bool ignoreAlreadyExecutedActivities)
+        {
+            if (_currentAffordance?.IsInterruptable == true &&
+                !_isCurrentlyPriorityAffordanceRunning)
+            {
+                PotentialAffs aff;
+                if (IsSick[time.InternalStep])
+                {
+                    aff = _sicknessPotentialAffs;
+                }
+                else
+                {
+                    aff = _normalPotentialAffs;
+                }
+
+                var availableInterruptingAffordances =
+                    NewGetAllViableAffordancesAndSubsOld(time, null, true, aff, ignoreAlreadyExecutedActivities);
+                if (availableInterruptingAffordances.Count != 0)
+                {
+                    var bestAffordance = GetBestAffordanceFromListOld(time, availableInterruptingAffordances);
+                    ActivateAffordanceOld(time, isDaylight, bestAffordance);
+                    switch (bestAffordance.AfterInterruption)
+                    {
+                        case ActionAfterInterruption.LookForNew:
+                            var currentTime = time;
+                            while (currentTime.InternalStep < _calcRepo.CalcParameters.InternalTimesteps &&
+                                   _isBusy[currentTime.InternalStep])
+                            {
+                                _isBusy[currentTime.InternalStep] = false;
+                                currentTime = currentTime.AddSteps(1);
+                            }
+
+                            break;
+                        case ActionAfterInterruption.GoBackToOld:
+                            if (_previousAffordancesWithEndTime.Count > 2) //set the old affordance again
+                            {
+                                var endtime =
+                                    _previousAffordancesWithEndTime[_previousAffordancesWithEndTime.Count - 1]
+                                        .Item2;
+                                var endtimePrev =
+                                    _previousAffordancesWithEndTime[_previousAffordancesWithEndTime.Count - 2]
+                                        .Item2;
+                                if (endtimePrev > endtime)
+                                {
+                                    TimeToResetActionEntryAfterInterruption = endtime;
+                                }
+                            }
+
+                            break;
+                        default: throw new LPGException("Forgotten ActionAfterInterruption");
+                    }
+
+                    if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+                    {
+                        if (//_lf == null ||
+                            _calcRepo.Logfile.ThoughtsLogFile1 == null)
+                        {
+                            throw new LPGException("Logfile was null.");
+                        }
+
+                        _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+                            new ThoughtEntry(this, time,
+                                "Interrupting the previous affordance for " + bestAffordance.Name),
+                            _calcPerson.HouseholdKey);
+                    }
+
+                    _isCurrentlyPriorityAffordanceRunning = true;
+                }
+            }
+
+            if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+            {
+                if (//_lf == null ||
+                    _calcRepo.Logfile.ThoughtsLogFile1 == null)
+                {
+                    throw new LPGException("Logfile was null.");
+                }
+
+                if (!_isCurrentlySick)
+                {
+                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(new ThoughtEntry(this, time, "I'm busy and healthy"),
+                        _calcPerson.HouseholdKey);
+                }
+                else
+                {
+                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(new ThoughtEntry(this, time, "I'm busy and sick"),
+                        _calcPerson.HouseholdKey);
+                }
+            }
+        }
+
+        [JetBrains.Annotations.NotNull]
+        [ItemNotNull]
+        private List<ICalcAffordanceBase> NewGetAllViableAffordancesAndSubsOld([JetBrains.Annotations.NotNull] TimeStep timeStep,
+                                                                            AffordanceStatusClass? errors,
+                                                                            bool getOnlyInterrupting,
+                                                                            [JetBrains.Annotations.NotNull] PotentialAffs potentialAffs, bool tryHarder)
+        {
+            var getOnlyRelevantDesires = getOnlyInterrupting; // just for clarity
+            // normal affs
+            var resultingAff = new List<ICalcAffordanceBase>();
+            List<ICalcAffordanceBase> srcList;
+            if (getOnlyInterrupting)
+            {
+                srcList = potentialAffs.PotentialInterruptingAffordances;
+            }
+            else
+            {
+                srcList = potentialAffs.PotentialAffordances;
+            }
+
+            foreach (var calcAffordanceBase in srcList)
+            {
+                if (NewIsAvailableAffordanceOld(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
+                    CurrentLocation.CalcSite, tryHarder))
+                {
+                    resultingAff.Add(calcAffordanceBase);
+                }
+            }
+
+            // subaffs
+            List<ICalcAffordanceBase> subSrcList;
+            if (getOnlyInterrupting)
+            {
+                subSrcList = potentialAffs.PotentialAffordancesWithInterruptingSubAffordances;
+            }
+            else
+            {
+                subSrcList = potentialAffs.PotentialAffordancesWithSubAffordances;
+            }
+
+            foreach (var affordance in subSrcList)
+            {
+                var spezsubaffs =
+                    affordance.CollectSubAffordances(timeStep, getOnlyInterrupting, CurrentLocation);
+                if (spezsubaffs.Count > 0)
+                {
+                    foreach (var spezsubaff in spezsubaffs)
+                    {
+                        if (NewIsAvailableAffordanceOld(timeStep, spezsubaff, errors,
+                            getOnlyRelevantDesires, CurrentLocation.CalcSite, tryHarder))
+                        {
+                            resultingAff.Add(spezsubaff);
+                        }
+                    }
+                }
+            }
+
+            if (getOnlyInterrupting)
+            {
+                foreach (var affordance in resultingAff)
+                {
+                    if (!PersonDesires.HasAtLeastOneDesireBelowThreshold(affordance))
+                    {
+                        throw new LPGException("something went wrong while getting an interrupting affordance!");
+                    }
+                }
+            }
+
+            return resultingAff;
+        }
+
+        private bool NewIsAvailableAffordanceOld([JetBrains.Annotations.NotNull] TimeStep timeStep,
+                                              [JetBrains.Annotations.NotNull] ICalcAffordanceBase aff,
+                                              AffordanceStatusClass? errors, bool checkForRelevance,
+                                              CalcSite? srcSite, bool ignoreAlreadyExecutedActivities)
+        {
+            if (_calcRepo.CalcParameters.TransportationEnabled)
+            {
+                if (aff.Site != srcSite && !(aff is AffordanceBaseTransportDecorator))
+                {
+                    //person is not at the right place and can't transport -> not available.
+                    return false;
+                }
+            }
+
+            if (!ignoreAlreadyExecutedActivities && _previousAffordances.Contains(aff))
+            {
+                if (errors != null)
+                {
+                    errors.Reasons.Add(new AffordanceStatusTuple(aff, "Just did this."));
+                }
+
+                return false;
+            }
+
+            var busynessResult = aff.IsBusy(timeStep, CurrentLocation, _calcPerson);
+            if (busynessResult != BusynessType.NotBusy)
+            {
+                if (errors != null)
+                {
+                    errors.Reasons.Add(new AffordanceStatusTuple(aff, "Affordance is busy:" + busynessResult.ToString()));
+                }
+
+                return false;
+            }
+
+            if (checkForRelevance && !PersonDesires.HasAtLeastOneDesireBelowThreshold(aff))
+            {
+                if (errors != null)
+                {
+                    errors.Reasons.Add(new AffordanceStatusTuple(aff,
+                        "Person has no desires below the threshold for this affordance, so it is not relevant right now."));
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+
+
+
+
+
         private void BecomeHealthy([JetBrains.Annotations.NotNull] TimeStep time)
         {
             PersonDesires = _normalDesires;
@@ -892,93 +1385,93 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            var bestdiff = decimal.MaxValue;
-            var bestaff = allAvailableAffordances[0];
+        //private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        //{
+        //    var bestdiff = decimal.MaxValue;
+        //    var bestaff = allAvailableAffordances[0];
 
-            var bestaffordances = new List<ICalcAffordanceBase>();
+        //    var bestaffordances = new List<ICalcAffordanceBase>();
 
-            //decimal DiffWork = 0;
-            //decimal DiffTheater = 0;
-            //bool foundWorkAsTeacher = allAvailableAffordances.Any(a => a.Name == "work as teacher");
-            //bool foundVisitTheTheater = allAvailableAffordances.Any(a => a.Name == "visit the theater");
+        //    //decimal DiffWork = 0;
+        //    //decimal DiffTheater = 0;
+        //    //bool foundWorkAsTeacher = allAvailableAffordances.Any(a => a.Name == "work as teacher");
+        //    //bool foundVisitTheTheater = allAvailableAffordances.Any(a => a.Name == "visit the theater");
 
 
-            foreach (var affordance in allAvailableAffordances)
-            {
-                //var desireDiff =
-                //PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
+        //    foreach (var affordance in allAvailableAffordances)
+        //    {
+        //        //var desireDiff =
+        //        //PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);
 
-                //var duration = affordance.CalcAffordanceSerial.ToString();
-                var duration = affordance.GetDuration();
-                var restTime = affordance.GetRestTimeWindows(time);
-                //String category = affordance.AffCategory;
+        //        //var duration = affordance.CalcAffordanceSerial.ToString();
+        //        var duration = affordance.GetDuration();
+        //        var restTime = affordance.GetRestTimeWindows(time);
+        //        //String category = affordance.AffCategory;
 
-                //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
-                //var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring, now);
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                //if(affordance.Name == "visit the theater")
-                //{
-                //    DiffTheater = desireDiff;
-                //}
+        //        //var desireDiff = PersonDesires.CalcEffectPartly(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name, affordance.IsInterruptable, careForAll, duration, time);
+        //        //var desireDiff = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring);
+        //        var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring, now);
+        //        var desireDiff = calcTotalDeviationResult.totalDeviation;
+        //        var weightSum = calcTotalDeviationResult.WeightSum;
+        //        //if(affordance.Name == "visit the theater")
+        //        //{
+        //        //    DiffTheater = desireDiff;
+        //        //}
 
-                //if(affordance.Name == "work as teacher")
-                //{
-                //    DiffWork = desireDiff;
-                //}
+        //        //if(affordance.Name == "work as teacher")
+        //        //{
+        //        //    DiffWork = desireDiff;
+        //        //}
 
-                if (desireDiff == 1000000000000000)
-                {
-                    continue;
-                }
-                //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
+        //        if (desireDiff == 1000000000000000)
+        //        {
+        //            continue;
+        //        }
+        //        //var desireDiff = PersonDesires.CalcEffect(affordance.Satisfactionvalues, out var thoughtstring, affordance.Name);  
 
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (//_lf == null ||
-                        _calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+        //        {
+        //            if (//_lf == null ||
+        //                _calcRepo.Logfile.ThoughtsLogFile1 == null)
+        //            {
+        //                throw new LPGException("Logfile was null.");
+        //            }
 
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
 
-                if (desireDiff < bestdiff)
-                {
-                    bestdiff = desireDiff;
-                    bestaff = affordance;
-                    bestaffordances.Clear();
-                }
+        //        if (desireDiff < bestdiff)
+        //        {
+        //            bestdiff = desireDiff;
+        //            bestaff = affordance;
+        //            bestaffordances.Clear();
+        //        }
 
-                if (desireDiff == bestdiff)
-                {
-                    bestaffordances.Add(affordance);
-                }
-            }
+        //        if (desireDiff == bestdiff)
+        //        {
+        //            bestaffordances.Add(affordance);
+        //        }
+        //    }
 
-            if (bestaffordances.Count > 1)
-            {
-                //if (_lf == null) {throw new LPGException("Logfile was null.");}
+        //    if (bestaffordances.Count > 1)
+        //    {
+        //        //if (_lf == null) {throw new LPGException("Logfile was null.");}
 
-                bestaff = PickRandomAffordanceFromEquallyAttractiveOnes(bestaffordances, time,
-                    this, _calcPerson.HouseholdKey);
-            }
+        //        bestaff = PickRandomAffordanceFromEquallyAttractiveOnes(bestaffordances, time,
+        //            this, _calcPerson.HouseholdKey);
+        //    }
 
-            //if(bestaff.Name == "visit the theater" || bestaff.Name == "work as teacher")
-            //{
-            //    Debug.WriteLine("     work: " + DiffWork + foundWorkAsTeacher + "   theater:  " + DiffTheater + foundVisitTheTheater);
-            //}
-            return bestaff;
-        }
+        //    //if(bestaff.Name == "visit the theater" || bestaff.Name == "work as teacher")
+        //    //{
+        //    //    Debug.WriteLine("     work: " + DiffWork + foundWorkAsTeacher + "   theater:  " + DiffTheater + foundVisitTheTheater);
+        //    //}
+        //    return bestaff;
+        //}
 
         //Parallel Compute
         private ICalcAffordanceBase GetBestAffordanceFromListParallel([JetBrains.Annotations.NotNull] TimeStep time,

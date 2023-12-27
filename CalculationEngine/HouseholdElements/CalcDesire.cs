@@ -50,6 +50,9 @@ namespace CalculationEngine.HouseholdElements {
 
     public class CalcDesire {
         private readonly decimal _decayRate;
+
+        private readonly decimal _decayRateOld;
+
         private readonly bool _isSharedValue;
         [NotNull]
         private readonly string _name;
@@ -78,6 +81,12 @@ namespace CalculationEngine.HouseholdElements {
             if (decayTime > 0) {
                 _decayRate = (decimal)GetRateDouble(decayTime);
             }
+
+            if (decayTime > 0)
+            {
+                _decayRateOld = GetRate(decayTime);
+            }
+
             _sourceTrait = sourceTrait;
             _desireCategory = desireCategory;
             Value = value;

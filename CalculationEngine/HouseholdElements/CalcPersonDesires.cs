@@ -79,6 +79,8 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
+        
+
         public void ApplyAffordanceEffectPartly([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
             [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep, DateTime now) {
             if (firsttime)
