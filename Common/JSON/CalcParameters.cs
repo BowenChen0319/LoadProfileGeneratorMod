@@ -66,8 +66,12 @@ namespace Common.JSON {
 
         public int UserSelectedRandomSeed { get; set; }
         public bool WriteExcelColumn { get; set; }
+
+        public bool UseNewAlgo { get; set; }
         public bool IgnorePreviousActivitesWhenNeeded { get; set; }
         public bool EnableIdlemode { get; set; }
+
+        
 
         //public void CheckDependenyOnOptions()
         //{
@@ -394,6 +398,11 @@ namespace Common.JSON {
             return this;
         }
 
+        public CalcParameters SetUseNewAlgo(bool useNewAlgo)
+        {
+            UseNewAlgo = useNewAlgo;
+            return this;
+        }
         /*public void ClearOptions()
             {
                 _options.Clear();

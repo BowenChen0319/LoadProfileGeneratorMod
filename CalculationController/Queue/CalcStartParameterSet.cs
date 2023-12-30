@@ -72,7 +72,7 @@ namespace CalculationController.Queue {
             int selectedRandomSeed,
             TimeSpan externalTimeResolution, bool writeExcelColumn, bool showSettlingPeriod, int settlingDays,
             int affordanceRepetitionCount, [NotNull] CalculationProfiler calculationProfiler, string resultPath, bool transportationEnabled,
-            bool enableIdlemode, [NotNull] string decimalSeperator, bool flexibilityEnabled)
+            bool enableIdlemode, [NotNull] string decimalSeperator, bool flexibilityEnabled, bool useNewAlgo)
         {
             OfficialSimulationStartTime = officialSimulationStartTime;
             OfficialSimulationEndTime = officialSimulationEndTime;
@@ -81,6 +81,7 @@ namespace CalculationController.Queue {
             SelectedRandomSeed = selectedRandomSeed;
             ExternalTimeResolution = externalTimeResolution;
             WriteExcelColumn = writeExcelColumn;
+            UseNewAlgo = useNewAlgo;
             ShowSettlingPeriod = showSettlingPeriod;
             SettlingDays = settlingDays;
             AffordanceRepetitionCount = affordanceRepetitionCount;
@@ -132,13 +133,14 @@ namespace CalculationController.Queue {
             DeviceProfileHeaderMode deviceProfileHeaderMode,
             bool ignorePreviousActivitiesWhenNeeded,
             string resultPath, bool transportationEnabled, bool enableIdlemode, string decimalSeperator,
-            bool flexibilityEnabled)
+            bool flexibilityEnabled, bool useNewAlgo)
         {
             IgnorePreviousActivitiesWhenNeeded = ignorePreviousActivitiesWhenNeeded;
             ResultPath = resultPath;
             LoadTypesToProcess = loadTypesToProcess;
             ExternalTimeResolution = externalTimeResolution;
             WriteExcelColumn = writeExcelColumn;
+            UseNewAlgo = useNewAlgo;
             ShowSettlingPeriod = showSettlingPeriod;
             SettlingDays = settlingDays;
             AffordanceRepetitionCount = affordanceRepetitionCount;
@@ -242,6 +244,8 @@ namespace CalculationController.Queue {
         public TravelRouteSet TravelRouteSet { get; }
 
         public bool WriteExcelColumn { get; }
+
+        public bool UseNewAlgo { get; }
         [CanBeNull]
         public ChargingStationSet ChargingStationSet { get; set; }
 

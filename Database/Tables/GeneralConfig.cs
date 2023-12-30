@@ -421,6 +421,14 @@ namespace Database.Tables {
 
         public bool WriteExcelColumnBool => WriteExcelColumn.ToUpper() == "TRUE";
 
+        public string UseNewAlgo
+        {
+            get => _settings[nameof(UseNewAlgo)].SettingValue;
+            set => UpdateValue(nameof(UseNewAlgo), value);
+        }
+
+        public bool UseNewAlgoBool => UseNewAlgo.ToUpper() == "TRUE";
+
 
         [JetBrains.Annotations.NotNull]
         [UsedImplicitly]
@@ -531,6 +539,8 @@ namespace Database.Tables {
             gc.CheckExistence(nameof(CarpetPlotWidth), "7", ignoreMissing);
             gc.CheckExistence(nameof(SelectedEnergyIntensity), "0", ignoreMissing);
             gc.CheckExistence(nameof(WriteExcelColumn), "True", ignoreMissing);
+            gc.CheckExistence(nameof(UseNewAlgo), "True", ignoreMissing);
+
 
             gc.CheckExistence(nameof(PerformCleanUpChecks), "True", ignoreMissing);
             gc.CheckExistence(nameof(EnableIdlemode), "True", ignoreMissing);
