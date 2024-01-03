@@ -154,6 +154,10 @@ namespace CalculationEngine {
                 //Debug.WriteLine("Starting the simulation");
                 
                 var timestep = new TimeStep(0, CalcRepo.CalcParameters);
+
+                var calcParameters = CalcRepo.CalcParameters;
+                Debug.WriteLine("Use New Algo: " + calcParameters.UseNewAlgo);
+
                 Debug.WriteLine("Starttime: " + now);
                 try {
                     CalcRepo.CalculationProfiler.StartPart(Utili.GetCurrentMethodAndClass() + " - Core Simulation");
