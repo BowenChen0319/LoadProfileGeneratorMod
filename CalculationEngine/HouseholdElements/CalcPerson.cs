@@ -210,7 +210,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public void NextStep([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        public void NextStepNew([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                              [JetBrains.Annotations.NotNull] HouseholdKey householdKey,
                              [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
                              int simulationSeed,DateTime now)
@@ -237,7 +237,8 @@ namespace CalculationEngine.HouseholdElements {
             //PersonDesires.ApplyDecay(time);
             if (_executingAffordance!=null)
             {
-                PersonDesires.ApplyDecayWithoutSome(time, _executingAffordance.Satisfactionvalues);
+                //PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
+                PersonDesires.ApplyDecay(time);
             }
             else
             {
@@ -255,9 +256,9 @@ namespace CalculationEngine.HouseholdElements {
                     //Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
                     _remainingExecutionSteps--;
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
-                    PersonDesires.ApplyAffordanceEffectPartly(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time, now);
+                    PersonDesires.ApplyAffordanceEffectNew(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time, now);
                 }
-                InterruptIfNeeded(time, isDaylight, false,now);
+                InterruptIfNeededNew(time, isDaylight, false,now);
                 //continue with current activity
 
                 return;
@@ -281,7 +282,7 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //activate new affordance
-            var bestaff = FindBestAffordance(time,  persons,
+            var bestaff = FindBestAffordanceNew(time,  persons,
                 simulationSeed, now);
             //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
             //Logger.Info(bestaff.ToString());
@@ -289,11 +290,11 @@ namespace CalculationEngine.HouseholdElements {
             //Debug.WriteLine(time);
             Debug.WriteLine("Time:   "+now+"  "+_calcPerson.Name+"    "+ bestaff.Name + "  restTime:  "+bestaff.GetRestTimeWindows(time));
 
-            ActivateAffordance(time, isDaylight,  bestaff, now);
+            ActivateAffordanceNew(time, isDaylight,  bestaff, now);
             _isCurrentlyPriorityAffordanceRunning = false;
         }
 
-        public void NextStepOld([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        public void NextStep([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                              [JetBrains.Annotations.NotNull] HouseholdKey householdKey,
                              [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
                              int simulationSeed)
@@ -329,7 +330,7 @@ namespace CalculationEngine.HouseholdElements {
             // bereits besch鋐tigt
             if (_isBusy[time.InternalStep])
             {
-                InterruptIfNeededOld(time, isDaylight, false);
+                InterruptIfNeeded(time, isDaylight, false);
                 return;
             }
 
@@ -354,16 +355,16 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //activate new affordance
-            var bestaff = FindBestAffordanceOld(time, persons,
+            var bestaff = FindBestAffordance(time, persons,
                 simulationSeed);
             //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
             Logger.Info(bestaff.ToString());
             Console.WriteLine(bestaff.ToString());
-            ActivateAffordanceOld(time, isDaylight, bestaff);
+            ActivateAffordance(time, isDaylight, bestaff);
             _isCurrentlyPriorityAffordanceRunning = false;
         }
 
-        private ICalcAffordanceBase FindBestAffordanceOld([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase FindBestAffordance([JetBrains.Annotations.NotNull] TimeStep time,
                                                        [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed)
         {
             var allAffs = IsSick[time.InternalStep] ? _sicknessPotentialAffs : _normalPotentialAffs;
@@ -374,11 +375,11 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             var allAffordances =
-                NewGetAllViableAffordancesAndSubsOld(time, null, false, allAffs, false);
+                NewGetAllViableAffordancesAndSubs(time, null, false, allAffs, false);
             if (allAffordances.Count == 0 && (time.ExternalStep < 0 || _calcRepo.CalcParameters.IgnorePreviousActivitesWhenNeeded))
             {
                 allAffordances =
-                    NewGetAllViableAffordancesAndSubsOld(time, null, false, allAffs, true);
+                    NewGetAllViableAffordancesAndSubs(time, null, false, allAffs, true);
             }
             allAffordances.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
             //no affordances, so search again for the error messages
@@ -386,7 +387,7 @@ namespace CalculationEngine.HouseholdElements {
             {
 
                 var status = new AffordanceStatusClass();
-                NewGetAllViableAffordancesAndSubsOld(time, status, false, allAffs, false);
+                NewGetAllViableAffordancesAndSubs(time, status, false, allAffs, false);
                 var ts = new TimeSpan(0, 0, 0,
                     (int)_calcRepo.CalcParameters.InternalStepsize.TotalSeconds * time.InternalStep);
                 var dt = _calcRepo.CalcParameters.InternalStartTime.Add(ts);
@@ -445,10 +446,10 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromListOld(time, allAffordances);
+            return GetBestAffordanceFromList(time, allAffordances);
         }
 
-        private ICalcAffordanceBase GetBestAffordanceFromListOld([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances)
         {
             var bestdiff = decimal.MaxValue;
@@ -497,7 +498,7 @@ namespace CalculationEngine.HouseholdElements {
             return bestaff;
         }
 
-        private void ActivateAffordanceOld([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        private void ActivateAffordance([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                          [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff)
         {
             if (_calcRepo.Logfile == null)
@@ -569,7 +570,7 @@ namespace CalculationEngine.HouseholdElements {
             //}
         }
 
-        private void InterruptIfNeededOld([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        private void InterruptIfNeeded([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                        bool ignoreAlreadyExecutedActivities)
         {
             if (_currentAffordance?.IsInterruptable == true &&
@@ -586,11 +587,11 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 var availableInterruptingAffordances =
-                    NewGetAllViableAffordancesAndSubsOld(time, null, true, aff, ignoreAlreadyExecutedActivities);
+                    NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0)
                 {
-                    var bestAffordance = GetBestAffordanceFromListOld(time, availableInterruptingAffordances);
-                    ActivateAffordanceOld(time, isDaylight, bestAffordance);
+                    var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances);
+                    ActivateAffordance(time, isDaylight, bestAffordance);
                     switch (bestAffordance.AfterInterruption)
                     {
                         case ActionAfterInterruption.LookForNew:
@@ -663,7 +664,7 @@ namespace CalculationEngine.HouseholdElements {
 
         [JetBrains.Annotations.NotNull]
         [ItemNotNull]
-        private List<ICalcAffordanceBase> NewGetAllViableAffordancesAndSubsOld([JetBrains.Annotations.NotNull] TimeStep timeStep,
+        private List<ICalcAffordanceBase> NewGetAllViableAffordancesAndSubs([JetBrains.Annotations.NotNull] TimeStep timeStep,
                                                                             AffordanceStatusClass? errors,
                                                                             bool getOnlyInterrupting,
                                                                             [JetBrains.Annotations.NotNull] PotentialAffs potentialAffs, bool tryHarder)
@@ -683,7 +684,7 @@ namespace CalculationEngine.HouseholdElements {
 
             foreach (var calcAffordanceBase in srcList)
             {
-                if (NewIsAvailableAffordanceOld(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
+                if (NewIsAvailableAffordance(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
                     CurrentLocation.CalcSite, tryHarder))
                 {
                     resultingAff.Add(calcAffordanceBase);
@@ -709,7 +710,7 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     foreach (var spezsubaff in spezsubaffs)
                     {
-                        if (NewIsAvailableAffordanceOld(timeStep, spezsubaff, errors,
+                        if (NewIsAvailableAffordance(timeStep, spezsubaff, errors,
                             getOnlyRelevantDesires, CurrentLocation.CalcSite, tryHarder))
                         {
                             resultingAff.Add(spezsubaff);
@@ -732,7 +733,7 @@ namespace CalculationEngine.HouseholdElements {
             return resultingAff;
         }
 
-        private bool NewIsAvailableAffordanceOld([JetBrains.Annotations.NotNull] TimeStep timeStep,
+        private bool NewIsAvailableAffordance([JetBrains.Annotations.NotNull] TimeStep timeStep,
                                               [JetBrains.Annotations.NotNull] ICalcAffordanceBase aff,
                                               AffordanceStatusClass? errors, bool checkForRelevance,
                                               CalcSite? srcSite, bool ignoreAlreadyExecutedActivities)
@@ -844,7 +845,7 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        private void InterruptIfNeeded([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        private void InterruptIfNeededNew([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                        bool ignoreAlreadyExecutedActivities, DateTime now)
         {
             if (_currentAffordance?.IsInterruptable == true &&
@@ -858,12 +859,12 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 var availableInterruptingAffordances =
-                    NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
+                    NewGetAllViableAffordancesAndSubsNew(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromList(time, availableInterruptingAffordances, true, now);
+                    var bestAffordance = GetBestAffordanceFromListNew(time, availableInterruptingAffordances, true, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
-                    ActivateAffordance(time, isDaylight,  bestAffordance, now);
+                    ActivateAffordanceNew(time, isDaylight,  bestAffordance, now);
                     
                     
                     switch (bestAffordance.AfterInterruption) {
@@ -1039,7 +1040,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public override string ToString() => "Person:" + Name;
 
-        private void ActivateAffordance([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        private void ActivateAffordanceNew([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                          [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff, DateTime now)
         {
             if (_calcRepo.Logfile == null) {
@@ -1094,7 +1095,7 @@ namespace CalculationEngine.HouseholdElements {
                     //PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes);
                 //}
             }
-            PersonDesires.ApplyAffordanceEffectPartly(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
+            PersonDesires.ApplyAffordanceEffectNew(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
             _executingAffordance = bestaff;
             _remainingExecutionSteps = durationInMinutes - 1;
             _currentDuration = durationInMinutes;
@@ -1141,7 +1142,7 @@ namespace CalculationEngine.HouseholdElements {
         }
         
         [JetBrains.Annotations.NotNull]
-        private ICalcAffordanceBase FindBestAffordance([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase FindBestAffordanceNew([JetBrains.Annotations.NotNull] TimeStep time,
                                                        [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed, DateTime now)
         {
             var allAffs = IsSick[time.InternalStep] ? _sicknessPotentialAffs : _normalPotentialAffs;
@@ -1151,18 +1152,18 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             var allAffordances =
-                NewGetAllViableAffordancesAndSubs(time, null, false,  allAffs, false);
+                NewGetAllViableAffordancesAndSubsNew(time, null, false,  allAffs, false);
             if(allAffordances.Count == 0 && (time.ExternalStep < 0 || _calcRepo.CalcParameters.IgnorePreviousActivitesWhenNeeded))
             {
                 allAffordances =
-                    NewGetAllViableAffordancesAndSubs(time, null,  false, allAffs, true);
+                    NewGetAllViableAffordancesAndSubsNew(time, null,  false, allAffs, true);
             }
             allAffordances.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
             //no affordances, so search again for the error messages
             if (allAffordances.Count == 0) {
 
                 var status = new AffordanceStatusClass();
-                NewGetAllViableAffordancesAndSubs(time, status,  false,  allAffs, false);
+                NewGetAllViableAffordancesAndSubsNew(time, status,  false,  allAffs, false);
                 var ts = new TimeSpan(0, 0, 0,
                     (int)_calcRepo.CalcParameters.InternalStepsize.TotalSeconds * time.InternalStep);
                 var dt = _calcRepo.CalcParameters.InternalStartTime.Add(ts);
@@ -1213,12 +1214,12 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromList(time,  allAffordances, true, now);
+            return GetBestAffordanceFromListNew(time,  allAffordances, true, now);
         }
 
         [JetBrains.Annotations.NotNull]
 
-        private ICalcAffordanceBase GetBestAffordanceFromList([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase GetBestAffordanceFromListNew([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
             var bestDiff = decimal.MaxValue;
@@ -1563,7 +1564,7 @@ namespace CalculationEngine.HouseholdElements {
 
         [JetBrains.Annotations.NotNull]
         [ItemNotNull]
-        private List<ICalcAffordanceBase> NewGetAllViableAffordancesAndSubs([JetBrains.Annotations.NotNull] TimeStep timeStep,
+        private List<ICalcAffordanceBase> NewGetAllViableAffordancesAndSubsNew([JetBrains.Annotations.NotNull] TimeStep timeStep,
                                                                             AffordanceStatusClass? errors,
                                                                             bool getOnlyInterrupting,
                                                                             [JetBrains.Annotations.NotNull] PotentialAffs potentialAffs, bool tryHarder)
@@ -1585,7 +1586,7 @@ namespace CalculationEngine.HouseholdElements {
 
 
             foreach (var calcAffordanceBase in srcList) {
-                if (NewIsAvailableAffordance(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
+                if (NewIsAvailableAffordanceNew(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
                     CurrentLocation.CalcSite, tryHarder)) {
                     resultingAff.Add(calcAffordanceBase);
                 }
@@ -1617,7 +1618,7 @@ namespace CalculationEngine.HouseholdElements {
                     affordance.CollectSubAffordances(timeStep, getOnlyInterrupting,  CurrentLocation);
                 if (spezsubaffs.Count > 0) {
                     foreach (var spezsubaff in spezsubaffs) {
-                        if (NewIsAvailableAffordance(timeStep, spezsubaff, errors,
+                        if (NewIsAvailableAffordanceNew(timeStep, spezsubaff, errors,
                             getOnlyRelevantDesires, CurrentLocation.CalcSite,tryHarder)) {
                             resultingAff.Add(spezsubaff);
                         }
@@ -1636,7 +1637,7 @@ namespace CalculationEngine.HouseholdElements {
             return resultingAff;
         }
 
-        private bool NewIsAvailableAffordance([JetBrains.Annotations.NotNull] TimeStep timeStep,
+        private bool NewIsAvailableAffordanceNew([JetBrains.Annotations.NotNull] TimeStep timeStep,
                                               [JetBrains.Annotations.NotNull] ICalcAffordanceBase aff,
                                               AffordanceStatusClass? errors, bool checkForRelevance,
                                               CalcSite? srcSite, bool ignoreAlreadyExecutedActivities)

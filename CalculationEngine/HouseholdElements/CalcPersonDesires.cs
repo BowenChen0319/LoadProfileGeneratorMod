@@ -81,29 +81,17 @@ namespace CalculationEngine.HouseholdElements {
 
         
 
-        public void ApplyAffordanceEffectPartly([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
+        public void ApplyAffordanceEffectNew([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
             [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep, DateTime now) {
             if (firsttime)
             {
-                if(_useNewAlgo == true)
+                while (_lastAffordances.Count > 10)
                 {
-                    while (_lastAffordances.Count > 10)
-                    {
-                        _lastAffordances.RemoveAt(0);
-                        //_timeOfLastAffordance.RemoveAt(0);
+                    _lastAffordances.RemoveAt(0);
+                    //_timeOfLastAffordance.RemoveAt(0);
 
-                    }
                 }
-                else
-                {
-                    while (_lastAffordances.Count > 10)
-                    {
-                        _lastAffordances.RemoveAt(0);
-                        //_timeOfLastAffordance.RemoveAt(0);
 
-                    }
-                }
-                
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
                 //_timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
@@ -253,8 +241,9 @@ namespace CalculationEngine.HouseholdElements {
          /// </summary>
          /// <param name="timestep"></param>
          /// <param name="satisfactionvalues"></param>
-        public void ApplyDecayWithoutSome([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
+        public void ApplyDecayWithoutSomeNew([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
         {
+            //TODO: Consider apply decay to all desires
             // Create a HashSet containing the DesireIDs from satisfactionvalues
             HashSet<int> satisfactionDesireIDs = new HashSet<int>(satisfactionvalues.Select(sv => sv.DesireID));
 
@@ -420,11 +409,11 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     if (interruptable == true)
                     {
-                        return CalcTotalDeviationAllasArea(1, satisfactionvalues, out thoughtstring, priorityInfo,restTime);
+                        return CalcTotalDeviationAllasAreaNew(1, satisfactionvalues, out thoughtstring, priorityInfo,restTime);
                     }
                     else
                     {
-                        return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
+                        return CalcTotalDeviationAllasAreaNew(duration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
                     }
 
                     //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
@@ -444,280 +433,8 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        private decimal CalcTotalDeviationAll(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, Boolean alreadyUsed)
-        {
-            decimal totalDeviation = 0;
-            StringBuilder? sb = null;
-            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
-            if (makeThoughts)
-            {
-                sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
-            }
-            foreach (var calcDesire in Desires.Values)
-            {
-                var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
-                if (satisfactionValue != null)
-                {
-                    var desire = Desires[satisfactionValue.DesireID];
-                    var decayrate = desire.GetDecayRate();
-                    var satisfactionvalue = satisfactionValue.Value;
-                    var currentvalueraw = desire.TempValue;
-                    var aftervalue = currentvalueraw + satisfactionvalue < 1 ? currentvalueraw + satisfactionvalue : 1;
 
-                    var deviation = (((1 - calcDesire.TempValue)+(1 - aftervalue))/2) * 100;
-                    var desirevalue = deviation * deviation * calcDesire.Weight;
-                    totalDeviation += desirevalue;
-                    if (sb != null)
-                    {
-                        sb.Append(calcDesire.Name);
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                        sb.Append(desirevalue.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
-                    }
-                }
-                else
-                {
-                    var decayrate = calcDesire.GetDecayRate();
-                    var currentvalueraw = calcDesire.TempValue;
-                    var currentvalue = (double)currentvalueraw;
-                    double doubleDecayrate = (double)decayrate;
-                    double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
-                    double afterValue = currentvalue * doubleAfterDecayrate;
-                    
-                    var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) / 2 * 100;
-                    var desirevalue = deviation * deviation * calcDesire.Weight;
-
-                    totalDeviation += desirevalue;
-                    if (sb != null)
-                    {
-                        sb.Append(calcDesire.Name);
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                        sb.Append(desirevalue.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
-                    }
-                }
-            }
-
-            if (sb != null)
-            {
-                thoughtstring = sb.ToString();
-            }
-            else
-            {
-                thoughtstring = null;
-            }
-
-            if (duration < 2 || alreadyUsed==true)
-            {
-                return 10000000000000;
-            }
-            else
-            {
-                return totalDeviation;
-            }
-
-            
-        }
-
-        private decimal CalcTotalDeviationAllasAreaOld(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo)
-        {
-            decimal totalDeviation = 0;
-            StringBuilder? sb = null;
-            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
-            if (makeThoughts)
-            {
-                sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
-            }
-
-            //object lockObject = new object();
-
-            var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value);
-
-
-            foreach (var calcDesire in Desires.Values)
-            {
-
-                var desireID = calcDesire.DesireID;
-                if (satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueRAW))
-                //var satisfactionValue = satisfactionvalues.FirstOrDefault(s => s.DesireID == calcDesire.DesireID);
-                //if (satisfactionValue != null)
-                {
-                    //var desire = Desires[satisfactionValue.DesireID];
-                    var desire = calcDesire;
-                    double decayrate = desire.GetDecayRateDoulbe();
-                    double satisfactionvalueDBL = (double)satisfactionvalueRAW;
-                    var currentValueRAW = desire.TempValue;
-                    var weight = desire.Weight;
-                    double weightDBL = (double)weight;
-                    double currentValueDBL = (double)currentValueRAW;
-
-                    //double decayrateAfterDBL = Math.Pow(decayrate, duration);
-                    //double afterValueDBL = currentValueDBL * decayrateAfterDBL;
-                    //double height = (currentValueDBL - afterValueDBL) + satisfactionvalueDBL;
-                    //double heightMore = currentValueDBL + satisfactionvalueDBL - 1;
-                    //double durationLess = duration;
-
-                    //double profitValue = 0;
-                    //if (heightMore > 0)
-                    //{
-                    //    double durationMore = (heightMore / satisfactionvalueDBL) * duration;
-                    //    durationLess = duration - durationMore;
-                    //    profitValue = durationLess * (1 - currentValueDBL) * weightDBL / 2;
-                    //}
-                    //else
-                    //{
-                    //    profitValue = ((1 - currentValueDBL) + (1 - currentValueDBL - satisfactionvalueDBL)) * duration * weightDBL/2;
-                    //}
-
-                    double profitValue = 0;
-                    profitValue = (1 - currentValueDBL);
-                    double updateValue = currentValueDBL;
-                    for (var i = 0; i < duration; i++)
-                    {
-                        updateValue = Math.Min(1, updateValue + satisfactionvalueDBL/duration);
-                        double diff = (1 - updateValue);
-                        profitValue = profitValue + diff;
-
-                    }
-                    double afterValueDBL = updateValue;
-
-                    profitValue = (profitValue * weightDBL) / duration;
-                    //totalDeviation += TunningDeviation(profitValue, duration);
-                    totalDeviation += (decimal)profitValue;
-                    var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
-                    if (sb != null)
-                    {
-                        sb.Append(calcDesire.Name);
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                        sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
-                    }
-                }
-                else
-                {
-                    //var decayrate = calcDesire.GetDecayRate();
-                    //var currentValueRAW = calcDesire.TempValue;
-                    //var currentValueDBL = (double)currentValueRAW;
-                    //double doubleDecayrate = (double)decayrate;
-                    //double doubleAfterDecayrate = Math.Pow(doubleDecayrate, duration);
-                    //double afterValue = (double)currentValueDBL * doubleAfterDecayrate;
-                    //var desirevalue = (decimal)((((1 - currentValueDBL) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
-                    ////var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
-                    //var deviation = (((1 - currentValueRAW)+(1 - (decimal)afterValue)) / 2 ) * 100;
-
-                    //desirevalue = desirevalue / duration;
-                    ////desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
-                    ////desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
-
-                    //totalDeviation += desirevalue;
-
-                    var decayrate = calcDesire.GetDecayRateDoulbe();
-                    var currentValueRAW = calcDesire.TempValue;
-                    var currentValueDBL = (double)currentValueRAW;
-                    double weightDBL = (double)calcDesire.Weight;
-                    //double doubleDecayrate = (double)decayrate;
-                    double doubleAfterDecayrate = Math.Pow(decayrate, duration);
-                    double afterValue = currentValueDBL * doubleAfterDecayrate;
-                    //var desirevalue = (decimal)((((1 - currentValueDBL) * (1 - afterValue))) * duration / 2) * calcDesire.Weight;
-                    //var deviation = ((1 - currentvalueraw) + (1 - (decimal)afterValue)) * 100;
-                    var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValue)) / 2) * 100;
-
-                    double profitValue = 0;
-
-                    //old way to cal the area
-                    profitValue = (1 - currentValueDBL);
-                    double updateValue = currentValueDBL;
-                    for (var i = 0; i < duration; i++)
-                    {
-                        updateValue = updateValue * decayrate;
-                        double diff = (1 - updateValue);
-                        profitValue = profitValue + diff;
-
-                    }
-
-
-                    //new way to calc area with Integration
-                    //double t_i = (double)calcDesire.GetDecayTimeSteps();
-                    //double profitValue1 = (duration) - ((currentValueDBL * t_i)/(Math.Log(2)))*(1-Math.Pow(0.5,(duration)/t_i));
-
-
-                    //var Diff = profitValue - profitValue1;
-                    //Debug.WriteLine("Diff:  " + Diff+"    duration:    "+duration);
-                    //if (Math.Abs(Diff) > 2)
-                    //{
-                    //    Debug.WriteLine(Diff+"         V1:  " + profitValue + "     V2:   " + profitValue1+"   ti:   "+t_i+"    dur:    "+duration+"      curr:    "+currentValueDBL+"      rate:   "+decayrate);
-                    //}
-                    
-
-
-                    profitValue = (profitValue * weightDBL) / duration;
-                    //desirevalue = (decimal)Math.Log(1 + ((double)desirevalue / duration));
-                    //desirevalue = (decimal)Math.Exp(-1 * 0.1 * duration) * desirevalue;
-
-                    totalDeviation += (decimal)profitValue;
-                    //totalDeviation += TunningDeviation(profitValue,duration);
-
-                    if (sb != null)
-                    {
-                        sb.Append(calcDesire.Name);
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
-                        sb.Append("*");
-                        sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                        sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
-                        sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
-                    }
-                }
-                
-                
-            }
-
-            if (sb != null)
-            {
-                thoughtstring = sb.ToString();
-            }
-            else
-            {
-                thoughtstring = null;
-            }
-            
-            //if (duration < 2 || alreadyUsed == true)
-            if (priorityInfo == 0)
-            {
-                return 1000000000000000;
-            }
-            else if(priorityInfo == 2)
-            {
-                return totalDeviation;
-            }
-            else
-            {
-                return totalDeviation;
-            }
-        }
-
-        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasArea(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
+        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasAreaNew(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;

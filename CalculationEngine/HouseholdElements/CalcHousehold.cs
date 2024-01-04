@@ -420,8 +420,18 @@ namespace CalculationEngine.HouseholdElements {
             }
             
             foreach (var p in _persons) {
-                p.NextStep(timestep, _locations, _daylightArray,
-                    _householdKey, _persons, _simulationSeed,now);
+                var calcParameters = _calcRepo.CalcParameters;
+                if (calcParameters.UseNewAlgo)
+                {
+                    p.NextStepNew(timestep, _locations, _daylightArray,
+                    _householdKey, _persons, _simulationSeed, now);
+                }
+                else
+                {
+                    p.NextStep(timestep, _locations, _daylightArray,
+                    _householdKey, _persons, _simulationSeed);
+                }
+                
                 //Debug.WriteLine("Time: " + now);
             }
 
