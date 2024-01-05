@@ -233,16 +233,21 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //PersonDesires.ApplyDecay(time);
-            if (_executingAffordance!=null)
-            {
-                //PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
-                PersonDesires.ApplyDecay(time);
-            }
-            else
-            {
-                PersonDesires.ApplyDecay(time);
-            }
+            //if (_executingAffordance!=null)
+            //{
+            //    //PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
+            //    PersonDesires.ApplyDecay(time);
+            //}
+            //else
+            //{
+            //    PersonDesires.ApplyDecay(time);
+            //}
+
             //PersonDesires.ApplyDecayWithoutSome(time, _executingAffordance.Satisfactionvalues);
+            PersonDesires.ApplyDecay(time);
+            //PersonDesires.ApplyDecayNew();
+
+
             WriteDesiresToLogfileIfNeeded(time, householdKey);
 
             ReturnToPreviousActivityIfPreviouslyInterrupted(time);
@@ -290,6 +295,8 @@ namespace CalculationEngine.HouseholdElements {
 
             ActivateAffordanceNew(time, isDaylight,  bestaff, now);
             _isCurrentlyPriorityAffordanceRunning = false;
+
+            //PersonDesires.ApplyDecayNew();
         }
 
         public void NextStep([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,

@@ -190,6 +190,7 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
+
         private decimal GetRate(decimal decayTime)
         {
             var logVal = (decimal)Math.Log(0.5);

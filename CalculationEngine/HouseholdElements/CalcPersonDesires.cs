@@ -235,11 +235,13 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-         /// <summary>
-         /// Test
-         /// </summary>
-         /// <param name="timestep"></param>
-         /// <param name="satisfactionvalues"></param>
+        
+
+        /// <summary>
+        /// Test
+        /// </summary>
+        /// <param name="timestep"></param>
+        /// <param name="satisfactionvalues"></param>
         public void ApplyDecayWithoutSomeNew([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
         {
             //TODO: Consider apply decay to all desires
