@@ -61,7 +61,6 @@ namespace CalculationEngine.HouseholdElements {
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
 
-        public static Boolean _useNewAlgo = true;
 
         public CalcPersonDesires(CalcRepo calcRepo) {
             _calcRepo = calcRepo;
@@ -300,135 +299,128 @@ namespace CalculationEngine.HouseholdElements {
             var interruptable = affordance.IsInterruptable;
             var duration = affordance.GetDuration();
             var restTime = affordance.GetRestTimeWindows(currentTime);
-            
+
             //Debug.WriteLine("     aff: " + affordanceName + "   restTime:  "+restTime);
-            if(_useNewAlgo == true)
+            var satisfactionvalueRAW = satisfactionvalues;
+            // calc decay
+            foreach (var calcDesire in Desires.Values)
             {
-                var satisfactionvalueRAW = satisfactionvalues;
-                // calc decay
-                foreach (var calcDesire in Desires.Values)
-                {
-                    calcDesire.TempValue = calcDesire.Value;
-                }
-                decimal modifier = 1;
-                //TimeStep edge = new TimeStep(120,0,false);
-                TimeStep edge = new TimeStep(1440, 0, false);
-                TimeStep edge1 = new TimeStep(180, 0, false);//diff
-                TimeStep edgeWeek = new TimeStep(60*24*7,0, false);
-                int priorityInfo = 1;
-                List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
+                calcDesire.TempValue = calcDesire.Value;
+            }
+            decimal modifier = 1;
+            //TimeStep edge = new TimeStep(120,0,false);
+            TimeStep edge = new TimeStep(1440, 0, false);
+            TimeStep edge1 = new TimeStep(180, 0, false);//diff
+            TimeStep edgeWeek = new TimeStep(60 * 24 * 7, 0, false);
+            int priorityInfo = 1;
+            List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
 
-                TimeStep lastTime;
-                var words = affordanceName.Split(' ');
-                string affordanceKey = string.Join(" ", words.Take(3));
-                DateTime lastDate;
-                _lastAffordanceDate.TryGetValue(affordanceKey, out lastDate);
+            TimeStep lastTime;
+            var words = affordanceName.Split(' ');
+            string affordanceKey = string.Join(" ", words.Take(3));
+            DateTime lastDate;
+            _lastAffordanceDate.TryGetValue(affordanceKey, out lastDate);
 
-                if (_lastAffordanceTime.TryGetValue(affordanceKey, out lastTime))
+            if (_lastAffordanceTime.TryGetValue(affordanceKey, out lastTime))
+            {
+                if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
                 {
-                    if(whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                    if ((currentTime - lastTime) < edge1)
                     {
-                        if((currentTime - lastTime) < edge1)
-                        {
-                            priorityInfo = 0;
-                        }
-                        else
-                        {
-                            modifier *= 1;
-                            priorityInfo = 2;
-                        }
+                        priorityInfo = 0;
                     }
                     else
-                    {
-                        if((currentTime - lastTime) < edge)
-                        {
-                            //modifier *= 0.1m;
-                            //priorityInfo = 0;
-                            if (now.Date == lastDate.Date)
-                            {
-                                
-                                modifier *= 0.1m;
-                                priorityInfo = 0;
-                            }
-                        }
-                        if(duration>120 && (currentTime - lastTime) < edgeWeek)//action, which too long
-                        {
-                            modifier *= 0.1m;
-                            priorityInfo = 0;
-                        }
-                    }
-                }
-                else
-                {
-                    if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
                     {
                         modifier *= 1;
                         priorityInfo = 2;
                     }
-                    
-                }
-                
-                // add value
-                foreach (var satisfactionvalue in satisfactionvalues)
-                {
-                    if (Desires.ContainsKey(satisfactionvalue.DesireID))
-                    {
-                        var desire = Desires[satisfactionvalue.DesireID];
-                        if (desire.TempValue + satisfactionvalue.Value > 1)
-                        {
-                            //if (interruptable == true)
-                            //{
-                            //    //desire.TempValue += (satisfactionvalue.Value / modifier) /duration;
-                            //    satisfactionvalue.Value = (satisfactionvalue.Value / modifier) / duration;
-                            //}
-                            //else
-                            //{
-                            //    //desire.TempValue += satisfactionvalue.Value / modifier;
-                            //    satisfactionvalue.Value = satisfactionvalue.Value / modifier;
-                            //}
-                            desire.TempValue += satisfactionvalue.Value / modifier;
-                        }
-                        else
-                        {
-                            //if (interruptable == true)
-                            //{
-                            //    //desire.TempValue += (satisfactionvalue.Value * modifier) /duration;
-                            //    satisfactionvalue.Value = (satisfactionvalue.Value * modifier) / duration;
-                            //}
-                            //else
-                            //{
-                            //    //desire.TempValue += satisfactionvalue.Value * modifier;
-                            //    satisfactionvalue.Value = satisfactionvalue.Value * modifier;
-                            //}
-                            desire.TempValue += satisfactionvalue.Value * modifier;
-                        }
-                    }
-                }
-                // get results
-                if (careForAll == true)
-                {
-                    if (interruptable == true)
-                    {
-                        return CalcTotalDeviationAllasAreaNew(1, satisfactionvalues, out thoughtstring, priorityInfo,restTime);
-                    }
-                    else
-                    {
-                        return CalcTotalDeviationAllasAreaNew(duration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
-                    }
-
-                    //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
-                    //return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
                 }
                 else
                 {
-                    return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName),-1);
+                    if ((currentTime - lastTime) < edge)
+                    {
+                        //modifier *= 0.1m;
+                        //priorityInfo = 0;
+                        if (now.Date == lastDate.Date)
+                        {
+
+                            modifier *= 0.1m;
+                            priorityInfo = 0;
+                        }
+                    }
+                    if (duration > 120 && (currentTime - lastTime) < edgeWeek)//action, which too long
+                    {
+                        modifier *= 0.1m;
+                        priorityInfo = 0;
+                    }
                 }
-                //return CalcTotalDeviation(out thoughtstring);
             }
             else
             {
-                return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName),-1);
+                if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                {
+                    modifier *= 1;
+                    priorityInfo = 2;
+                }
+
             }
+
+            // add value
+            foreach (var satisfactionvalue in satisfactionvalues)
+            {
+                if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                {
+                    var desire = Desires[satisfactionvalue.DesireID];
+                    if (desire.TempValue + satisfactionvalue.Value > 1)
+                    {
+                        //if (interruptable == true)
+                        //{
+                        //    //desire.TempValue += (satisfactionvalue.Value / modifier) /duration;
+                        //    satisfactionvalue.Value = (satisfactionvalue.Value / modifier) / duration;
+                        //}
+                        //else
+                        //{
+                        //    //desire.TempValue += satisfactionvalue.Value / modifier;
+                        //    satisfactionvalue.Value = satisfactionvalue.Value / modifier;
+                        //}
+                        desire.TempValue += satisfactionvalue.Value / modifier;
+                    }
+                    else
+                    {
+                        //if (interruptable == true)
+                        //{
+                        //    //desire.TempValue += (satisfactionvalue.Value * modifier) /duration;
+                        //    satisfactionvalue.Value = (satisfactionvalue.Value * modifier) / duration;
+                        //}
+                        //else
+                        //{
+                        //    //desire.TempValue += satisfactionvalue.Value * modifier;
+                        //    satisfactionvalue.Value = satisfactionvalue.Value * modifier;
+                        //}
+                        desire.TempValue += satisfactionvalue.Value * modifier;
+                    }
+                }
+            }
+            // get results
+            if (careForAll == true)
+            {
+                if (interruptable == true)
+                {
+                    return CalcTotalDeviationAllasAreaNew(1, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
+                }
+                else
+                {
+                    return CalcTotalDeviationAllasAreaNew(duration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
+                }
+
+                //return CalcTotalDeviationAllasArea(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+                //return CalcTotalDeviationAll(duration, satisfactionvalues, out thoughtstring, alreadyUsed);
+            }
+            else
+            {
+                return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName), -1);
+            }
+            //return CalcTotalDeviation(out thoughtstring);
 
 
         }

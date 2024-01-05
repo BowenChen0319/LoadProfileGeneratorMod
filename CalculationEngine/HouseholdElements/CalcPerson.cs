@@ -138,8 +138,6 @@ namespace CalculationEngine.HouseholdElements {
 
         public int _currentDuration = 0;
 
-        public static Boolean _useNewAlgo = true;
-
 
 
         [JetBrains.Annotations.NotNull]
@@ -1203,7 +1201,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (_calcRepo.CalcParameters.EnableIdlemode)
                 {
                     var idleaff = CurrentLocation.IdleAffs[this];
-                    idleaff.IsBusy(time, CurrentLocation, _calcPerson);
+                    idleaff.IsBusyNew(time, CurrentLocation, _calcPerson);
                     //Logger.Info(s);
                     return idleaff;
                 }
@@ -1272,97 +1270,93 @@ namespace CalculationEngine.HouseholdElements {
 
 
             // Look back
-            if (_useNewAlgo == true)
+            //double mostWeighted = -1;
+            double mostWeighted = -1000;
+            double suitWeighted = -1000;
+            decimal minDesireDiff = 10000;
+            string? bestWeightName = null;
+            string? suitableAffordanceName = null;
+            string bestAffordanceName = bestAffordance.Name;
+
+            //string? bestAffordanceName = bestAffordance.Name;
+            string? bestShortAffordanceName = null;
+            int bestRestTime = bestAffordance.GetRestTimeWindows(time);
+            int bestDuration = bestAffordance.GetDuration();
+
+            int mostWeightRestTime = -1000;
+            int suitRestTime = -1000;
+
+            foreach (var kvp in affordanceDetails)
             {
-                //double mostWeighted = -1;
-                double mostWeighted = -1000;
-                double suitWeighted = -1000;
-                decimal minDesireDiff = 10000;
-                string? bestWeightName = null;
-                string? suitableAffordanceName = null;
-                string bestAffordanceName = bestAffordance.Name;
+                var weightSum = kvp.Value.Item4;
+                var restTimeWindows = kvp.Value.Item3;
+                var duration = kvp.Value.Item2;
+                var desireDiff = kvp.Value.Item1;
 
-                //string? bestAffordanceName = bestAffordance.Name;
-                string? bestShortAffordanceName = null;
-                int bestRestTime = bestAffordance.GetRestTimeWindows(time);
-                int bestDuration = bestAffordance.GetDuration();
-
-                int mostWeightRestTime = -1000;
-                int suitRestTime = -1000;
-
-                foreach (var kvp in affordanceDetails)
+                if (weightSum >= 100)
                 {
-                    var weightSum = kvp.Value.Item4;
-                    var restTimeWindows = kvp.Value.Item3;
-                    var duration = kvp.Value.Item2; 
-                    var desireDiff = kvp.Value.Item1; 
-
-                    if (weightSum >= 100)
-                    {
-                        Debug.WriteLine("   name: " + kvp.Key + "      restTime: " + restTimeWindows + "    weight: " + weightSum);
-                    }
-
-                    // Check and update the affordance with maximum weightSum
-                    if (weightSum > mostWeighted)
-                    {
-                        mostWeighted = weightSum;
-                        mostWeightRestTime = restTimeWindows;
-                        bestWeightName = kvp.Key;
-                    }
-
-                    // Check and update the affordance with smallest desireDiff and duration <= 60
-                    if (desireDiff < minDesireDiff && duration <= 60)
-                    {
-                        minDesireDiff = desireDiff;
-                        bestShortAffordanceName = kvp.Key;
-                    }
-
-                    // Check for suitableAffordance
-                    if (weightSum >= 100 && restTimeWindows < 3 * bestDuration && restTimeWindows > 0 && kvp.Key != bestAffordanceName)
-                    {
-                        if (weightSum > suitWeighted)
-                        {
-                            suitWeighted = weightSum;
-                            suitRestTime = restTimeWindows;
-                            suitableAffordanceName = kvp.Key;
-                        }
-                    }
+                    Debug.WriteLine("   name: " + kvp.Key + "      restTime: " + restTimeWindows + "    weight: " + weightSum);
                 }
 
-                // Now, fetch the required affordances only once
-                ICalcAffordanceBase? bestWeightAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == bestWeightName);
-                ICalcAffordanceBase? bestShortAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == bestShortAffordanceName);
-                ICalcAffordanceBase? suitableAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == suitableAffordanceName);
-
-                // If the importance of the best affordance exceeds 100 and its restTimeWindows is negative
-                //int bestWeightRestTime = bestWeightAffordance.GetRestTimeWindows(time);
-                //int bestWeightDuration = bestWeightAffordance.GetDuration();
-                DateTime newTime = now.AddMinutes(bestDuration);
-                if (suitableAffordance != null)
+                // Check and update the affordance with maximum weightSum
+                if (weightSum > mostWeighted)
                 {
-                    Debug.WriteLine("case 3"+ "   Rather:  " + bestAffordance.Name + "  be:  " + suitableAffordance.Name);
-                    return suitableAffordance;
+                    mostWeighted = weightSum;
+                    mostWeightRestTime = restTimeWindows;
+                    bestWeightName = kvp.Key;
                 }
-                else if (mostWeighted >= 100 && mostWeightRestTime < 0)
+
+                // Check and update the affordance with smallest desireDiff and duration <= 60
+                if (desireDiff < minDesireDiff && duration <= 60)
                 {
-                    if (bestDuration <= 60)
+                    minDesireDiff = desireDiff;
+                    bestShortAffordanceName = kvp.Key;
+                }
+
+                // Check for suitableAffordance
+                if (weightSum >= 100 && restTimeWindows < 3 * bestDuration && restTimeWindows > 0 && kvp.Key != bestAffordanceName)
+                {
+                    if (weightSum > suitWeighted)
                     {
-                        Debug.WriteLine("case 1"+ "   Still:  " + bestAffordance.Name);
-                        return bestAffordance;
-                    }
-                    else if (bestShortAffordance!=null)
-                    {
-                        Debug.WriteLine("case 2"+ "   Rather:  " + bestAffordance.Name + "  be:  " + bestShortAffordance.Name);
-                        return bestShortAffordance;
+                        suitWeighted = weightSum;
+                        suitRestTime = restTimeWindows;
+                        suitableAffordanceName = kvp.Key;
                     }
                 }
-                else if(bestDuration>120 && newTime.TimeOfDay> new TimeSpan(1, 0, 0) && newTime.Date>now.Date && bestShortAffordance != null)
-                {
-                    return bestShortAffordance;//avoid no slepp at night
-                }
-                // If found an affordance that meets the criteria, return it.
-
             }
+
+            // Now, fetch the required affordances only once
+            ICalcAffordanceBase? bestWeightAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == bestWeightName);
+            ICalcAffordanceBase? bestShortAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == bestShortAffordanceName);
+            ICalcAffordanceBase? suitableAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == suitableAffordanceName);
+
+            // If the importance of the best affordance exceeds 100 and its restTimeWindows is negative
+            //int bestWeightRestTime = bestWeightAffordance.GetRestTimeWindows(time);
+            //int bestWeightDuration = bestWeightAffordance.GetDuration();
+            DateTime newTime = now.AddMinutes(bestDuration);
+            if (suitableAffordance != null)
+            {
+                Debug.WriteLine("case 3" + "   Rather:  " + bestAffordance.Name + "  be:  " + suitableAffordance.Name);
+                return suitableAffordance;
+            }
+            else if (mostWeighted >= 100 && mostWeightRestTime < 0)
+            {
+                if (bestDuration <= 60)
+                {
+                    Debug.WriteLine("case 1" + "   Still:  " + bestAffordance.Name);
+                    return bestAffordance;
+                }
+                else if (bestShortAffordance != null)
+                {
+                    Debug.WriteLine("case 2" + "   Rather:  " + bestAffordance.Name + "  be:  " + bestShortAffordance.Name);
+                    return bestShortAffordance;
+                }
+            }
+            else if (bestDuration > 120 && newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date && bestShortAffordance != null)
+            {
+                return bestShortAffordance;//avoid no slepp at night
+            }
+            // If found an affordance that meets the criteria, return it.
 
             return bestAffordance;
 
@@ -1661,7 +1655,7 @@ namespace CalculationEngine.HouseholdElements {
 
             //Debug.WriteLine(aff.Name);
 
-            var busynessResult = aff.IsBusy(timeStep, CurrentLocation, _calcPerson);
+            var busynessResult = aff.IsBusyNew(timeStep, CurrentLocation, _calcPerson);
             //Debug.WriteLine(busynessResult);
             if (busynessResult != BusynessType.NotBusy) {
                 if (errors != null) {

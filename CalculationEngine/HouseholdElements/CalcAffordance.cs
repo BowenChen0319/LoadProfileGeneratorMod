@@ -309,7 +309,7 @@ namespace CalculationEngine.HouseholdElements {
             
         }
 
-        public override BusynessType IsBusy(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true)
+        public override BusynessType IsBusyNew(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true)
         {
             if (!_timeFactorsForTimes.ContainsKey(time.InternalStep)) {
                 if (clearDictionaries) {
@@ -390,7 +390,7 @@ namespace CalculationEngine.HouseholdElements {
         }
         
         //IsBusyOld is the old version of IsBusy, which is used to compare with the new version of IsBusy
-        public BusynessType IsBusyOld(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true)
+        public override BusynessType IsBusy(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true)
         {
             if (!_timeFactorsForTimes.ContainsKey(time.InternalStep))
             {

@@ -197,6 +197,13 @@ namespace CalculationEngine.Transportation {
             return result;
         }
 
+        public BusynessType IsBusyNew(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson,
+            bool clearDictionaries = true)
+        {
+            
+            return this.IsBusy(time,srcLocation,calcPerson, clearDictionaries);
+        }
+
         //public BitArray IsBusyArray => _sourceAffordance.IsBusyArray;
 
         public bool IsInterruptable => _sourceAffordance.IsInterruptable;

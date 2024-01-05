@@ -118,6 +118,16 @@ namespace CalculationEngine.HouseholdElements {
             return BusynessType.NotBusy;
         }
 
+        public override BusynessType IsBusyNew(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson,
+            bool clearDictionaries = true)
+        {
+            if (IsBusyArray[time.InternalStep])
+            {
+                return BusynessType.Occupied;
+            }
+            return BusynessType.NotBusy;
+        }
+
         public override List<CalcSubAffordance> CollectSubAffordances(TimeStep time,
                                                                       bool onlyInterrupting,
                                                                       CalcLocation srcLocation) => throw new NotImplementedException();

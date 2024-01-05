@@ -75,6 +75,11 @@ namespace CalculationEngine.HouseholdElements {
                                     bool clearDictionaries = true) =>
             throw new LPGException("This function should never be called");
 
+        public override BusynessType IsBusyNew(TimeStep time,
+                                    CalcLocation srcLocation, CalcPersonDto calcPerson,
+                                    bool clearDictionaries = true) =>
+            throw new LPGException("This function should never be called");
+
         public override int GetRestTimeWindows(TimeStep time)
         {
             if (IsBusyArray[time.InternalStep] == false)
