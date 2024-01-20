@@ -233,19 +233,19 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //PersonDesires.ApplyDecay(time);
-            //if (_executingAffordance!=null)
+            //if (_executingAffordance != null)
             //{
-            //    //PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
-            //    PersonDesires.ApplyDecay(time);
+            //    PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
+            //
             //}
             //else
             //{
             //    PersonDesires.ApplyDecay(time);
             //}
 
-            //PersonDesires.ApplyDecayWithoutSome(time, _executingAffordance.Satisfactionvalues);
+            
             PersonDesires.ApplyDecay(time);
-            //PersonDesires.ApplyDecayNew();
+            
 
 
             WriteDesiresToLogfileIfNeeded(time, householdKey);
