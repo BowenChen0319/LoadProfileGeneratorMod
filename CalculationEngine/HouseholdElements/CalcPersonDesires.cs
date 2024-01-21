@@ -61,6 +61,8 @@ namespace CalculationEngine.HouseholdElements {
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
 
+        public bool _debug_print = false;
+
 
         public CalcPersonDesires(CalcRepo calcRepo) {
             _calcRepo = calcRepo;
@@ -118,7 +120,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
 
-                Debug.WriteLine("                              duration" + durationAsTimestep);
+                //Debug.WriteLine("                              duration" + durationAsTimestep);
                 //
             }
             
@@ -302,7 +304,11 @@ namespace CalculationEngine.HouseholdElements {
             var duration = affordance.GetDuration();
             var restTime = affordance.GetRestTimeWindows(currentTime);
 
-            //Debug.WriteLine("     aff: " + affordanceName + "   restTime:  "+restTime);
+            if (_debug_print)
+            {
+                //Debug.WriteLine("     aff: " + affordanceName + "   restTime:  "+restTime);
+            }
+
             var satisfactionvalueRAW = satisfactionvalues;
             // calc decay
             foreach (var calcDesire in Desires.Values)
@@ -427,8 +433,84 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
+        public (decimal totalDeviation, double WeightSum) CalcEffectPartly1(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now)
+        {
+            var satisfactionvalues = affordance.Satisfactionvalues;
+            var affordanceName = affordance.Name;
+            var affordanceNameLower = affordanceName.ToLower(); // 优化字符串操作
+            var duration = affordance.GetDuration();
+            var restTime = affordance.GetRestTimeWindows(currentTime);
 
-        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasAreaNew(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
+            var interruptable = affordance.IsInterruptable;
+            var words = affordanceName.Split(' ');
+            string affordanceKey = string.Join(" ", words.Take(3));
+
+            var edge = new TimeStep(1440, 0, false);
+            var edge1 = new TimeStep(180, 0, false);
+            var edgeWeek = new TimeStep(60 * 24 * 7, 0, false);
+
+            int priorityInfo = 1;
+            decimal modifier = 1;
+            List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
+
+            
+
+            _lastAffordanceTime.TryGetValue(affordanceKey, out TimeStep lastTime);
+            DateTime lastDate;
+            _lastAffordanceDate.TryGetValue(affordanceKey, out lastDate);
+
+            if (whiteList.Any(affordance => affordanceNameLower.Contains(affordance.ToLower())))
+            {
+                if ((currentTime - lastTime) < edge1)
+                {
+                    priorityInfo = 0;
+                }
+                else
+                {
+                    priorityInfo = 2;
+                }
+            }
+            else
+            {
+                if ((currentTime - lastTime) < edge)
+                {
+                    if (now.Date == lastDate.Date)
+                    {
+                        modifier *= 0.1m;
+                        priorityInfo = 0;
+                    }
+                }
+                if (duration > 120 && (currentTime - lastTime) < edgeWeek)
+                {
+                    modifier *= 0.1m;
+                    priorityInfo = 0;
+                }
+            }
+
+            foreach (var satisfactionvalue in satisfactionvalues)
+            {
+                if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                {
+                    var desire = Desires[satisfactionvalue.DesireID];
+                    var newValue = satisfactionvalue.Value * modifier;
+                    desire.TempValue += newValue > 1 ? newValue / duration : newValue;
+                }
+            }
+
+            if (careForAll)
+            {
+                var calcDuration = interruptable ? 1 : duration;
+                return CalcTotalDeviationAllasAreaNew(calcDuration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
+            }
+            else
+            {
+                return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName), -1);
+            }
+        }
+
+
+
+        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasAreaNew1(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
         {
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
@@ -536,6 +618,81 @@ namespace CalculationEngine.HouseholdElements {
                 return (totalDeviation, weight_sum);
             }
         }
+
+        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasAreaNew(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
+        {
+            decimal totalDeviation = 0;
+            StringBuilder? sb = null;
+            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
+            if (makeThoughts)
+            {
+                sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
+            }
+
+            var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
+
+            double weight_sum = 0;
+            foreach (var calcDesire in Desires.Values)
+            {
+                var desireID = calcDesire.DesireID;
+                satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueDBL);
+
+                var decayrate = calcDesire.GetDecayRateDoulbe();
+                var currentValueDBL = (double)calcDesire.TempValue;
+                var weightDBL = (double)calcDesire.Weight;
+
+                if (satisfactionvalueDBL > 0)
+                {
+                    weight_sum += weightDBL;
+                }
+
+                double profitValue = 1 - currentValueDBL;
+                double updateValue = currentValueDBL;
+                if (satisfactionvalueDBL > 0)
+                {
+                    for (var i = 0; i < duration; i++)
+                    {
+                        updateValue = Math.Min(1, updateValue + satisfactionvalueDBL / duration);
+                        profitValue += (1 - updateValue);
+                    }
+                }
+                else
+                {
+                    updateValue *= Math.Pow(decayrate, duration);
+                    profitValue += (1 - updateValue) * duration;
+                }
+
+                profitValue = profitValue * weightDBL / duration;
+                totalDeviation += (decimal)profitValue;
+
+                if (sb != null)
+                {
+                    var deviation = (((1 - (decimal)currentValueDBL) + (1 - (decimal)updateValue)) / 2) * 100;
+                    sb.Append(calcDesire.Name);
+                    sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
+                    sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
+                    sb.Append("*");
+                    sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
+                    sb.Append("*");
+                    sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
+                    sb.Append(_calcRepo.CalcParameters.CSVCharacter);
+                    sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
+                    sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
+                }
+            }
+
+            thoughtstring = sb?.ToString() ?? null;
+
+            if (priorityInfo == 0)
+            {
+                return (1000000000000000, weight_sum);
+            }
+            else
+            {
+                return (totalDeviation, weight_sum);
+            }
+        }
+
 
         //static decimal TunningDeviation(double deviationRAW, int duration)
         //{
