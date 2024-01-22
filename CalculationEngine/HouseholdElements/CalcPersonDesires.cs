@@ -63,6 +63,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public bool _debug_print = false;
 
+        public bool _lookback = false;
+
 
         public CalcPersonDesires(CalcRepo calcRepo) {
             _calcRepo = calcRepo;
@@ -302,7 +304,13 @@ namespace CalculationEngine.HouseholdElements {
             var affordanceName = affordance.Name;
             var interruptable = affordance.IsInterruptable;
             var duration = affordance.GetDuration();
-            var restTime = affordance.GetRestTimeWindows(currentTime);
+            var restTime = 0;
+
+            if (_lookback)
+            {
+                restTime = affordance.GetRestTimeWindows(currentTime);
+            }
+            
 
             if (_debug_print)
             {
@@ -439,7 +447,12 @@ namespace CalculationEngine.HouseholdElements {
             var affordanceName = affordance.Name;
             var affordanceNameLower = affordanceName.ToLower(); // 优化字符串操作
             var duration = affordance.GetDuration();
-            var restTime = affordance.GetRestTimeWindows(currentTime);
+            var restTime = 0;
+
+            if (_lookback)
+            {
+                restTime = affordance.GetRestTimeWindows(currentTime);
+            }
 
             var interruptable = affordance.IsInterruptable;
             var words = affordanceName.Split(' ');

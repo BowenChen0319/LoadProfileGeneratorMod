@@ -239,18 +239,18 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //PersonDesires.ApplyDecay(time);
-            //if (_executingAffordance != null)
-            //{
-            //    PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
+            if (_executingAffordance != null)
+            {
+                PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
 
-            //}
-            //else
-            //{
-            //    PersonDesires.ApplyDecay(time);
-            //}
+            }
+            else
+            {
+                PersonDesires.ApplyDecay(time);
+            }
 
 
-            PersonDesires.ApplyDecay(time);
+            //PersonDesires.ApplyDecay(time);
 
 
 
@@ -1278,8 +1278,11 @@ namespace CalculationEngine.HouseholdElements {
                         _calcPerson.HouseholdKey);
                 }
 
-                var restTimeWindows = affordance.GetRestTimeWindows(time);
-                affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows, weightSum);
+                if (_lookback)
+                {
+                    var restTimeWindows = affordance.GetRestTimeWindows(time);
+                    affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows, weightSum);
+                }
 
                 if (desireDiff < bestDiff)
                 {
@@ -1597,13 +1600,15 @@ namespace CalculationEngine.HouseholdElements {
                 }
             }
 
-            //if (!ignoreAlreadyExecutedActivities && _previousAffordances.Contains(aff)) {
-            //    if (errors != null) {
-            //        errors.Reasons.Add(new AffordanceStatusTuple(aff, "Just did this."));
-            //    }
+            if (!ignoreAlreadyExecutedActivities && _previousAffordances.Contains(aff))
+            {
+                if (errors != null)
+                {
+                    errors.Reasons.Add(new AffordanceStatusTuple(aff, "Just did this."));
+                }
 
-            //    return false;
-            //}
+                return false;
+            }
 
             //Debug.WriteLine(aff.Name);
 
