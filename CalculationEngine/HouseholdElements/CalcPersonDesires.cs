@@ -654,7 +654,7 @@ namespace CalculationEngine.HouseholdElements {
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
 
-                var short_duration = 60;
+                var short_duration = 30;
 
                 if (satisfactionvalueDBL > 0)
                 {
@@ -678,12 +678,17 @@ namespace CalculationEngine.HouseholdElements {
                             profitValue += (1 - updateValue);
                         }
                     }
-                    
+                    //for (var i = 0; i < duration; i++)
+                    //{
+                    //    updateValue = Math.Min(1, updateValue + (satisfactionvalueDBL / duration));
+                    //    profitValue += (1 - updateValue);
+                    //}
+
 
                 }
                 else
                 {
-                    if(duration >= short_duration)
+                    if (duration >= short_duration)
                     {
                         profitValue += duration - (updateValue / (Math.Log(decayrate)) * (Math.Pow(decayrate, duration) - 1));
                     }
@@ -695,6 +700,11 @@ namespace CalculationEngine.HouseholdElements {
                             profitValue += (1 - updateValue);
                         }
                     }
+                    //for (var i = 0; i < duration; i++)
+                    //{
+                    //    updateValue *= decayrate;
+                    //    profitValue += (1 - updateValue);
+                    //}
 
 
 
@@ -733,21 +743,6 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-
-        //static decimal TunningDeviation(double deviationRAW, int duration)
-        //{
-        //    //double tunning = (2 - Math.Exp(-duration));
-        //    //double result = deviationRAW*tunning;
-        //    //return (decimal)result;
-
-        //    double rate = duration / (24 * 60);
-        //    double alpha = 4;//8
-        //    double tunning = (2 - Math.Exp(-alpha*rate));
-        //    double result = deviationRAW * tunning;
-        //    //double result = deviationRAW;
-        //    //return (decimal)result/ (decimal)weight_sum;
-        //    return (decimal)result;
-        //}
 
         private decimal CalcTotalDeviation(out string? thoughtstring) {
             decimal totalDeviation = 0;
