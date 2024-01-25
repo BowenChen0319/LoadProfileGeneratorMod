@@ -654,25 +654,50 @@ namespace CalculationEngine.HouseholdElements {
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
 
+                var short_duration = 60;
+
                 if (satisfactionvalueDBL > 0)
                 {
                     weight_sum += weightDBL;
                 }
 
                 double profitValue = 1 - currentValueDBL;
+                //double profitValue = 0;
                 double updateValue = currentValueDBL;
                 if (satisfactionvalueDBL > 0)
                 {
-                    for (var i = 0; i < duration; i++)
+                    if (duration >= short_duration)
                     {
-                        updateValue = Math.Min(1, updateValue + satisfactionvalueDBL / duration);
-                        profitValue += (1 - updateValue);
+                        profitValue += ((1 - updateValue) + Math.Max(0, 1 - updateValue - satisfactionvalueDBL)) * Math.Min(((1 - updateValue) / (satisfactionvalueDBL / duration)), duration) / 2;
                     }
+                    else
+                    {
+                        for (var i = 0; i < duration; i++)
+                        {
+                            updateValue = Math.Min(1, updateValue + (satisfactionvalueDBL / duration));
+                            profitValue += (1 - updateValue);
+                        }
+                    }
+                    
+
                 }
                 else
                 {
-                    updateValue *= Math.Pow(decayrate, duration);
-                    profitValue += (1 - updateValue) * duration;
+                    if(duration >= short_duration)
+                    {
+                        profitValue += duration - (updateValue / (Math.Log(decayrate)) * (Math.Pow(decayrate, duration) - 1));
+                    }
+                    else
+                    {
+                        for (var i = 0; i < duration; i++)
+                        {
+                            updateValue *= decayrate;
+                            profitValue += (1 - updateValue);
+                        }
+                    }
+
+
+
                 }
 
                 profitValue = profitValue * weightDBL / duration;
@@ -693,6 +718,8 @@ namespace CalculationEngine.HouseholdElements {
                     sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                 }
             }
+
+            weight_sum = weight_sum < 1 ? 1 : weight_sum;
 
             thoughtstring = sb?.ToString() ?? null;
 
