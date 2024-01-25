@@ -273,7 +273,8 @@ namespace CalculationEngine.HouseholdElements {
                 return;
             }
 
-            if (IsOnVacation[time.InternalStep]) {
+            if (IsOnVacation[time.InternalStep])
+            {
                 BeOnVacation(time);
 
                 return;
@@ -1258,6 +1259,29 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     continue;
                 }
+
+                
+
+                //if sleep in the wait list, then direct run it V1
+                if (weightSum >= 1000)
+                {
+                    bestAffordance = affordance;
+                    break;
+                }
+                
+                //V2
+                if (duration >= 120)
+                {
+                    DateTime newTime = now.AddMinutes(duration);
+                    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
+                    if (newTime.Date > now.Date)
+                    {
+                        continue;
+                    }
+
+                }
+
+
 
                 desireDiff = TunningDeviation((double)desireDiff, duration);
                 

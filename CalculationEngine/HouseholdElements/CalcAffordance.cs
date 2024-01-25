@@ -287,6 +287,7 @@ namespace CalculationEngine.HouseholdElements {
             return result;
         }
 
+        //GetRestTimeWindows maybe leads to slow performance, so we need to optimize it
         public override int GetRestTimeWindows(TimeStep time)
         {
             if (IsBusyArray[time.InternalStep] == false)
