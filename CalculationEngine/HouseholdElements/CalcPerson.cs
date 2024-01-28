@@ -1281,42 +1281,50 @@ namespace CalculationEngine.HouseholdElements {
 
 
 
-                ////V1 if sleep in the wait list, then direct run it
-                //if (weightSum >= 1000)
-                //{
-                //    bestAffordance = affordance;
-                //    break;
-                //}
+                //V1 if sleep in the wait list, then direct run it
+                if (weightSum >= 1000)
+                {
+                    bestAffordance = affordance;
+                    break;
+                }
 
-                ////V2 & V3
-                //if (duration >= 120)
-                //{
-                //    DateTime newTime = now.AddMinutes(duration);
-                //    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
-                //    if (newTime.Date > now.Date)
-                //    {
-                //        continue;
-                //    }
+                //V2 & V3
+                if (duration >= 120)
+                {
+                    DateTime newTime = now.AddMinutes(duration);
+                    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
+                    if (newTime.Date > now.Date)
+                    {
+                        continue;
+                    }
 
-                //}
+                }
 
                 //Load sample data
-                var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
-                {
-                    //Col0 = @"00:39:00",
-                    //Col1 = @"sleep bed 01 (10 h)",
-                    Col0 = now.ToString("HH:mm:ss"),
-                    Col1 = affordance.Name,
-                };
+                //string hourString = now.ToString("hh");
+                //int hourInt = int.Parse(hourString);
+                //float hourFloat = (float)hourInt;
 
-                //Load model and predict output
-                var result = ML_Time_Aff_Bool_Model.Predict(sampleData);
-
-                if (result.PredictedLabel == "1")
+                if (now.Hour >= 19 || now.Hour <= 3)
                 {
-                    //Debug.WriteLine("ML:  Time:   " + now + "  Name:  " + affordance.Name );
-                    continue;
+                    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                    {
+                        Col0 = now.ToString("HH:mm:ss"),
+                        //Col0 = hourFloat,
+                        Col1 = affordance.Name,
+                    };
+
+                    //Load model and predict output
+                    var result = ML_Time_Aff_Bool_Model.Predict(sampleData);
+
+                    if (result.PredictedLabel == "1")
+                    {
+                        Debug.WriteLine("ML:  Time:   " + now + "  Name:  " + affordance.Name);
+                        continue;
+                    }
                 }
+
+                
 
 
 

@@ -14,7 +14,7 @@ namespace CalculationEngine
 {
     public partial class ML_Time_Aff_Bool_Model
     {
-        public const string RetrainFilePath =  @"C:\Work\ml-7-9-13-v1.csv";
+        public const string RetrainFilePath =  @"C:\Work\ML\Data\ml-training-data.csv";
         public const char RetrainSeparatorChar = ',';
         public const bool RetrainHasHeader =  false;
 
@@ -93,7 +93,7 @@ namespace CalculationEngine
                                     .Append(mlContext.Transforms.Text.FeaturizeText(inputColumnName:@"col1",outputColumnName:@"col1"))      
                                     .Append(mlContext.Transforms.Concatenate(@"Features", new []{@"col0",@"col1"}))      
                                     .Append(mlContext.Transforms.Conversion.MapValueToKey(outputColumnName:@"col2",inputColumnName:@"col2",addKeyValueAnnotationsAsText:false))      
-                                    .Append(mlContext.MulticlassClassification.Trainers.OneVersusAll(binaryEstimator:mlContext.BinaryClassification.Trainers.FastTree(new FastTreeBinaryTrainer.Options(){NumberOfLeaves=10,MinimumExampleCountPerLeaf=4,NumberOfTrees=7,MaximumBinCountPerFeature=124,FeatureFraction=0.99999999,LearningRate=0.999999776672986,LabelColumnName=@"col2",FeatureColumnName=@"Features",DiskTranspose=false}),labelColumnName: @"col2"))      
+                                    .Append(mlContext.MulticlassClassification.Trainers.OneVersusAll(binaryEstimator:mlContext.BinaryClassification.Trainers.FastTree(new FastTreeBinaryTrainer.Options(){NumberOfLeaves=21,MinimumExampleCountPerLeaf=10,NumberOfTrees=50,MaximumBinCountPerFeature=348,FeatureFraction=0.894509634399547,LearningRate=0.996464363080737,LabelColumnName=@"col2",FeatureColumnName=@"Features",DiskTranspose=false}),labelColumnName: @"col2"))      
                                     .Append(mlContext.Transforms.Conversion.MapKeyToValue(outputColumnName:@"PredictedLabel",inputColumnName:@"PredictedLabel"));
 
             return pipeline;
