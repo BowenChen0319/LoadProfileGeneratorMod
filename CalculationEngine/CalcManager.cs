@@ -158,7 +158,10 @@ namespace CalculationEngine {
                 var calcParameters = CalcRepo.CalcParameters;
                 Debug.WriteLine("Use New Algo: " + calcParameters.UseNewAlgo);
 
-                Debug.WriteLine("Starttime: " + now);
+                Debug.WriteLine("Starttime: " + DateTime.Now);
+
+                Stopwatch sw = new Stopwatch();
+
                 try {
                     CalcRepo.CalculationProfiler.StartPart(Utili.GetCurrentMethodAndClass() + " - Core Simulation");
                     if (ExitCalcFunction) {
@@ -174,6 +177,8 @@ namespace CalculationEngine {
                         throw new LPGException("CalcObject was null");
                     }
 
+                    sw.Start();
+
                     while (now < CalcRepo.CalcParameters.InternalEndTime && ContinueRunning) {
                         // ReSharper disable once PossibleNullReferenceException
                         // Timestep is always running until the end of the simulation, even between the durations of the affordacne 
@@ -185,7 +190,10 @@ namespace CalculationEngine {
                         timestep = timestep.AddSteps(1);
                     }
                     
-                    Debug.WriteLine("Endtime: " + now);
+                    sw.Stop();
+                    Debug.WriteLine("Time elapsed: {0} seconds", sw.Elapsed.TotalSeconds);
+                    Debug.WriteLine("Endtime: " + DateTime.Now);
+                    
                     Logger.Info("Finished the simulation");
                 }
                 finally {

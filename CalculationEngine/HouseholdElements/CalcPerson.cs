@@ -142,6 +142,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public bool _lookback = false;
 
+        public decimal totalWeightedDeviation = 0;
+
 
 
 
@@ -270,12 +272,16 @@ namespace CalculationEngine.HouseholdElements {
                 InterruptIfNeededNew(time, isDaylight, false,now);
                 //continue with current activity
 
+                //totalWeightedDeviation = PersonDesires.getcurrent_TotalWeightedDeviation();
+
                 return;
             }
 
             if (IsOnVacation[time.InternalStep])
             {
                 BeOnVacation(time);
+
+                //totalWeightedDeviation = PersonDesires.getcurrent_TotalWeightedDeviation();
 
                 return;
             }
@@ -307,7 +313,16 @@ namespace CalculationEngine.HouseholdElements {
             ActivateAffordanceNew(time, isDaylight,  bestaff, now);
             _isCurrentlyPriorityAffordanceRunning = false;
 
+            //totalWeightedDeviation = PersonDesires.getcurrent_TotalWeightedDeviation();
+
+            //Debug.WriteLine("Time:   " + now +  "  totalWeightedDeviation:  " + PersonDesires.getcurrent_TotalWeightedDeviation());
+
             //PersonDesires.ApplyDecayNew();
+        }
+
+        public decimal getCurrent_TotalWeightedDeviation()
+        {
+            return PersonDesires.getcurrent_TotalWeightedDeviation();
         }
 
         public void NextStep([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
@@ -1244,9 +1259,13 @@ namespace CalculationEngine.HouseholdElements {
         {
             var bestDiff = decimal.MaxValue;
             var bestAffordance = allAvailableAffordances[0];
+            //var bestaffordances = new List<(ICalcAffordanceBase, double)>();
+            
+            //bestaffordances.Add(bestAffordance);
+            
             double bestWeightSum = -1;
 
-            var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int, double>>();
+            //var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int, double>>();
 
             foreach (var affordance in allAvailableAffordances)
             {
@@ -1260,25 +1279,43 @@ namespace CalculationEngine.HouseholdElements {
                     continue;
                 }
 
-                
 
-                //if sleep in the wait list, then direct run it V1
-                if (weightSum >= 1000)
-                {
-                    bestAffordance = affordance;
-                    break;
-                }
-                
-                //V2
-                if (duration >= 120)
-                {
-                    DateTime newTime = now.AddMinutes(duration);
-                    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
-                    if (newTime.Date > now.Date)
-                    {
-                        continue;
-                    }
 
+                ////V1 if sleep in the wait list, then direct run it
+                //if (weightSum >= 1000)
+                //{
+                //    bestAffordance = affordance;
+                //    break;
+                //}
+
+                ////V2 & V3
+                //if (duration >= 120)
+                //{
+                //    DateTime newTime = now.AddMinutes(duration);
+                //    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
+                //    if (newTime.Date > now.Date)
+                //    {
+                //        continue;
+                //    }
+
+                //}
+
+                //Load sample data
+                var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                {
+                    //Col0 = @"00:39:00",
+                    //Col1 = @"sleep bed 01 (10 h)",
+                    Col0 = now.ToString("HH:mm:ss"),
+                    Col1 = affordance.Name,
+                };
+
+                //Load model and predict output
+                var result = ML_Time_Aff_Bool_Model.Predict(sampleData);
+
+                if (result.PredictedLabel == "1")
+                {
+                    //Debug.WriteLine("ML:  Time:   " + now + "  Name:  " + affordance.Name );
+                    continue;
                 }
 
 
@@ -1305,7 +1342,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (_lookback)
                 {
                     var restTimeWindows = affordance.GetRestTimeWindows(time);
-                    affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows, weightSum);
+                    //affordanceDetails[affordance.Name] = Tuple.Create(desireDiff, duration, restTimeWindows, weightSum);
                 }
 
                 if (desireDiff < bestDiff)
@@ -1313,10 +1350,32 @@ namespace CalculationEngine.HouseholdElements {
                     bestDiff = desireDiff;
                     bestAffordance = affordance;
                     bestWeightSum = weightSum;
+                    //bestaffordances.Clear();
+                    //bestaffordances.Add((affordance,weightSum));
                 }
+
+                //if (desireDiff == bestDiff)
+                //{
+                //    bestaffordances.Add((affordance,weightSum));
+                //}
             }
 
-            
+            //if (bestaffordances.Count > 1)
+            //{
+            //    //choose the one with the highest weightSum from the bestaffordances
+            //    double maxWeightSum = -1;
+            //    foreach (var affordance in bestaffordances)
+            //    {
+            //        if (affordance.Item2 > maxWeightSum)
+            //        {
+            //            maxWeightSum = affordance.Item2;
+            //            bestAffordance = affordance.Item1;
+            //        }
+            //    }
+
+                
+            //}
+
             if (_lookback)
             {
                 // Look back
@@ -1336,48 +1395,48 @@ namespace CalculationEngine.HouseholdElements {
                 int mostWeightRestTime = -1000;
                 int suitRestTime = -1000;
 
-                foreach (var kvp in affordanceDetails)
-                {
-                    var weightSum = kvp.Value.Item4;
-                    var restTimeWindows = kvp.Value.Item3;
-                    var duration = kvp.Value.Item2;
-                    var desireDiff = kvp.Value.Item1;
+                //foreach (var kvp in affordanceDetails)
+                //{
+                //    var weightSum = kvp.Value.Item4;
+                //    var restTimeWindows = kvp.Value.Item3;
+                //    var duration = kvp.Value.Item2;
+                //    var desireDiff = kvp.Value.Item1;
 
-                    if (weightSum >= 100)
-                    {
-                        if (_debug_print)
-                        {
-                            Debug.WriteLine("   name: " + kvp.Key + "      restTime: " + restTimeWindows + "    weight: " + weightSum);
-                        }
+                //    if (weightSum >= 100)
+                //    {
+                //        if (_debug_print)
+                //        {
+                //            Debug.WriteLine("   name: " + kvp.Key + "      restTime: " + restTimeWindows + "    weight: " + weightSum);
+                //        }
                     
-                    }
+                //    }
 
-                    // Check and update the affordance with maximum weightSum
-                    if (weightSum > mostWeighted)
-                    {
-                        mostWeighted = weightSum;
-                        mostWeightRestTime = restTimeWindows;
-                        bestWeightName = kvp.Key;
-                    }
+                //    // Check and update the affordance with maximum weightSum
+                //    if (weightSum > mostWeighted)
+                //    {
+                //        mostWeighted = weightSum;
+                //        mostWeightRestTime = restTimeWindows;
+                //        bestWeightName = kvp.Key;
+                //    }
 
-                    // Check and update the affordance with smallest desireDiff and duration <= 60
-                    if (desireDiff < minDesireDiff && duration <= 60)
-                    {
-                        minDesireDiff = desireDiff;
-                        bestShortAffordanceName = kvp.Key;
-                    }
+                //    // Check and update the affordance with smallest desireDiff and duration <= 60
+                //    if (desireDiff < minDesireDiff && duration <= 60)
+                //    {
+                //        minDesireDiff = desireDiff;
+                //        bestShortAffordanceName = kvp.Key;
+                //    }
 
-                    // Check for suitableAffordance
-                    if (weightSum >= 100 && restTimeWindows < 3 * bestDuration && restTimeWindows > 0 && kvp.Key != bestAffordanceName)
-                    {
-                        if (weightSum > suitWeighted)
-                        {
-                            suitWeighted = weightSum;
-                            suitRestTime = restTimeWindows;
-                            suitableAffordanceName = kvp.Key;
-                        }
-                    }
-                }
+                //    // Check for suitableAffordance
+                //    if (weightSum >= 100 && restTimeWindows < 3 * bestDuration && restTimeWindows > 0 && kvp.Key != bestAffordanceName)
+                //    {
+                //        if (weightSum > suitWeighted)
+                //        {
+                //            suitWeighted = weightSum;
+                //            suitRestTime = restTimeWindows;
+                //            suitableAffordanceName = kvp.Key;
+                //        }
+                //    }
+                //}
 
                 // Now, fetch the required affordances only once
                 ICalcAffordanceBase? bestWeightAffordance = allAvailableAffordances.FirstOrDefault(aff => aff.Name == bestWeightName);

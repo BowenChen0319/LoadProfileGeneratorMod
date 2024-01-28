@@ -41,6 +41,7 @@ using CalculationEngine.Transportation;
 using Common;
 using JetBrains.Annotations;
 
+
 #endregion
 
 namespace CalculationEngine.HouseholdElements {
@@ -78,6 +79,13 @@ namespace CalculationEngine.HouseholdElements {
         private int _simulationSeed;
         [NotNull] private readonly string _description;
         private readonly CalcRepo _calcRepo;
+
+        public decimal totalWeightedDeviation = 0;
+        
+        public Dictionary<DateTime, decimal> totalWeightedDeviationByDate = new Dictionary<DateTime, decimal>();
+
+        public bool saveDesiresTWD = false;
+
 
         //[CanBeNull] private VariableLogfile _variableLogfile;
 
@@ -317,6 +325,41 @@ namespace CalculationEngine.HouseholdElements {
 
         public void FinishCalculation()
         {
+            
+            
+
+            
+            if(saveDesiresTWD)
+            {
+                Debug.WriteLine("TWD: " + totalWeightedDeviation);
+                string fileName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".csv";
+                string filePath = Path.Combine(@"C:\Work", fileName);
+
+                try
+                {
+                    // 创建或覆盖文件
+                    using (StreamWriter file = new StreamWriter(filePath))
+                    {
+                        // 写入文件头
+                        file.WriteLine("Date,Deviation,");
+
+                        // 遍历字典并写入文件
+                        foreach (var item in totalWeightedDeviationByDate)
+                        {
+                            string line = $"{item.Key.ToString("yyyy-MM-dd")},{item.Value.ToString(CultureInfo.InvariantCulture)},";
+                            file.WriteLine(line);
+                        }
+                    }
+
+                    Debug.WriteLine($"saved in: {filePath}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"can not save: {ex.Message}");
+                }
+            }
+
+
             DumpTimeProfiles();
         }
 
@@ -389,6 +432,8 @@ namespace CalculationEngine.HouseholdElements {
             throw new NotImplementedException();
         }
         */
+
+
         public void RunOneStep(TimeStep timestep, DateTime now, bool runProcessing)
         {
             if (_locations == null) {
@@ -418,13 +463,33 @@ namespace CalculationEngine.HouseholdElements {
             if (_autoDevs == null) {
                 throw new LPGException("_autoDevs should not be null");
             }
+
             
+
             foreach (var p in _persons) {
                 var calcParameters = _calcRepo.CalcParameters;
                 if (calcParameters.UseNewAlgo)
                 {
+                    //totalWeightedDeviation += p.getCurrent_TotalWeightedDeviation();
+
                     p.NextStepNew(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
+
+                    if (saveDesiresTWD)
+                    {
+                        if (totalWeightedDeviationByDate.ContainsKey(now.Date))
+                        {
+                            totalWeightedDeviationByDate[now.Date] += p.getCurrent_TotalWeightedDeviation();
+                        }
+                        else
+                        {
+                            totalWeightedDeviationByDate[now.Date] = p.getCurrent_TotalWeightedDeviation();
+                        }
+
+                        totalWeightedDeviation += p.getCurrent_TotalWeightedDeviation();
+                    }
+
+
                 }
                 else
                 {
@@ -536,6 +601,8 @@ namespace CalculationEngine.HouseholdElements {
                 person.LogPersonStatus(timestep);
             }
         }
+
+        
 
         public void Dispose()
         {

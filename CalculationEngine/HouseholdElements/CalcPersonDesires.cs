@@ -262,7 +262,21 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-
+        public decimal getcurrent_TotalWeightedDeviation()
+        {
+            decimal total = 0;
+            //decimal weightsum = 0;
+            foreach (var calcDesire in Desires.Values)
+            {
+                if (calcDesire.Value > 0)
+                {
+                    total += (1 - calcDesire.Value) * calcDesire.Weight;
+                }
+                
+                
+            }
+            return total ;
+        }
 
         public decimal CalcEffect([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
             [NotNull] string affordanceName) {
@@ -329,7 +343,7 @@ namespace CalculationEngine.HouseholdElements {
             TimeStep edge1 = new TimeStep(180, 0, false);//diff
             TimeStep edgeWeek = new TimeStep(60 * 24 * 7, 0, false);
             int priorityInfo = 1;
-            List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
+            List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" , "job"};
 
             TimeStep lastTime;
             var words = affordanceName.Split(' ');
@@ -655,6 +669,7 @@ namespace CalculationEngine.HouseholdElements {
                 var weightDBL = (double)calcDesire.Weight;
 
                 var short_duration = 30;
+                //short_duration = int.MaxValue;
 
                 if (satisfactionvalueDBL > 0)
                 {
