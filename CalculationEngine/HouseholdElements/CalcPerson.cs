@@ -1300,10 +1300,10 @@ namespace CalculationEngine.HouseholdElements {
 
                 }
 
-                //Load sample data
-                //string hourString = now.ToString("hh");
-                //int hourInt = int.Parse(hourString);
-                //float hourFloat = (float)hourInt;
+                ////Load sample data
+                ////string hourString = now.ToString("hh");
+                ////int hourInt = int.Parse(hourString);
+                ////float hourFloat = (float)hourInt;
 
                 if (now.Hour >= 19 || now.Hour <= 3)
                 {
@@ -1324,7 +1324,7 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
 
-                
+
 
 
 
