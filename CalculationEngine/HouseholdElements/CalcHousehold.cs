@@ -334,6 +334,8 @@ namespace CalculationEngine.HouseholdElements {
                 Debug.WriteLine("TWD: " + totalWeightedDeviation);
                 string fileName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".csv";
                 string filePath = Path.Combine(@"C:\Work", fileName);
+                //get OutputDirectory from JsonCalcSpecification 
+                
 
                 try
                 {
@@ -472,6 +474,40 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     //totalWeightedDeviation += p.getCurrent_TotalWeightedDeviation();
 
+                    DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
+
+                    bool isEndOfDay = now >= endOfDay;
+
+                    //DateTime startOfNextDay = now.Date.AddDays(1);
+
+                    //bool isEndOfDay = (startOfNextDay - now).TotalMinutes <= 1;
+                    //if (isEndOfDay)
+                    //{
+                    //    Debug.WriteLine(totalWeightedDeviationByDate.Count());
+                    //}
+
+
+                    if (isEndOfDay && totalWeightedDeviationByDate.Count()>7)
+                    {
+                        //Debug.WriteLine("now 是当天最后一刻: " + now.Date.ToString("yyyy-MM-dd"));
+                        //check the TWD
+                        var filteredValues = totalWeightedDeviationByDate.Where(kvp => kvp.Key != now.Date).Select(kvp => kvp.Value);
+
+                        double average = (double)filteredValues.Average();
+                        //double variance = filteredValues.Sum(v => Math.Pow((double)v - average, 2)) / (totalWeightedDeviationByDate.Count);
+                        //double standardDeviation = Math.Sqrt(variance);
+                        //double standardDeviation = 0.1 * average;
+                        double standardDeviation = 0.1 * 1000000;
+                        //print the average and standard deviation and the current TWD
+                        //Debug.WriteLine("Value: " + (average + standardDeviation - (double)totalWeightedDeviationByDate[now.Date]));
+
+                        if ((double)totalWeightedDeviationByDate[now.Date] > average + standardDeviation)
+                        {
+                            Debug.WriteLine("now TWD HIGH: " + now.Date.ToString("yyyy-MM-dd"));
+                        }
+                        
+                    }
+                    
                     p.NextStepNew(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
 
@@ -483,6 +519,8 @@ namespace CalculationEngine.HouseholdElements {
                         }
                         else
                         {
+                            //new day started
+                            
                             totalWeightedDeviationByDate[now.Date] = p.getCurrent_TotalWeightedDeviation();
                         }
 

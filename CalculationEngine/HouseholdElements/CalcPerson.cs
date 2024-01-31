@@ -1319,7 +1319,7 @@ namespace CalculationEngine.HouseholdElements {
 
                     if (result.PredictedLabel == "1")
                     {
-                        Debug.WriteLine("ML:  Time:   " + now + "  Name:  " + affordance.Name);
+                        //Debug.WriteLine("ML:  Time:   " + now + "  Name:  " + affordance.Name);
                         continue;
                     }
                 }
