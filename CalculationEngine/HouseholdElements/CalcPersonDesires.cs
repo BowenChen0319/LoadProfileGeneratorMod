@@ -273,7 +273,6 @@ namespace CalculationEngine.HouseholdElements {
                     total += (1 - calcDesire.Value) * calcDesire.Weight;
                 }
                 
-                
             }
             return total ;
         }

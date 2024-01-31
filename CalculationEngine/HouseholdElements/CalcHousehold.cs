@@ -81,10 +81,20 @@ namespace CalculationEngine.HouseholdElements {
         private readonly CalcRepo _calcRepo;
 
         public decimal totalWeightedDeviation = 0;
+
+        //public Dictionary<string, DateTime, decimal> totalWeightedDeviationByDate = new Dictionary<DateTime, decimal>();
+
+        //public Dictionary<DateTime, decimal> highTWDExceptions = new Dictionary<DateTime, decimal>();
+
+        public Dictionary<string, Dictionary<DateTime, decimal>> totalWeightedDeviationByDate = new Dictionary<string, Dictionary<DateTime, decimal>>();
         
-        public Dictionary<DateTime, decimal> totalWeightedDeviationByDate = new Dictionary<DateTime, decimal>();
+        public Dictionary<string, Dictionary<DateTime, decimal>> allHighTWDExceptions = new Dictionary<string, Dictionary<DateTime, decimal>>();
+        
+        public Dictionary<string, DateTime?> allLastHighTWD = new Dictionary<string, DateTime?>();
 
         public bool saveDesiresTWD = false;
+
+        //public DateTime lastHighTWD;
 
 
         //[CanBeNull] private VariableLogfile _variableLogfile;
@@ -329,37 +339,37 @@ namespace CalculationEngine.HouseholdElements {
             
 
             
-            if(saveDesiresTWD)
-            {
-                Debug.WriteLine("TWD: " + totalWeightedDeviation);
-                string fileName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".csv";
-                string filePath = Path.Combine(@"C:\Work", fileName);
-                //get OutputDirectory from JsonCalcSpecification 
+            //if(saveDesiresTWD)
+            //{
+            //    Debug.WriteLine("TWD: " + totalWeightedDeviation);
+            //    string fileName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".csv";
+            //    string filePath = Path.Combine(@"C:\Work", fileName);
+            //    //get OutputDirectory from JsonCalcSpecification 
                 
 
-                try
-                {
-                    // 创建或覆盖文件
-                    using (StreamWriter file = new StreamWriter(filePath))
-                    {
-                        // 写入文件头
-                        file.WriteLine("Date,Deviation,");
+            //    try
+            //    {
+            //        // 创建或覆盖文件
+            //        using (StreamWriter file = new StreamWriter(filePath))
+            //        {
+            //            // 写入文件头
+            //            file.WriteLine("Date,Deviation,");
 
-                        // 遍历字典并写入文件
-                        foreach (var item in totalWeightedDeviationByDate)
-                        {
-                            string line = $"{item.Key.ToString("yyyy-MM-dd")},{item.Value.ToString(CultureInfo.InvariantCulture)},";
-                            file.WriteLine(line);
-                        }
-                    }
+            //            // 遍历字典并写入文件
+            //            foreach (var item in totalWeightedDeviationByDate)
+            //            {
+            //                string line = $"{item.Key.ToString("yyyy-MM-dd")},{item.Value.ToString(CultureInfo.InvariantCulture)},";
+            //                file.WriteLine(line);
+            //            }
+            //        }
 
-                    Debug.WriteLine($"saved in: {filePath}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"can not save: {ex.Message}");
-                }
-            }
+            //        Debug.WriteLine($"saved in: {filePath}");
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Debug.WriteLine($"can not save: {ex.Message}");
+            //    }
+            //}
 
 
             DumpTimeProfiles();
@@ -470,13 +480,24 @@ namespace CalculationEngine.HouseholdElements {
 
             foreach (var p in _persons) {
                 var calcParameters = _calcRepo.CalcParameters;
+                
+                
                 if (calcParameters.UseNewAlgo)
                 {
                     //totalWeightedDeviation += p.getCurrent_TotalWeightedDeviation();
 
+                    string person_name =  p.Name;
+
                     DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
 
                     bool isEndOfDay = now >= endOfDay;
+
+                    if (!totalWeightedDeviationByDate.ContainsKey(person_name))
+                    {
+                        totalWeightedDeviationByDate[person_name] = new Dictionary<DateTime, decimal>();
+                        allHighTWDExceptions[person_name] = new Dictionary<DateTime, decimal>();
+                        allLastHighTWD[person_name] = null;
+                    }
 
                     //DateTime startOfNextDay = now.Date.AddDays(1);
 
@@ -487,23 +508,44 @@ namespace CalculationEngine.HouseholdElements {
                     //}
 
 
-                    if (isEndOfDay && totalWeightedDeviationByDate.Count()>7)
+                    if (!allHighTWDExceptions.ContainsKey(person_name))
                     {
-                        //Debug.WriteLine("now 是当天最后一刻: " + now.Date.ToString("yyyy-MM-dd"));
-                        //check the TWD
-                        var filteredValues = totalWeightedDeviationByDate.Where(kvp => kvp.Key != now.Date).Select(kvp => kvp.Value);
+                        allHighTWDExceptions[person_name] = new Dictionary<DateTime, decimal>();
+                    }
+                    if (!allLastHighTWD.ContainsKey(person_name))
+                    {
+                        allLastHighTWD[person_name] = null;
+                    }
+
+                    var highTWDExceptions = allHighTWDExceptions[person_name];
+                    var lastHighTWD = allLastHighTWD[person_name];
+                    var totalWeightedDeviationByDateP = totalWeightedDeviationByDate[person_name];
+
+
+                    if (isEndOfDay && totalWeightedDeviationByDateP.Count()>7)
+                    {
+                        
+                        var filteredValues = totalWeightedDeviationByDateP.Where(kvp => kvp.Key != now.Date).Select(kvp => kvp.Value);
 
                         double average = (double)filteredValues.Average();
                         //double variance = filteredValues.Sum(v => Math.Pow((double)v - average, 2)) / (totalWeightedDeviationByDate.Count);
                         //double standardDeviation = Math.Sqrt(variance);
                         //double standardDeviation = 0.1 * average;
-                        double standardDeviation = 0.1 * 1000000;
-                        //print the average and standard deviation and the current TWD
-                        //Debug.WriteLine("Value: " + (average + standardDeviation - (double)totalWeightedDeviationByDate[now.Date]));
 
-                        if ((double)totalWeightedDeviationByDate[now.Date] > average + standardDeviation)
+                        double standardDeviation = 0.1 * 1000000;
+                        
+                        if ((double)totalWeightedDeviationByDateP[now.Date] > average + standardDeviation)
                         {
-                            Debug.WriteLine("now TWD HIGH: " + now.Date.ToString("yyyy-MM-dd"));
+                            DateTime previousDay = now.Date.AddDays(-1);
+                            
+
+                            if (!highTWDExceptions.ContainsKey(previousDay) && previousDay!=lastHighTWD)
+                            {
+                                allHighTWDExceptions[person_name][now.Date] = totalWeightedDeviationByDateP[now.Date];
+                                Debug.WriteLine("now TWD HIGH: " + now.Date.ToString("yyyy-MM-dd"));
+                            }
+
+                            allLastHighTWD[person_name] = now.Date;
                         }
                         
                     }
@@ -511,17 +553,17 @@ namespace CalculationEngine.HouseholdElements {
                     p.NextStepNew(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
 
-                    if (saveDesiresTWD)
+                    if (true)
                     {
-                        if (totalWeightedDeviationByDate.ContainsKey(now.Date))
+                        if (totalWeightedDeviationByDateP.ContainsKey(now.Date))
                         {
-                            totalWeightedDeviationByDate[now.Date] += p.getCurrent_TotalWeightedDeviation();
+                            totalWeightedDeviationByDate[person_name][now.Date] += p.getCurrent_TotalWeightedDeviation();
                         }
                         else
                         {
                             //new day started
-                            
-                            totalWeightedDeviationByDate[now.Date] = p.getCurrent_TotalWeightedDeviation();
+
+                            totalWeightedDeviationByDate[person_name][now.Date] = p.getCurrent_TotalWeightedDeviation();
                         }
 
                         totalWeightedDeviation += p.getCurrent_TotalWeightedDeviation();
