@@ -39,6 +39,7 @@ using Automation.ResultFiles;
 using CalculationEngine.Helper;
 using CalculationEngine.Transportation;
 using Common;
+using Database.Tables.BasicHouseholds;
 using JetBrains.Annotations;
 
 
@@ -93,6 +94,8 @@ namespace CalculationEngine.HouseholdElements {
         public Dictionary<string, DateTime?> allLastHighTWD = new Dictionary<string, DateTime?>();
 
         public bool saveDesiresTWD = false;
+
+        public Dictionary<string,ICalcAffordanceBase> currentAff = new Dictionary<string, ICalcAffordanceBase>();
 
         //public DateTime lastHighTWD;
 
@@ -335,17 +338,17 @@ namespace CalculationEngine.HouseholdElements {
 
         public void FinishCalculation()
         {
-            
-            
 
-            
+
+
+
             //if(saveDesiresTWD)
             //{
             //    Debug.WriteLine("TWD: " + totalWeightedDeviation);
             //    string fileName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".csv";
             //    string filePath = Path.Combine(@"C:\Work", fileName);
             //    //get OutputDirectory from JsonCalcSpecification 
-                
+
 
             //    try
             //    {
@@ -370,6 +373,22 @@ namespace CalculationEngine.HouseholdElements {
             //        Debug.WriteLine($"can not save: {ex.Message}");
             //    }
             //}
+
+            //var innerDict = p.AffordanceSequence[previousDay];
+            //        foreach (var kvp in innerDict)
+            //        {
+            //            // 假设ICalcAffordanceBase有一个ToString()方法或其他想要打印的属性
+            //            Debug.WriteLine($"Inner Key: {kvp.Key}, Value: {kvp.Value}");
+            //        }
+
+            foreach (var person in _persons)
+            {
+                var person_name = person.Name;
+                foreach (var kvp in allHighTWDExceptions[person_name])
+                {
+                    Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}, TWD: {kvp.Value}");
+                }
+            }
 
 
             DumpTimeProfiles();
@@ -500,29 +519,26 @@ namespace CalculationEngine.HouseholdElements {
                     }
 
                     //DateTime startOfNextDay = now.Date.AddDays(1);
-
                     //bool isEndOfDay = (startOfNextDay - now).TotalMinutes <= 1;
-                    //if (isEndOfDay)
-                    //{
-                    //    Debug.WriteLine(totalWeightedDeviationByDate.Count());
-                    //}
 
+                    
 
-                    if (!allHighTWDExceptions.ContainsKey(person_name))
+                    //Dictionary<DateTime, decimal> highTWDExceptions;
+                    if (!allHighTWDExceptions.TryGetValue(person_name, out var highTWDExceptions))
                     {
-                        allHighTWDExceptions[person_name] = new Dictionary<DateTime, decimal>();
-                    }
-                    if (!allLastHighTWD.ContainsKey(person_name))
-                    {
-                        allLastHighTWD[person_name] = null;
+                        highTWDExceptions = new Dictionary<DateTime, decimal>();
+                        allHighTWDExceptions[person_name] = highTWDExceptions;
                     }
 
-                    var highTWDExceptions = allHighTWDExceptions[person_name];
-                    var lastHighTWD = allLastHighTWD[person_name];
+                    DateTime? lastHighTWD;
+                    if (!allLastHighTWD.TryGetValue(person_name, out lastHighTWD))
+                    {
+                        lastHighTWD = null; // 明确指定为null，即使这是默认行为
+                    }
                     var totalWeightedDeviationByDateP = totalWeightedDeviationByDate[person_name];
 
 
-                    if (isEndOfDay && totalWeightedDeviationByDateP.Count()>7)
+                    if (isEndOfDay && totalWeightedDeviationByDateP.Count>7)
                     {
                         
                         var filteredValues = totalWeightedDeviationByDateP.Where(kvp => kvp.Key != now.Date).Select(kvp => kvp.Value);
@@ -532,7 +548,7 @@ namespace CalculationEngine.HouseholdElements {
                         //double standardDeviation = Math.Sqrt(variance);
                         //double standardDeviation = 0.1 * average;
 
-                        double standardDeviation = 0.1 * 1000000;
+                        double standardDeviation = 0.2 * 1000000;
                         
                         if ((double)totalWeightedDeviationByDateP[now.Date] > average + standardDeviation)
                         {
@@ -543,6 +559,54 @@ namespace CalculationEngine.HouseholdElements {
                             {
                                 allHighTWDExceptions[person_name][now.Date] = totalWeightedDeviationByDateP[now.Date];
                                 Debug.WriteLine("now TWD HIGH: " + now.Date.ToString("yyyy-MM-dd"));
+
+                                if (p.AffordanceSequence != null)
+                                {
+                                    ////var nowDateKey = now.Date;
+                                    //if (p.AffordanceSequence.ContainsKey(previousDay))
+                                    //{
+                                    //    var innerDict = p.AffordanceSequence[previousDay];
+                                    //    foreach (var kvp in innerDict)
+                                    //    {
+                                    //        // 假设ICalcAffordanceBase有一个ToString()方法或其他想要打印的属性
+                                    //        Debug.WriteLine($"Inner Key: {kvp.Key}, Value: {kvp.Value.Name}, Cate: {kvp.Value.AffCategory}");
+                                    //    }
+                                    //}
+
+                                    var uniqueActivities = new Dictionary<string, ICalcAffordanceBase>();
+
+                                    // 获取previousDay的活动
+                                    if (p.AffordanceSequence.TryGetValue(previousDay, out var previousDayActivities))
+                                    {
+                                        foreach (var activity in previousDayActivities)
+                                        {
+                                            uniqueActivities[activity.Value.Name] = activity.Value;
+                                        }
+                                    }
+
+                                    // 检查previousDay前两天的活动
+                                    for (int i = 1; i <= 2; i++)
+                                    {
+                                        DateTime dayToCheck = previousDay.AddDays(-i);
+                                        if (p.AffordanceSequence.TryGetValue(dayToCheck, out var activities))
+                                        {
+                                            foreach (var activity in activities)
+                                            {
+                                                // 如果在previousDay前两天内找到相同的活动，则从uniqueActivities中移除
+                                                if (uniqueActivities.ContainsKey(activity.Value.Name))
+                                                {
+                                                    uniqueActivities.Remove(activity.Value.Name);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 打印uniqueActivities中剩余的项，这些是只在previousDay出现的活动
+                                    foreach (var kvp in uniqueActivities)
+                                    {
+                                        Debug.WriteLine($"Unique Activity on {previousDay:yyyy-MM-dd}: {kvp.Key}, Cate: {kvp.Value.AffCategory}");
+                                    }
+                                }
                             }
 
                             allLastHighTWD[person_name] = now.Date;
@@ -552,6 +616,10 @@ namespace CalculationEngine.HouseholdElements {
                     
                     p.NextStepNew(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
+
+                    
+                    ICalcAffordanceBase newAff = p._executingAffordance;
+
 
                     if (true)
                     {

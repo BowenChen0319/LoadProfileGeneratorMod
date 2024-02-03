@@ -132,8 +132,6 @@ namespace CalculationEngine.HouseholdElements {
 
         public int ID => _calcPerson.ID;
 
-        public ICalcAffordanceBase _executingAffordance = null;
-
         public int _remainingExecutionSteps = 0;
 
         public int _currentDuration = 0;
@@ -144,7 +142,11 @@ namespace CalculationEngine.HouseholdElements {
 
         public decimal totalWeightedDeviation = 0;
 
+        public ICalcAffordanceBase _executingAffordance = null;
 
+        public Dictionary<DateTime,Dictionary<DateTime,ICalcAffordanceBase>> AffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<DateTime, ICalcAffordanceBase>>();
+
+        public Dictionary<DateTime,Dictionary<DateTime, (ICalcAffordanceBase,int)>> TrainningAffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<DateTime, (ICalcAffordanceBase,int)>>();
 
 
 
@@ -1156,6 +1158,24 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             _currentAffordance = bestaff;
+
+            //if (!AffordanceSequence.ContainsKey(now.Date))
+            //{
+            //    AffordanceSequence[now.Date] = new Dictionary<DateTime, ICalcAffordanceBase>();
+            //}
+
+            //AffordanceSequence[now.Date][now] = bestaff;
+
+            //Dictionary<DateTime, ICalcAffordanceBase> innerDict;
+            if (!AffordanceSequence.TryGetValue(now.Date, out var innerDict))
+            {
+                innerDict = new Dictionary<DateTime, ICalcAffordanceBase>();
+                AffordanceSequence[now.Date] = innerDict;
+            }
+
+            innerDict[now] = bestaff;
+
+
             //else {
             //    if (_calcParameters.IsSet(CalcOption.ThoughtsLogfile)) {
             //        if(_lf == null) {
