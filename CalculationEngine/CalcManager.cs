@@ -179,6 +179,8 @@ namespace CalculationEngine {
 
                     sw.Start();
 
+                    CalcObject.BuildTwdDic();
+
                     while (now < CalcRepo.CalcParameters.InternalEndTime && ContinueRunning) {
                         // ReSharper disable once PossibleNullReferenceException
                         // Timestep is always running until the end of the simulation, even between the durations of the affordacne 

@@ -146,7 +146,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public Dictionary<DateTime,Dictionary<DateTime,ICalcAffordanceBase>> AffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<DateTime, ICalcAffordanceBase>>();
 
-        public Dictionary<DateTime,Dictionary<DateTime, (ICalcAffordanceBase,int)>> TrainningAffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<DateTime, (ICalcAffordanceBase,int)>>();
+        public Dictionary<DateTime,Dictionary<string, (string,int)>> TrainingAffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<string, (string,int)>>();
 
 
 
@@ -322,9 +322,9 @@ namespace CalculationEngine.HouseholdElements {
             //PersonDesires.ApplyDecayNew();
         }
 
-        public decimal getCurrent_TotalWeightedDeviation()
+        public decimal GetCurrent_TotalWeightedDeviation()
         {
-            return PersonDesires.getcurrent_TotalWeightedDeviation();
+            return PersonDesires.Getcurrent_TotalWeightedDeviation();
         }
 
         public void NextStep([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
@@ -1339,7 +1339,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 //    if (result.PredictedLabel == "1")
                 //    {
-                //        Debug.WriteLine("ML:  Time:   " + now + "  Name:  " + affordance.Name);
+                //        //Debug.WriteLine("ML: "+_calcPerson.Name+" Time:   " + now + "  Name:  " + affordance.Name);
                 //        continue;
                 //    }
                 //}

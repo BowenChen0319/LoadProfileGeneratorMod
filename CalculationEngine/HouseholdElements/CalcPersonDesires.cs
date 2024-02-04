@@ -262,7 +262,7 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        public decimal getcurrent_TotalWeightedDeviation()
+        public decimal Getcurrent_TotalWeightedDeviation()
         {
             decimal total = 0;
             //decimal weightsum = 0;
