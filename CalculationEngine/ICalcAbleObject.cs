@@ -43,7 +43,7 @@ namespace CalculationEngine
         [NotNull]
         HouseholdKey HouseholdKey { get;  }
 
-        
+        void BuildTwdDic();
         [NotNull]
         [ItemNotNull]
         List<CalcAutoDev> CollectAutoDevs();
@@ -62,9 +62,5 @@ namespace CalculationEngine
         void Init( [NotNull] DayLightStatus daylightArray, int simulationSeed);
 //void WriteInformation();
         void RunOneStep([NotNull] TimeStep timestep, DateTime now, bool runProcessing);
-
-        void BuildTwdDic();
-
-
     }
 }

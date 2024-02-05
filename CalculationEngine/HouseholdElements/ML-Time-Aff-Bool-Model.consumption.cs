@@ -59,9 +59,16 @@ namespace CalculationEngine
 
         #endregion
 
-        private static string MLNetModelPath = Path.GetFullPath("ML-Time-Aff-Bool-Model.mlnet");
+        //private static string MLNetModelPath = Path.GetFullPath("ML-Time-Aff-Bool-Model.mlnet");
 
-        public static readonly Lazy<PredictionEngine<ModelInput, ModelOutput>> PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
+        private static string MLNetModelPath = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
+
+        public static Lazy<PredictionEngine<ModelInput, ModelOutput>> PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
+
+        public static void ReloadModel()
+        {
+            PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
+        }
 
         private static PredictionEngine<ModelInput, ModelOutput> CreatePredictEngine()
         {
@@ -134,6 +141,7 @@ namespace CalculationEngine
         public static ModelOutput Predict(ModelInput input)
         {
             var predEngine = PredictEngine.Value;
+            //var predEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true).Value;
             return predEngine.Predict(input);
         }
     }

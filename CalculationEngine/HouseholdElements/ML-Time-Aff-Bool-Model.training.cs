@@ -17,13 +17,9 @@ namespace CalculationEngine
     public partial class ML_Time_Aff_Bool_Model
     {
         public const string RetrainFilePath =  @"C:\Work\ML\Data\ml-training-data.csv";
-        public string _pathToSaveDebug = @"C:\Users\Bowen Chen\source\Repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
-        public string GetPathToSaveDebug() => _pathToSaveDebug;
-
-        public string _pathToSaveRelease = @"C:\Users\Bowen Chen\Source\Repos\BowenChen0319\LPG-Mod\CalculationEngine\HouseholdElements\ML-Time-Aff-Bool-Model.mlnet";
-        public string GetPathToSaveRelease() => _pathToSaveRelease;
-        
-        public const char RetrainSeparatorChar = ',';
+        //public string _pathToSaveDebug = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
+        public string _pathToSaveRelease = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
+        public const char RetrainSeparatorChar = ';';
         public const bool RetrainHasHeader =  false;
 
          /// <summary>
@@ -37,12 +33,12 @@ namespace CalculationEngine
         {
             var mlContext = new MLContext();
             
-            string pathToSaveDebug = @"C:\Users\Bowen Chen\source\Repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
-            string pathToSaveRelease = @"C:\Users\Bowen Chen\Source\Repos\BowenChen0319\LPG-Mod\CalculationEngine\HouseholdElements\ML-Time-Aff-Bool-Model.mlnet";
+            //string pathToSaveDebug = @"C:\Users\OvenC\source\repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
+            string pathToSaveRelease = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
 
             var data = LoadIDataViewFromFile(mlContext, inputDataFilePath, separatorChar, hasHeader);
             var model = RetrainModel(mlContext, data);
-            SaveModel(mlContext, model, data, pathToSaveDebug);
+            //SaveModel(mlContext, model, data, pathToSaveDebug);
             SaveModel(mlContext, model, data, pathToSaveRelease);
             Debug.WriteLine("Model trained and saved.");
         }

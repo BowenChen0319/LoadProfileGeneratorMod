@@ -534,7 +534,7 @@ namespace CalculationEngine.HouseholdElements {
                 //double standardDeviation = Math.Sqrt(variance);
                 //double standardDeviation = 0.1 * average;
 
-                var standardDeviation = 0.2 * 1000000;
+                var standardDeviation = 0.4 * 1000000;
 
                 if ((double)totalWeightedDeviationByDateP[now.Date] > average + standardDeviation)
                 {
@@ -670,7 +670,7 @@ namespace CalculationEngine.HouseholdElements {
                 // 添加新的活动数据
                 foreach (var activity in trainingActivitiesForTheDay)
                 {
-                    csvLines.Add($"{activity.Key},{activity.Value.Item1},{activity.Value.Item2}");
+                    csvLines.Add($"{activity.Key};{activity.Value.Item1};{activity.Value.Item2}");
                 }
 
                 string directoryPath = Path.GetDirectoryName(personalFilePath);
@@ -689,6 +689,9 @@ namespace CalculationEngine.HouseholdElements {
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 ML_Time_Aff_Bool_Model.Train(personalFilePath);
+
+                ML_Time_Aff_Bool_Model.ReloadModel();
+
                 stopwatch.Stop();
                 Debug.WriteLine($"Training time: {stopwatch.Elapsed.TotalSeconds} s");
             }
