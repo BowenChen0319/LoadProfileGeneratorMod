@@ -686,6 +686,11 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 Debug.WriteLine($"File saved: {personalFilePath}");
+
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                ML_Time_Aff_Bool_Model.Train(personalFilePath);
+                stopwatch.Stop();
+                Debug.WriteLine($"Training time: {stopwatch.Elapsed.TotalSeconds} s");
             }
             catch (Exception ex)
             {
@@ -772,6 +777,7 @@ namespace CalculationEngine.HouseholdElements {
                         if (NeedCheck)
                         {
                             CheckAndBuildTraningSet(p, now);
+                            
                             
                         }
                         if (NeedRecored)

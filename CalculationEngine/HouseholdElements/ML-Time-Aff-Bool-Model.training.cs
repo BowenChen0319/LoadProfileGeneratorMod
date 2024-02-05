@@ -10,6 +10,7 @@ using Microsoft.ML.Trainers.FastTree;
 using Microsoft.ML.Trainers;
 using Microsoft.ML;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace CalculationEngine
 {
@@ -43,6 +44,7 @@ namespace CalculationEngine
             var model = RetrainModel(mlContext, data);
             SaveModel(mlContext, model, data, pathToSaveDebug);
             SaveModel(mlContext, model, data, pathToSaveRelease);
+            Debug.WriteLine("Model trained and saved.");
         }
 
         /// <summary>
@@ -103,8 +105,9 @@ namespace CalculationEngine
             var pipeline = mlContext.Transforms.Text.FeaturizeText(inputColumnName:@"col0",outputColumnName:@"col0")      
                                     .Append(mlContext.Transforms.Text.FeaturizeText(inputColumnName:@"col1",outputColumnName:@"col1"))      
                                     .Append(mlContext.Transforms.Concatenate(@"Features", new []{@"col0",@"col1"}))      
-                                    .Append(mlContext.Transforms.Conversion.MapValueToKey(outputColumnName:@"col2",inputColumnName:@"col2",addKeyValueAnnotationsAsText:false))      
-                                    .Append(mlContext.MulticlassClassification.Trainers.OneVersusAll(binaryEstimator:mlContext.BinaryClassification.Trainers.FastTree(new FastTreeBinaryTrainer.Options(){NumberOfLeaves=4,MinimumExampleCountPerLeaf=10,NumberOfTrees=419,MaximumBinCountPerFeature=329,FeatureFraction=0.839461655117374,LearningRate=0.999999776672986,LabelColumnName=@"col2",FeatureColumnName=@"Features",DiskTranspose=false}),labelColumnName: @"col2"))      
+                                    .Append(mlContext.Transforms.Conversion.MapValueToKey(outputColumnName:@"col2",inputColumnName:@"col2",addKeyValueAnnotationsAsText:false))
+                                    //.Append(mlContext.MulticlassClassification.Trainers.OneVersusAll(binaryEstimator:mlContext.BinaryClassification.Trainers.FastTree(new FastTreeBinaryTrainer.Options(){NumberOfLeaves=4,MinimumExampleCountPerLeaf=10,NumberOfTrees=419,MaximumBinCountPerFeature=329,FeatureFraction=0.839461655117374,LearningRate=0.999999776672986,LabelColumnName=@"col2",FeatureColumnName=@"Features",DiskTranspose=false}),labelColumnName: @"col2"))      
+                                    .Append(mlContext.MulticlassClassification.Trainers.OneVersusAll(binaryEstimator: mlContext.BinaryClassification.Trainers.FastTree(new FastTreeBinaryTrainer.Options() { NumberOfLeaves = 13, MinimumExampleCountPerLeaf = 6, NumberOfTrees = 28, MaximumBinCountPerFeature = 311, FeatureFraction = 0.99999999, LearningRate = 0.9939775958224505, LabelColumnName = @"col2", FeatureColumnName = @"Features", DiskTranspose = false }), labelColumnName: @"col2"))
                                     .Append(mlContext.Transforms.Conversion.MapKeyToValue(outputColumnName:@"PredictedLabel",inputColumnName:@"PredictedLabel"));
 
             return pipeline;

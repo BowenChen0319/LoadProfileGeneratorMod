@@ -1325,24 +1325,24 @@ namespace CalculationEngine.HouseholdElements {
                 //////int hourInt = int.Parse(hourString);
                 //////float hourFloat = (float)hourInt;
 
-                //if (now.Hour >= 19 || now.Hour <= 3)
-                //{
-                //    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
-                //    {
-                //        Col0 = now.ToString("HH:mm:ss"),
-                //        //Col0 = hourFloat,
-                //        Col1 = affordance.Name,
-                //    };
+                if (!firstTimeRecorded&&(now.Hour >= 19 || now.Hour <= 3))
+                {
+                    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                    {
+                        Col0 = now.ToString("HH:mm:ss"),
+                        //Col0 = hourFloat,
+                        Col1 = affordance.Name,
+                    };
 
-                //    //Load model and predict output
-                //    var result = ML_Time_Aff_Bool_Model.Predict(sampleData);
+                    //Load model and predict output
+                    var result = ML_Time_Aff_Bool_Model.Predict(sampleData);
 
-                //    if (result.PredictedLabel == "1")
-                //    {
-                //        //Debug.WriteLine("ML: "+_calcPerson.Name+" Time:   " + now + "  Name:  " + affordance.Name);
-                //        continue;
-                //    }
-                //}
+                    if (result.PredictedLabel == "1")
+                    {
+                        Debug.WriteLine("ML: "+_calcPerson.Name+" Time:   " + now + "  Name:  " + affordance.Name);
+                        continue;
+                    }
+                }
 
 
 
