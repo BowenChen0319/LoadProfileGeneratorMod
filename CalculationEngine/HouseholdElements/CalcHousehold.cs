@@ -35,6 +35,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Automation;
 using Automation.ResultFiles;
 using CalculationEngine.Helper;
@@ -607,6 +608,8 @@ namespace CalculationEngine.HouseholdElements {
                         //{
                         //    Debug.WriteLine($"Unique Activity on {previousDay:yyyy-MM-dd}: {kvp.Key}, Cate: {kvp.Value.AffCategory}");
                         //}
+                        //bool firstTime = p.TrainingAffordanceSequence.Count == 0;
+                        bool firstTime = p.firstTimeRecorded;
 
                         var trainingActivitiesForTheDay = new Dictionary<string, (string, int)>();
 
@@ -614,10 +617,14 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
 
-                            trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
+                            trainingActivitiesForTheDay[activity.Key.ToString("HH:mm:ss")] = (activity.Value.Name, isUnique);
                         }
 
                         p.TrainingAffordanceSequence[previousDay] = trainingActivitiesForTheDay;
+
+                        UpdateAndSaveTrainingCSV(p.Name.Replace("/", "_"), trainingActivitiesForTheDay, firstTime);
+
+                        p.firstTimeRecorded = false;
                     }
 
 
@@ -628,6 +635,66 @@ namespace CalculationEngine.HouseholdElements {
 
             }
         }
+
+        public void UpdateAndSaveTrainingCSV(string personName, Dictionary<string, (string, int)> trainingActivitiesForTheDay, bool firstTime)
+        {
+            string baseDir = @"C:\Work\ML\Data";
+            string personalFilePath = Path.Combine(baseDir, $"ml-training-{personName}.csv");
+            string defaultFilePath = Path.Combine(baseDir, "ml-training-data.csv");
+
+            // 确保目录存在
+            if (!Directory.Exists(baseDir))
+            {
+                Directory.CreateDirectory(baseDir);
+            }
+
+            try
+            {
+                // 确定使用哪个文件路径
+                string filePathToUse = !firstTime ? personalFilePath : defaultFilePath;
+                //Debug.WriteLine($"Using file: {filePathToUse}");
+                // 如果是个人文件路径不存在，则初始化CSV内容
+
+                //if (firstTime && File.Exists(personalFilePath))
+                //{
+                //    Debug.WriteLine($"File already exist: {personalFilePath}");
+                //    File.Delete(personalFilePath);
+                //}
+
+                List<string> csvLines = new List<string>();
+                if (File.Exists(filePathToUse))
+                {
+                    csvLines.AddRange(File.ReadAllLines(filePathToUse)); // 读取现有文件内容
+                }
+
+                // 添加新的活动数据
+                foreach (var activity in trainingActivitiesForTheDay)
+                {
+                    csvLines.Add($"{activity.Key},{activity.Value.Item1},{activity.Value.Item2}");
+                }
+
+                string directoryPath = Path.GetDirectoryName(personalFilePath);
+
+                
+                // 使用StreamWriter写入文件
+                using (StreamWriter file = new StreamWriter(personalFilePath, false)) // false表示覆盖文件
+                {
+                    foreach (string line in csvLines)
+                    {
+                        file.WriteLine(line);
+                    }
+                }
+
+                Debug.WriteLine($"File saved: {personalFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"File not saved: {ex.Message}");
+            }
+        }
+
+
+
 
         public void UpdateTotalWeightedDeviation(CalcPerson p, DateTime now)
         {

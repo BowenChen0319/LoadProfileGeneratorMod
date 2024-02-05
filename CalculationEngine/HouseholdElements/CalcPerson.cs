@@ -148,7 +148,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public Dictionary<DateTime,Dictionary<string, (string,int)>> TrainingAffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<string, (string,int)>>();
 
-
+        public bool firstTimeRecorded = true;
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";

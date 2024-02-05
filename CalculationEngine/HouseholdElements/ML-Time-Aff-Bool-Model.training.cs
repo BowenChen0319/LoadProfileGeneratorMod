@@ -9,12 +9,19 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Trainers.FastTree;
 using Microsoft.ML.Trainers;
 using Microsoft.ML;
+using System.Runtime.CompilerServices;
 
 namespace CalculationEngine
 {
     public partial class ML_Time_Aff_Bool_Model
     {
         public const string RetrainFilePath =  @"C:\Work\ML\Data\ml-training-data.csv";
+        public string _pathToSaveDebug = @"C:\Users\Bowen Chen\source\Repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
+        public string GetPathToSaveDebug() => _pathToSaveDebug;
+
+        public string _pathToSaveRelease = @"C:\Users\Bowen Chen\Source\Repos\BowenChen0319\LPG-Mod\CalculationEngine\HouseholdElements\ML-Time-Aff-Bool-Model.mlnet";
+        public string GetPathToSaveRelease() => _pathToSaveRelease;
+        
         public const char RetrainSeparatorChar = ',';
         public const bool RetrainHasHeader =  false;
 
@@ -25,13 +32,17 @@ namespace CalculationEngine
         /// <param name="inputDataFilePath">Path to the data file for training.</param>
         /// <param name="separatorChar">Separator character for delimited training file.</param>
         /// <param name="hasHeader">Boolean if training file has a header.</param>
-        public static void Train(string outputModelPath, string inputDataFilePath = RetrainFilePath, char separatorChar = RetrainSeparatorChar, bool hasHeader = RetrainHasHeader)
+        public static void Train(string inputDataFilePath = RetrainFilePath, char separatorChar = RetrainSeparatorChar, bool hasHeader = RetrainHasHeader)
         {
             var mlContext = new MLContext();
+            
+            string pathToSaveDebug = @"C:\Users\Bowen Chen\source\Repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
+            string pathToSaveRelease = @"C:\Users\Bowen Chen\Source\Repos\BowenChen0319\LPG-Mod\CalculationEngine\HouseholdElements\ML-Time-Aff-Bool-Model.mlnet";
 
             var data = LoadIDataViewFromFile(mlContext, inputDataFilePath, separatorChar, hasHeader);
             var model = RetrainModel(mlContext, data);
-            SaveModel(mlContext, model, data, outputModelPath);
+            SaveModel(mlContext, model, data, pathToSaveDebug);
+            SaveModel(mlContext, model, data, pathToSaveRelease);
         }
 
         /// <summary>
