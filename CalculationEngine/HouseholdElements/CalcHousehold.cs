@@ -617,7 +617,7 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
 
-                            trainingActivitiesForTheDay[activity.Key.ToString("HH:mm:ss")] = (activity.Value.Name, isUnique);
+                            trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
                         }
 
                         p.TrainingAffordanceSequence[previousDay] = trainingActivitiesForTheDay;
@@ -686,14 +686,14 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 Debug.WriteLine($"File saved: {personalFilePath}");
-
+                
+                //ML Training
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 ML_Time_Aff_Bool_Model.Train(personalFilePath);
-
                 ML_Time_Aff_Bool_Model.ReloadModel();
-
                 stopwatch.Stop();
                 Debug.WriteLine($"Training time: {stopwatch.Elapsed.TotalSeconds} s");
+
             }
             catch (Exception ex)
             {

@@ -1330,7 +1330,7 @@ namespace CalculationEngine.HouseholdElements {
                     //ML_Time_Aff_Bool_Model.ReloadModel();
                     var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
                     {
-                        Col0 = now.ToString("HH:mm:ss"),
+                        Col0 = now.ToString("HH:mm"),
                         //Col0 = hourFloat,
                         Col1 = affordance.Name,
                     };
@@ -1340,7 +1340,7 @@ namespace CalculationEngine.HouseholdElements {
 
                     if (result.PredictedLabel == "1")
                     {
-                        Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
+                        //Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
                         continue;
                     }
                 }
