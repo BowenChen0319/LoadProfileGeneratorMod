@@ -150,6 +150,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public bool firstTimeRecorded = true;
 
+        public int trainingCounter = 0;
+
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
 
@@ -1302,23 +1304,23 @@ namespace CalculationEngine.HouseholdElements {
 
 
                 ////V1 if sleep in the wait list, then direct run it
-                //if (weightSum >= 1000)
-                //{
-                //    bestAffordance = affordance;
-                //    break;
-                //}
+                if (weightSum >= 1000)
+                {
+                    bestAffordance = affordance;
+                    break;
+                }
 
-                ////V2 & V3
-                //if (duration >= 120)
-                //{
-                //    DateTime newTime = now.AddMinutes(duration);
-                //    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
-                //    if (newTime.Date > now.Date)
-                //    {
-                //        continue;
-                //    }
+                //V2 & V3
+                if (duration >= 120)
+                {
+                    DateTime newTime = now.AddMinutes(duration);
+                    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
+                    if (newTime.Date > now.Date)
+                    {
+                        continue;
+                    }
 
-                //}
+                }
 
                 //////Load sample data
                 //////string hourString = now.ToString("hh");
@@ -1326,6 +1328,7 @@ namespace CalculationEngine.HouseholdElements {
                 //////float hourFloat = (float)hourInt;
 
                 if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
+                //if (!firstTimeRecorded)
                 {
                     //ML_Time_Aff_Bool_Model.ReloadModel();
                     var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
@@ -1340,7 +1343,7 @@ namespace CalculationEngine.HouseholdElements {
 
                     if (result.PredictedLabel == "1")
                     {
-                        //Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
+                        Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
                         continue;
                     }
                 }

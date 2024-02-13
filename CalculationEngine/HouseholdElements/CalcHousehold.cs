@@ -530,16 +530,40 @@ namespace CalculationEngine.HouseholdElements {
             if (totalWeightedDeviationByDateP.Count > 7)
             {
                 var average = totalWeightedDeviationByDateP.Where(kvp => kvp.Key != now.Date).Select(kvp => (double)kvp.Value).Average();
-                //double variance = filteredValues.Sum(v => Math.Pow((double)v - average, 2)) / (totalWeightedDeviationByDate.Count);
+
                 //double standardDeviation = Math.Sqrt(variance);
                 //double standardDeviation = 0.1 * average;
 
-                var standardDeviation = 0.4 * 1000000;
+                //var standardDeviation1 = Math.Sqrt(totalWeightedDeviationByDateP
+                //    .Where(kvp => kvp.Key != now.Date)
+                //    .Select(kvp => Math.Pow((double)kvp.Value - average, 2))
+                //    .Average());
+
+                //Debug.WriteLine(person_name+" Date: "+now.Date+"  Mean: " + average +" Std: "+standardDeviation1);
+
+                //var standardDeviation = 0.4 * 1000000;
+
+                var standardDeviation = 0.1557 * average + 900;
+
+                
 
                 if ((double)totalWeightedDeviationByDateP[now.Date] > average + standardDeviation)
                 {
                     NeedToRecord = true;
-                    
+
+                    DateTime yesterday = now.Date.AddDays(-1);
+
+                    if (p.AffordanceSequence.TryGetValue(yesterday, out var yesterdayActivities))
+                    {
+                        var lastActivity = yesterdayActivities.Last().Value;
+                        //Debug.WriteLine("last on:  " + lastActivity.Name);
+                        if (lastActivity.Name.Contains("sleep bed"))
+                        {
+                            return (false, false);
+                        }
+                        
+                    }
+
                     DateTime previousDay = now.Date.AddDays(-1);
 
                     if (!highTWDExceptions.ContainsKey(previousDay) && previousDay != lastHighTWD)
@@ -622,7 +646,13 @@ namespace CalculationEngine.HouseholdElements {
 
                         p.TrainingAffordanceSequence[previousDay] = trainingActivitiesForTheDay;
 
-                        UpdateAndSaveTrainingCSV(p.Name.Replace("/", "_"), trainingActivitiesForTheDay, firstTime);
+                        if(p.trainingCounter <= 12)
+                        {
+                            UpdateAndSaveTrainingCSV(p.Name.Replace("/", "_"), trainingActivitiesForTheDay, firstTime);
+
+                            p.trainingCounter++;
+
+                        }
 
                         p.firstTimeRecorded = false;
                     }
@@ -692,6 +722,7 @@ namespace CalculationEngine.HouseholdElements {
                 ML_Time_Aff_Bool_Model.Train(personalFilePath);
                 ML_Time_Aff_Bool_Model.ReloadModel();
                 stopwatch.Stop();
+
                 Debug.WriteLine($"Training time: {stopwatch.Elapsed.TotalSeconds} s");
 
             }
