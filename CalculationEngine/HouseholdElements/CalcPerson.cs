@@ -1311,16 +1311,16 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 //V2 & V3
-                if (duration >= 120)
-                {
-                    DateTime newTime = now.AddMinutes(duration);
-                    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
-                    if (newTime.Date > now.Date)
-                    {
-                        continue;
-                    }
+                //if (duration >= 120)
+                //{
+                //    DateTime newTime = now.AddMinutes(duration);
+                //    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
+                //    if (newTime.Date > now.Date)
+                //    {
+                //        continue;
+                //    }
 
-                }
+                //}
 
                 //////Load sample data
                 //////string hourString = now.ToString("hh");

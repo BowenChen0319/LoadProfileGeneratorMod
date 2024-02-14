@@ -555,6 +555,7 @@ namespace CalculationEngine.HouseholdElements {
 
                     if (p.AffordanceSequence.TryGetValue(yesterday, out var yesterdayActivities))
                     {
+                        
                         var lastActivity = yesterdayActivities.Last().Value;
                         //Debug.WriteLine("last on:  " + lastActivity.Name);
                         if (lastActivity.Name.Contains("sleep bed"))
@@ -811,7 +812,6 @@ namespace CalculationEngine.HouseholdElements {
                         if (NeedCheck)
                         {
                             CheckAndBuildTraningSet(p, now);
-                            
                             
                         }
                         if (NeedRecored)

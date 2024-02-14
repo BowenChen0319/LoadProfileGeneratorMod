@@ -342,8 +342,8 @@ namespace CalculationEngine.HouseholdElements {
             TimeStep edge1 = new TimeStep(180, 0, false);//diff
             TimeStep edgeWeek = new TimeStep(60 * 24 * 7, 0, false);
             int priorityInfo = 1;
-            List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" , "job"};
-
+            List<string> whiteList = new List<string> { "go to the toilet", "sleep bed"};
+            List<string> whiteList2 = new List<string> { "work", "office","study", "school", "job" };
             TimeStep lastTime;
             var words = affordanceName.Split(' ');
             string affordanceKey = string.Join(" ", words.Take(3));
