@@ -38,6 +38,7 @@ using Automation;
 using Automation.ResultFiles;
 using Common;
 using Common.SQLResultLogging;
+using Common.SQLResultLogging.InputLoggers;
 using JetBrains.Annotations;
 
 #endregion
@@ -315,6 +316,7 @@ namespace CalculationEngine.HouseholdElements {
             
             var satisfactionvalues = affordance.Satisfactionvalues;
             var affordanceName = affordance.Name;
+            var affordanceCategory = affordance.AffCategory;
             var interruptable = affordance.IsInterruptable;
             var duration = affordance.GetDuration();
             var restTime = 0;
@@ -337,13 +339,13 @@ namespace CalculationEngine.HouseholdElements {
                 calcDesire.TempValue = calcDesire.Value;
             }
             decimal modifier = 1;
-            //TimeStep edge = new TimeStep(120,0,false);
-            TimeStep edge = new TimeStep(1440, 0, false);
+            TimeStep edge = new TimeStep(180,0,false);
+            //TimeStep edge = new TimeStep(1440, 0, false);
             TimeStep edge1 = new TimeStep(180, 0, false);//diff
             TimeStep edgeWeek = new TimeStep(60 * 24 * 7, 0, false);
             int priorityInfo = 1;
             List<string> whiteList = new List<string> { "go to the toilet", "sleep bed"};
-            List<string> whiteList2 = new List<string> { "work", "office","study", "school", "job" };
+            List<string> whiteList2 = new List<string> { "work", "office","study", "school", "job", "sleep" };
             TimeStep lastTime;
             var words = affordanceName.Split(' ');
             string affordanceKey = string.Join(" ", words.Take(3));
@@ -352,7 +354,12 @@ namespace CalculationEngine.HouseholdElements {
 
             if (_lastAffordanceTime.TryGetValue(affordanceKey, out lastTime))
             {
-                if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                bool inWhiteList1 = whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower()));
+
+                bool inWhiteList2 = whiteList2.Any(affordance => affordanceCategory.ToLower().Contains(affordance.ToLower()));
+
+
+                if (inWhiteList1 || inWhiteList2)
                 {
                     if ((currentTime - lastTime) < edge1)
                     {
@@ -373,20 +380,26 @@ namespace CalculationEngine.HouseholdElements {
                         if (now.Date == lastDate.Date)
                         {
 
-                            modifier *= 0.1m;
+                            //modifier *= 0.1m;
+                            modifier *= 1;
                             priorityInfo = 0;
                         }
                     }
                     if (duration > 120 && (currentTime - lastTime) < edgeWeek)//action, which too long
                     {
-                        modifier *= 0.1m;
+                        //modifier *= 0.1m;
+                        modifier *= 1;
                         priorityInfo = 0;
                     }
                 }
             }
             else
             {
-                if (whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower())))
+                bool inWhiteList1 = whiteList.Any(affordance => affordanceName.ToLower().Contains(affordance.ToLower()));
+
+                bool inWhiteList2 = whiteList2.Any(affordance => affordanceCategory.ToLower().Contains(affordance.ToLower()));
+
+                if (inWhiteList1 || inWhiteList2)
                 {
                     modifier *= 1;
                     priorityInfo = 2;
