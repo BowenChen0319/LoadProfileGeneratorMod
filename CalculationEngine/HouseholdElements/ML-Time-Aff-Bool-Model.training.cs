@@ -22,26 +22,44 @@ namespace CalculationEngine
         public const char RetrainSeparatorChar = ';';
         public const bool RetrainHasHeader =  false;
 
-         /// <summary>
+        /// <summary>
         /// Train a new model with the provided dataset.
         /// </summary>
         /// <param name="outputModelPath">File path for saving the model. Should be similar to "C:\YourPath\ModelName.mlnet"</param>
         /// <param name="inputDataFilePath">Path to the data file for training.</param>
         /// <param name="separatorChar">Separator character for delimited training file.</param>
         /// <param name="hasHeader">Boolean if training file has a header.</param>
-        public static void Train(string inputDataFilePath = RetrainFilePath, char separatorChar = RetrainSeparatorChar, bool hasHeader = RetrainHasHeader)
+        //public static void Train(string inputDataFilePath = RetrainFilePath, char separatorChar = RetrainSeparatorChar, bool hasHeader = RetrainHasHeader)
+        //{
+        //    var mlContext = new MLContext();
+
+        //    //string pathToSaveDebug = @"C:\Users\OvenC\source\repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
+        //    string pathToSaveRelease = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
+
+        //    var data = LoadIDataViewFromFile(mlContext, inputDataFilePath, separatorChar, hasHeader);
+        //    var model = RetrainModel(mlContext, data);
+        //    //SaveModel(mlContext, model, data, pathToSaveDebug);
+        //    SaveModel(mlContext, model, data, pathToSaveRelease);
+        //    Debug.WriteLine("Model trained and saved.");
+        //}
+
+        public static void Train(string personName, string inputDataFilePath = RetrainFilePath, char separatorChar = RetrainSeparatorChar, bool hasHeader = RetrainHasHeader)
         {
+            personName = personName.Replace("/", "_").Replace(" ", "_");
             var mlContext = new MLContext();
-            
-            //string pathToSaveDebug = @"C:\Users\OvenC\source\repos\BowenChen0319\LPG-Mod\WpfApplication1\bin\Debug\net6.0-windows\ML-Time-Aff-Bool-Model.mlnet";
-            string pathToSaveRelease = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
+
+            // 动态生成模型保存路径，包含personName
+            string modelFileName = $"ML-Time-Aff-Bool-Model-{personName}.mlnet";
+            string modelSavePath = Path.Combine(@"C:\Work\ML\Models\", modelFileName);
 
             var data = LoadIDataViewFromFile(mlContext, inputDataFilePath, separatorChar, hasHeader);
             var model = RetrainModel(mlContext, data);
-            //SaveModel(mlContext, model, data, pathToSaveDebug);
-            SaveModel(mlContext, model, data, pathToSaveRelease);
-            Debug.WriteLine("Model trained and saved.");
+
+            // 保存模型到动态生成的路径
+            SaveModel(mlContext, model, data, modelSavePath);
+            Debug.WriteLine($"Model for {personName} trained and saved to {modelSavePath}.");
         }
+
 
         /// <summary>
         /// Load an IDataView from a file path.

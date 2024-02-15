@@ -720,8 +720,8 @@ namespace CalculationEngine.HouseholdElements {
                 
                 //ML Training
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                ML_Time_Aff_Bool_Model.Train(personalFilePath);
-                ML_Time_Aff_Bool_Model.ReloadModel();
+                ML_Time_Aff_Bool_Model.Train(personName,personalFilePath);
+                ML_Time_Aff_Bool_Model.ReloadModel(personName);
                 stopwatch.Stop();
 
                 Debug.WriteLine($"Training time: {stopwatch.Elapsed.TotalSeconds} s");

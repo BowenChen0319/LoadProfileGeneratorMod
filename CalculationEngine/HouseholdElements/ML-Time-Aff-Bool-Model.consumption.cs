@@ -63,30 +63,51 @@ namespace CalculationEngine
 
         private static string MLNetModelPath = @"C:\Work\ML\Models\ML-Time-Aff-Bool-Model.mlnet";
 
-        public static Lazy<PredictionEngine<ModelInput, ModelOutput>> PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
+        //public static Lazy<PredictionEngine<ModelInput, ModelOutput>> PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
 
-        public static void ReloadModel()
+        public static Dictionary<string, PredictionEngine<ModelInput, ModelOutput>> PredictEngines = new Dictionary<string, PredictionEngine<ModelInput, ModelOutput>>();
+
+
+        public static void ReloadModel(string personName)
         {
-            PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
+            personName = personName.Replace("/", "_").Replace(" ", "_");
+            PredictEngines[personName] = CreatePredictEngine(personName);
         }
 
-        private static PredictionEngine<ModelInput, ModelOutput> CreatePredictEngine()
+        //private static PredictionEngine<ModelInput, ModelOutput> CreatePredictEngine()
+        //{
+        //    var mlContext = new MLContext();
+        //    ITransformer mlModel = mlContext.Model.Load(MLNetModelPath, out var _);
+        //    return mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(mlModel);
+        //}
+        private static PredictionEngine<ModelInput, ModelOutput> CreatePredictEngine(string personName)
         {
             var mlContext = new MLContext();
-            ITransformer mlModel = mlContext.Model.Load(MLNetModelPath, out var _);
+            // 根据人名动态生成模型路径
+            string modelPath = $@"C:\Work\ML\Models\ML-Time-Aff-Bool-Model-{personName}.mlnet";
+            ITransformer mlModel = mlContext.Model.Load(modelPath, out var _);
             return mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(mlModel);
         }
+
 
         /// <summary>
         /// Use this method to predict scores for all possible labels.
         /// </summary>
         /// <param name="input">model input.</param>
         /// <returns><seealso cref=" ModelOutput"/></returns>
-        public static IOrderedEnumerable<KeyValuePair<string, float>> PredictAllLabels(ModelInput input)
+        
+        
+        //public static IOrderedEnumerable<KeyValuePair<string, float>> PredictAllLabels(ModelInput input)
+        //{
+        //    var predEngine = PredictEngine.Value;
+        //    var result = predEngine.Predict(input);
+        //    return GetSortedScoresWithLabels(result);
+        //}
+
+        public static IOrderedEnumerable<KeyValuePair<string, float>> PredictAllLabels(ModelInput input, string personName)
         {
-            var predEngine = PredictEngine.Value;
-            var result = predEngine.Predict(input);
-            return GetSortedScoresWithLabels(result);
+            var result = Predict(input, personName); // 使用修改后的Predict方法
+            return GetSortedScoresWithLabels(result,personName);
         }
 
         /// <summary>
@@ -95,20 +116,35 @@ namespace CalculationEngine
         /// <param name="result">Prediction to get the labeled scores from.</param>
         /// <returns>Ordered list of label and score.</returns>
         /// <exception cref="Exception"></exception>
-        public static IOrderedEnumerable<KeyValuePair<string, float>> GetSortedScoresWithLabels(ModelOutput result)
+        //public static IOrderedEnumerable<KeyValuePair<string, float>> GetSortedScoresWithLabels(ModelOutput result)
+        //{
+        //    var unlabeledScores = result.Score;
+        //    var labelNames = GetLabels(result);
+
+        //    Dictionary<string, float> labledScores = new Dictionary<string, float>();
+        //    for (int i = 0; i < labelNames.Count(); i++)
+        //    {
+        //        // Map the names to the predicted result score array
+        //        var labelName = labelNames.ElementAt(i);
+        //        labledScores.Add(labelName.ToString(), unlabeledScores[i]);
+        //    }
+
+        //    return labledScores.OrderByDescending(c => c.Value);
+        //}
+
+        public static IOrderedEnumerable<KeyValuePair<string, float>> GetSortedScoresWithLabels(ModelOutput result, string personName)
         {
             var unlabeledScores = result.Score;
-            var labelNames = GetLabels(result);
+            var labelNames = GetLabels(result, personName); // 修改这里
 
-            Dictionary<string, float> labledScores = new Dictionary<string, float>();
+            Dictionary<string, float> labeledScores = new Dictionary<string, float>();
             for (int i = 0; i < labelNames.Count(); i++)
             {
-                // Map the names to the predicted result score array
                 var labelName = labelNames.ElementAt(i);
-                labledScores.Add(labelName.ToString(), unlabeledScores[i]);
+                labeledScores.Add(labelName, unlabeledScores[i]);
             }
 
-            return labledScores.OrderByDescending(c => c.Value);
+            return labeledScores.OrderByDescending(c => c.Value);
         }
 
         /// <summary>
@@ -117,9 +153,11 @@ namespace CalculationEngine
         /// <param name="result">Predicted result to get the labels from.</param>
         /// <returns>List of labels.</returns>
         /// <exception cref="Exception"></exception>
-        private static IEnumerable<string> GetLabels(ModelOutput result)
+        private static IEnumerable<string> GetLabels(ModelOutput result,string personName)
         {
-            var schema = PredictEngine.Value.OutputSchema;
+            var predEngine = PredictEngines[personName];
+            var schema = predEngine.OutputSchema;
+
 
             var labelColumn = schema.GetColumnOrNull("col2");
             if (labelColumn == null)
@@ -138,11 +176,25 @@ namespace CalculationEngine
         /// </summary>
         /// <param name="input">model input.</param>
         /// <returns><seealso cref=" ModelOutput"/></returns>
-        public static ModelOutput Predict(ModelInput input)
+        
+
+        //public static ModelOutput Predict(ModelInput input)
+        //{
+        //    var predEngine = PredictEngine.Value;
+        //    //var predEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true).Value;
+        //    return predEngine.Predict(input);
+        //}
+        public static ModelOutput Predict(ModelInput input, string personName)
         {
-            var predEngine = PredictEngine.Value;
-            //var predEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true).Value;
+            personName = personName.Replace("/", "_").Replace(" ", "_");
+            //if (!PredictEngines.ContainsKey(personName))
+            //{
+            //    PredictEngines[personName] = CreatePredictEngine(personName);
+            //}
+
+            var predEngine = PredictEngines[personName];
             return predEngine.Predict(input);
         }
+
     }
 }
