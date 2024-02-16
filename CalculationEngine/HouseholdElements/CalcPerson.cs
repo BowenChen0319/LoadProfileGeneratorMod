@@ -1339,7 +1339,7 @@ namespace CalculationEngine.HouseholdElements {
                     };
 
                     //Load model and predict output
-                    var result = ML_Time_Aff_Bool_Model.Predict(sampleData,_calcPerson.Name);
+                    var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
 
                     if (result.PredictedLabel == "1")
                     {

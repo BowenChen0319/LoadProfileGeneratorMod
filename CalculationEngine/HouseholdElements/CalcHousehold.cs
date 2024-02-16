@@ -627,7 +627,9 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (uniqueActivities.Count > 0 && p.AffordanceSequence.TryGetValue(previousDay, out var allActivitiesForTheDay))
                 {
-                    if (allActivitiesForTheDay.Count >= 10)
+                    //var lastActivity = allActivitiesForTheDay.Values.LastOrDefault();
+                    var latestActivityTime = allActivitiesForTheDay.Keys.Max();
+                    if (allActivitiesForTheDay.Count>10 && latestActivityTime.TimeOfDay > new TimeSpan(18, 0, 0))
                     {
                         //foreach (var kvp in uniqueActivities)
                         //{
@@ -640,9 +642,13 @@ namespace CalculationEngine.HouseholdElements {
 
                         foreach (var activity in allActivitiesForTheDay)
                         {
-                            int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
+                            if(!activity.Value.Name.Contains("Replacement Activity"))
+                            {
+                                int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
 
-                            trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
+                                trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
+                            }
+                            
                         }
 
                         p.TrainingAffordanceSequence[previousDay] = trainingActivitiesForTheDay;
@@ -701,6 +707,10 @@ namespace CalculationEngine.HouseholdElements {
                 // 添加新的活动数据
                 foreach (var activity in trainingActivitiesForTheDay)
                 {
+                    //if (!activity.Value.Item1.Contains("Replacement Activity"))
+                    //{
+                    //    csvLines.Add($"{activity.Key};{activity.Value.Item1};{activity.Value.Item2}");
+                    //}
                     csvLines.Add($"{activity.Key};{activity.Value.Item1};{activity.Value.Item2}");
                 }
 
