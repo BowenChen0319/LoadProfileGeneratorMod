@@ -1332,14 +1332,14 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     //ML_Time_Aff_Bool_Model.ReloadModel();
 
-                    var roundedTime = now;
-                    var rounded_minutes = (roundedTime.Minute % 15) * 15;
-                    roundedTime = roundedTime.AddMinutes(-rounded_minutes);
+                    //var roundedTime = now;
+                    //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
+                    //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
 
                     var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
                     {
-                        //Col0 = now.ToString("HH:mm"),
-                        Col0 = roundedTime.ToString("HH:mm"),
+                        Col0 = now.ToString("HH:mm"),
+                        //Col0 = roundedTime.ToString("HH:mm"),
                         //Col0 = hourFloat,
                         Col1 = affordance.Name,
                     };

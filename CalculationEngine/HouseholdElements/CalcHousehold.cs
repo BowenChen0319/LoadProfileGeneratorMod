@@ -646,12 +646,12 @@ namespace CalculationEngine.HouseholdElements {
                             {
                                 int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
 
-                                var rounded_down_time = activity.Key;
-                                var rounded_minutes = (rounded_down_time.Minute % 15) * 15;
-                                rounded_down_time = rounded_down_time.AddMinutes(-rounded_minutes);
-
-                                //trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
-                                trainingActivitiesForTheDay[rounded_down_time.ToString("HH:mm")] = (activity.Value.Name, isUnique);
+                                //var rounded_down_time = activity.Key;
+                                //var rounded_minutes = rounded_down_time.Minute -((rounded_down_time.Minute % 15) * 15);
+                                //rounded_down_time = rounded_down_time.AddMinutes(-rounded_minutes);
+                                
+                                trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
+                                //trainingActivitiesForTheDay[rounded_down_time.ToString("HH:mm")] = (activity.Value.Name, isUnique);
                             }
                             
                         }
