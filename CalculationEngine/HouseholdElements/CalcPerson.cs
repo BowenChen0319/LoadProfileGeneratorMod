@@ -148,9 +148,13 @@ namespace CalculationEngine.HouseholdElements {
 
         public Dictionary<DateTime,Dictionary<string, (string,int)>> TrainingAffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<string, (string,int)>>();
 
+        
         public bool firstTimeRecorded = true;
 
         public int trainingCounter = 0;
+
+        public Dictionary<string, decimal> updatedWeight = new Dictionary<string, decimal>();
+
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -1327,38 +1331,21 @@ namespace CalculationEngine.HouseholdElements {
                 //////int hourInt = int.Parse(hourString);
                 //////float hourFloat = (float)hourInt;
 
-                if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
-                //if (!firstTimeRecorded)
+                
+
+                if(updatedWeight.TryGetValue(affordance.Name, out var weight))
                 {
-                    //ML_Time_Aff_Bool_Model.ReloadModel();
-
-                    //var roundedTime = now;
-                    //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
-                    //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
-
-                    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
-                    {
-                        Col0 = now.ToString("HH:mm"),
-                        //Col0 = roundedTime.ToString("HH:mm"),
-                        //Col0 = hourFloat,
-                        Col1 = affordance.Name,
-                    };
-
-                    //Load model and predict output
-                    var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
-
-                    if (result.PredictedLabel == "1")
-                    {
-                        Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
-                        continue;
-                    }
+                    desireDiff = weight * TunningDeviation((double)desireDiff, duration);
+                }
+                else
+                {
+                    desireDiff = TunningDeviation((double)desireDiff, duration);
+                
                 }
 
 
 
-
-
-                desireDiff = TunningDeviation((double)desireDiff, duration);
+                //desireDiff = TunningDeviation((double)desireDiff, duration);
                 
 
                 //desireDiff = desireDiff / (decimal)weightSum;
@@ -1385,6 +1372,35 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (desireDiff < bestDiff)
                 {
+
+                    if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
+                    //if (!firstTimeRecorded)
+                    {
+                        //ML_Time_Aff_Bool_Model.ReloadModel();
+
+                        //var roundedTime = now;
+                        //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
+                        //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
+
+                        var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                        {
+                            Col0 = now.ToString("HH:mm"),
+                            //Col0 = roundedTime.ToString("HH:mm"),
+                            //Col0 = hourFloat,
+                            Col1 = affordance.Name,
+                        };
+
+                        //Load model and predict output
+                        var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
+
+                        if (result.PredictedLabel == "1")
+                        {
+                            Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
+                            setNewWeight(affordance.Name, 0.2m);
+                            continue;
+                        }
+                    }
+
                     bestDiff = desireDiff;
                     bestAffordance = affordance;
                     bestWeightSum = weightSum;
@@ -1528,6 +1544,19 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
+        public void setNewWeight(string aff, decimal ratio)
+        {
+            
+            if(updatedWeight.TryGetValue(aff, out var weight))
+            {
+                updatedWeight[aff] = weight + ratio;
+            }
+            else
+            {
+                updatedWeight[aff] = 1+ratio;
+            }
+        }
+
         static decimal TunningDeviation(double deviationRAW, int duration)
         {
             //double tunning = (2 - Math.Exp(-duration));
@@ -1537,7 +1566,7 @@ namespace CalculationEngine.HouseholdElements {
             double rate = duration / (24 * 60);
             double alpha = 4;//8
             double tunning = (2 - Math.Exp(-alpha * rate));
-            //double result = deviationRAW * tunning;
+            
             double result = deviationRAW * tunning;
             //double result = deviationRAW;
             //return (decimal)result/ (decimal)weight_sum;

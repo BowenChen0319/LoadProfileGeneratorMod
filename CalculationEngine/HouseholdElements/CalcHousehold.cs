@@ -386,18 +386,34 @@ namespace CalculationEngine.HouseholdElements {
             foreach (var person in _persons)
             {
                 var person_name = person.Name;
-                foreach (var kvp in allHighTWDExceptions[person_name])
+                if (allHighTWDExceptions[person_name].Count > 0)
                 {
-                    Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}, TWD: {kvp.Value}");
-                }
-                foreach (var kvp in person.TrainingAffordanceSequence)
-                {
-                    Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}");
-                    foreach (var kvp2 in kvp.Value)
+                    foreach (var kvp in allHighTWDExceptions[person_name])
                     {
-                        Debug.WriteLine($"Inner Key: {kvp2.Key}, Value: {kvp2.Value.Item1}, Unique: {kvp2.Value.Item2}");
+                        Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}, TWD: {kvp.Value}");
                     }
                 }
+                if(person.TrainingAffordanceSequence.Count > 0)
+                {
+                    foreach (var kvp in person.TrainingAffordanceSequence)
+                    {
+                        Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}");
+                        foreach (var kvp2 in kvp.Value)
+                        {
+                            Debug.WriteLine($"Inner Key: {kvp2.Key}, Value: {kvp2.Value.Item1}, Unique: {kvp2.Value.Item2}");
+                        }
+                    }
+                }
+
+                Debug.WriteLine($"Name: {person_name}, Count: {person.updatedWeight.Count}");
+                if (person.updatedWeight.Count > 0)
+                {
+                    foreach (var kvp in person.updatedWeight)
+                    {
+                        Debug.WriteLine($"Person: {person.Name}, Desire: {kvp.Key}, Weight: {kvp.Value}");
+                    }
+                }
+                
             }
 
 
@@ -575,8 +591,15 @@ namespace CalculationEngine.HouseholdElements {
                         //CheckAndBiuldTraningSet(p, now);
                     }
 
-                   
+
                 }
+                //else
+                //{
+                //    foreach (var kvp in p.AffordanceSequence[now.Date])
+                //    {
+                //        p.setNewWeight(kvp.Value.Name, -0.05m);
+                //    }
+                //}
 
             }
             return (NeedToCheck, NeedToRecord);
@@ -646,6 +669,11 @@ namespace CalculationEngine.HouseholdElements {
                             {
                                 int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
 
+                                if (isUnique == 1)
+                                {
+                                    p.setNewWeight(activity.Value.Name, 0.2m);
+                                }
+
                                 //var rounded_down_time = activity.Key;
                                 //var rounded_minutes = rounded_down_time.Minute -((rounded_down_time.Minute % 15) * 15);
                                 //rounded_down_time = rounded_down_time.AddMinutes(-rounded_minutes);
@@ -655,6 +683,8 @@ namespace CalculationEngine.HouseholdElements {
                             }
                             
                         }
+
+                        
 
                         p.TrainingAffordanceSequence[previousDay] = trainingActivitiesForTheDay;
 
