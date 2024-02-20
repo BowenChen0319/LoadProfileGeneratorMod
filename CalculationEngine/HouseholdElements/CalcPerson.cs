@@ -1396,7 +1396,7 @@ namespace CalculationEngine.HouseholdElements {
                         if (result.PredictedLabel == "1")
                         {
                             Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
-                            setNewWeight(affordance.Name, 0.2m);
+                            setNewWeight(affordance.Name, 0.1m);
                             continue;
                         }
                     }
@@ -1549,7 +1549,7 @@ namespace CalculationEngine.HouseholdElements {
             
             if(updatedWeight.TryGetValue(aff, out var weight))
             {
-                updatedWeight[aff] = weight + ratio;
+                updatedWeight[aff] = Math.Max(weight + ratio,0.1m);
             }
             else
             {

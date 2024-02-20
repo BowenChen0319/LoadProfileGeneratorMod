@@ -595,9 +595,13 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 //else
                 //{
-                //    foreach (var kvp in p.AffordanceSequence[now.Date])
+                    
+                //    if(p.AffordanceSequence.TryGetValue(now.Date, out var todayActivities))
                 //    {
-                //        p.setNewWeight(kvp.Value.Name, -0.05m);
+                //        foreach (var activity in todayActivities)
+                //        {
+                //            p.setNewWeight(activity.Value.Name, -0.01m);
+                //        }
                 //    }
                 //}
 
@@ -618,6 +622,8 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     foreach (var activity in previousDayActivities)
                     {
+                        //p.setNewWeight(activity.Value.Name, 0.1m);
+
                         uniqueActivities[activity.Value.Name] = activity.Value;
                     }
                 }
@@ -677,7 +683,7 @@ namespace CalculationEngine.HouseholdElements {
                                 //var rounded_down_time = activity.Key;
                                 //var rounded_minutes = rounded_down_time.Minute -((rounded_down_time.Minute % 15) * 15);
                                 //rounded_down_time = rounded_down_time.AddMinutes(-rounded_minutes);
-                                
+
                                 trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
                                 //trainingActivitiesForTheDay[rounded_down_time.ToString("HH:mm")] = (activity.Value.Name, isUnique);
                             }
