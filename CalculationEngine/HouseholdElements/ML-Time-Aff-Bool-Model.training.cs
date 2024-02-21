@@ -45,19 +45,25 @@ namespace CalculationEngine
 
         public static void Train(string personName, string inputDataFilePath = RetrainFilePath, char separatorChar = RetrainSeparatorChar, bool hasHeader = RetrainHasHeader)
         {
-            personName = personName.Replace("/", "_").Replace(" ", "_");
+            var personName1 = personName.Replace("/", "_").Replace(" ", "_");
             var mlContext = new MLContext();
 
             // 动态生成模型保存路径，包含personName
-            string modelFileName = $"ML-Time-Aff-Bool-Model-{personName}.mlnet";
+            //if don't exist, create the directory
+            if (!Directory.Exists(@"C:\Work\ML\Models\"))
+            {
+                Directory.CreateDirectory(@"C:\Work\ML\Models\");
+            }
+            string modelFileName = $"ML-Time-Aff-Bool-Model-{personName1}.mlnet";
             string modelSavePath = Path.Combine(@"C:\Work\ML\Models\", modelFileName);
+            
 
             var data = LoadIDataViewFromFile(mlContext, inputDataFilePath, separatorChar, hasHeader);
             var model = RetrainModel(mlContext, data);
 
             // 保存模型到动态生成的路径
             SaveModel(mlContext, model, data, modelSavePath);
-            Debug.WriteLine($"Model for {personName} trained and saved to {modelSavePath}.");
+            Debug.WriteLine($"Model for {personName1} trained and saved to {modelSavePath}.");
         }
 
 

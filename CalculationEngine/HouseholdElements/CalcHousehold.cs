@@ -717,14 +717,25 @@ namespace CalculationEngine.HouseholdElements {
         public void UpdateAndSaveTrainingCSV(string personName, Dictionary<string, (string, int)> trainingActivitiesForTheDay, bool firstTime)
         {
             string baseDir = @"C:\Work\ML\Data";
+            string baseDir2 = @"C:\Work\ML\Models";
+
+            if (!Directory.Exists(baseDir))
+            {
+                // 创建目录
+                Directory.CreateDirectory(baseDir);
+            }
+            if (!Directory.Exists(baseDir2))
+            {
+                // 创建目录
+                Directory.CreateDirectory(baseDir2);
+
+            }
+
             string personalFilePath = Path.Combine(baseDir, $"ml-training-{personName}.csv");
             string defaultFilePath = Path.Combine(baseDir, "ml-training-data.csv");
 
             // 确保目录存在
-            if (!Directory.Exists(baseDir))
-            {
-                Directory.CreateDirectory(baseDir);
-            }
+            
 
             try
             {
