@@ -49,10 +49,12 @@ using Common.JSON;
 using Common.SQLResultLogging.InputLoggers;
 using Database.Tables.BasicHouseholds;
 using JetBrains.Annotations;
+using Newtonsoft.Json.Linq;
 
 #endregion
 
 namespace CalculationEngine.HouseholdElements {
+
     public class CalcPerson : CalcBase {
         [ItemNotNull]
         [JetBrains.Annotations.NotNull]
@@ -154,6 +156,12 @@ namespace CalculationEngine.HouseholdElements {
         public int trainingCounter = 0;
 
         public Dictionary<string, decimal> updatedWeight = new Dictionary<string, decimal>();
+
+        //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
+
+        public Dictionary<State,Dictionary<string,double>> qTable = new Dictionary<State, Dictionary<string, double>>();
+  
+        public State currentState = null;
 
 
         [JetBrains.Annotations.NotNull]
@@ -822,10 +830,6 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-
-
-
-
         private void BecomeHealthy([JetBrains.Annotations.NotNull] TimeStep time)
         {
             PersonDesires = _normalDesires;
@@ -900,7 +904,7 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubsNew(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromListNew(time, availableInterruptingAffordances, true, now);
+                    var bestAffordance = GetBestAffordanceFromListNewRL(time, availableInterruptingAffordances, true, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     if(_debug_print)
                     {
@@ -1275,7 +1279,7 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromListNew(time,  allAffordances, true, now);
+            return GetBestAffordanceFromListNewRL(time,  allAffordances, true, now);
         }
 
         [JetBrains.Annotations.NotNull]
@@ -1296,6 +1300,7 @@ namespace CalculationEngine.HouseholdElements {
             foreach (var affordance in allAvailableAffordances)
             {
                 var duration = affordance.GetDuration();
+
                 var calcTotalDeviationResult = PersonDesires.CalcEffectPartly(affordance, time, careForAll, out var thoughtstring,now);
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
                 var weightSum = calcTotalDeviationResult.WeightSum;
@@ -1335,19 +1340,17 @@ namespace CalculationEngine.HouseholdElements {
 
                 if(updatedWeight.TryGetValue(affordance.Name, out var weight))
                 {
-                    desireDiff = weight * TunningDeviation((double)desireDiff, duration);
+                    //desireDiff = weight * TunningDeviation((double)desireDiff, duration);
+                    desireDiff = weight * desireDiff;
                 }
                 else
                 {
-                    desireDiff = TunningDeviation((double)desireDiff, duration);
-                
+                    //desireDiff = TunningDeviation((double)desireDiff, duration);
+                    desireDiff = weight * desireDiff;
+
                 }
 
-
-
                 //desireDiff = TunningDeviation((double)desireDiff, duration);
-                
-
                 //desireDiff = desireDiff / (decimal)weightSum;
 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
@@ -1373,33 +1376,33 @@ namespace CalculationEngine.HouseholdElements {
                 if (desireDiff < bestDiff)
                 {
 
-                    if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
-                    //if (!firstTimeRecorded)
-                    {
-                        //ML_Time_Aff_Bool_Model.ReloadModel();
+                    //if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
+                    ////if (!firstTimeRecorded)
+                    //{
+                    //    //ML_Time_Aff_Bool_Model.ReloadModel();
 
-                        //var roundedTime = now;
-                        //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
-                        //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
+                    //    //var roundedTime = now;
+                    //    //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
+                    //    //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
 
-                        var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
-                        {
-                            Col0 = now.ToString("HH:mm"),
-                            //Col0 = roundedTime.ToString("HH:mm"),
-                            //Col0 = hourFloat,
-                            Col1 = affordance.Name,
-                        };
+                    //    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                    //    {
+                    //        Col0 = now.ToString("HH:mm"),
+                    //        //Col0 = roundedTime.ToString("HH:mm"),
+                    //        //Col0 = hourFloat,
+                    //        Col1 = affordance.Name,
+                    //    };
 
-                        //Load model and predict output
-                        var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
+                    //    //Load model and predict output
+                    //    var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
 
-                        if (result.PredictedLabel == "1")
-                        {
-                            Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
-                            setNewWeight(affordance.Name, 0.1m);
-                            continue;
-                        }
-                    }
+                    //    if (result.PredictedLabel == "1")
+                    //    {
+                    //        Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
+                    //        setNewWeight(affordance.Name, 0.1m);
+                    //        continue;
+                    //    }
+                    //}
 
                     bestDiff = desireDiff;
                     bestAffordance = affordance;
@@ -1544,6 +1547,249 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
+        //public void BuildQtable()
+        //{
+
+        //}
+
+        private ICalcAffordanceBase GetBestAffordanceFromListNewRL([JetBrains.Annotations.NotNull] TimeStep time,
+                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        {
+            //var bestDiff = decimal.MaxValue;
+            var bestQ_S_A = double.MinValue;
+            var bestAffordance = allAvailableAffordances[0];
+            //var bestaffordances = new List<(ICalcAffordanceBase, double)>();
+
+            //bestaffordances.Add(bestAffordance);
+
+            double bestWeightSum = -1;
+
+            //var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int, double>>();
+
+            foreach (var affordance in allAvailableAffordances)
+            {
+                var duration = affordance.GetDuration();
+
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL(affordance, time, careForAll, out var thoughtstring, now);
+                var desireDiff = calcTotalDeviationResult.totalDeviation;
+                var weightSum = calcTotalDeviationResult.WeightSum;
+                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+
+                var roundedTime = now;
+                var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
+                roundedTime = roundedTime.AddMinutes(-rounded_minutes);
+                TimeSpan nowTimeState = new TimeSpan(roundedTime.Hour, roundedTime.Minute, 0);
+
+                var newTime = now.AddMinutes(duration);
+                var rounded_minutes_new = newTime.Minute - ((newTime.Minute % 15) * 15);
+                newTime = newTime.AddMinutes(-rounded_minutes_new);
+                TimeSpan newTimeState = new TimeSpan(newTime.Hour, newTime.Minute, 0);
+
+                //List<double> desire_value = desire_ValueAfter.Values.ToList();
+
+                List<double> desire_value_after = new List<double>();
+                foreach(var kvp in desire_ValueAfter)
+                {
+                    var desire_Info = kvp.Value;
+                    double desire_weight = desire_Info.Item1;
+                    double desire_valueAfter = desire_Info.Item2;
+                    
+                    int slot = 2;
+
+                    if ((desire_weight>=10))
+                    {
+                        slot = 5;
+                    }
+                    if (desire_weight >=100)
+                    {
+                        slot = 10;
+                    }
+
+                    var desire_level = (int)(desire_valueAfter / (1 / slot));
+
+                    desire_value_after.Add(desire_level);
+
+                }
+                
+                double alpha = 0.2;
+
+                double gamma = 0.8;
+
+                List<double> desire_value_before = new List<double>();
+                if (true)
+                {
+                    
+                    foreach (var kvp in desire_ValueBefore)
+                    {
+                        var desire_Info = kvp.Value;
+                        double desire_weight = desire_Info.Item1;
+                        double desire_valueBefore = desire_Info.Item2;
+
+                        int slot = 1;
+
+                        if ((desire_weight >= 10))
+                        {
+                            slot = 2;
+                        }
+                        if (desire_weight >= 100)
+                        {
+                            slot = 5;
+                        }
+
+                        var desire_level = (int)(desire_valueBefore / (1 / slot));
+
+                        desire_value_before.Add(desire_level);
+
+                    }
+                    this.currentState = new State(desire_value_before, nowTimeState);
+                }
+                State newState = new State(desire_value_after, newTimeState);
+
+                //State testState1 = new State(desire_value_after, nowTimeState);
+
+                //State testState2 = new State(desire_value_before, newTimeState);
+
+                var R_S_A = desireDiff + 1000000;
+
+
+                //if(qTable.TryGetValue(currentState, out var Q_S_test))
+                //{
+                //    Debug.WriteLine("Q_S_Found!!   " + "Q_S_test" + "  Date:" + now.Date);
+                //}
+
+                if (!qTable.TryGetValue(currentState, out var Q_S))
+                {
+                    // Initialize with an empty dictionary if the current state is not found
+                    Q_S = new Dictionary<string, double>();
+                    qTable[currentState] = Q_S;
+                }
+
+                //Debug.WriteLine("should false:  "+currentState.Equals(testState1)+ "should false:  "+currentState.Equals(testState2));
+
+                double Q_S_A;
+                // Check if the current state has the action, initialize Q_S_A accordingly
+                //double Q_S_A_test;
+                //if(Q_S.TryGetValue(affordance.Guid.ToString(), out Q_S_A_test))
+                //{
+                //    Debug.WriteLine("Q_S_A_Found!!   " + Q_S_A_test+ "  Date:"  +now.Date+"  Aff:  "+affordance.Name);
+                //}
+
+
+                if (!Q_S.TryGetValue(affordance.Guid.ToString(), out Q_S_A))
+                {
+                    Q_S_A = 0; // Initialize to 0 if the action is not found
+                }
+
+                double maxQ_nS_nA = 0;
+                Dictionary<string, double> Q_newState_actions;
+
+                // Attempt to get the actions for the new state
+                if (qTable.TryGetValue(newState, out Q_newState_actions))
+                {
+                    // If found, iterate to find the max Q value among actions
+                    foreach (var action in Q_newState_actions)
+                    {
+                        if (action.Value > maxQ_nS_nA)
+                        {
+                            maxQ_nS_nA = action.Value;
+                        }
+                    }
+                }
+
+                // Update the Q value for the current state and action
+                var new_Q_S_A = (1 - alpha) * Q_S_A + alpha * ((double)R_S_A + gamma * maxQ_nS_nA);
+                qTable[currentState][affordance.Guid.ToString()] = new_Q_S_A;
+
+                if(new_Q_S_A > bestQ_S_A)
+                {
+
+                    if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
+                    //if (!firstTimeRecorded)
+                    {
+                        //ML_Time_Aff_Bool_Model.ReloadModel();
+
+                        //var roundedTime = now;
+                        //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
+                        //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
+
+                        var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                        {
+                            Col0 = now.ToString("HH:mm"),
+                            //Col0 = roundedTime.ToString("HH:mm"),
+                            //Col0 = hourFloat,
+                            Col1 = affordance.Name,
+                        };
+
+                        //Load model and predict output
+                        var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
+
+                        if (result.PredictedLabel == "1")
+                        {
+                            Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
+                            setNewWeight(affordance.Name, 0.1m);
+                            continue;
+                        }
+                    }
+
+                    bestQ_S_A = new_Q_S_A;
+                    bestAffordance = affordance;
+                    //this.currentState = newState;
+
+                }
+
+                //if (desireDiff == 1000000000000000)
+                //{
+                //    continue;
+                //}
+
+
+
+                ////V1 if sleep in the wait list, then direct run it
+                if (weightSum >= 1000)
+                {
+                    bestAffordance = affordance;
+                    break;
+                }
+
+                //V2 & V3
+                //if (duration >= 120)
+                //{
+                //    DateTime newTime = now.AddMinutes(duration);
+                //    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
+                //    if (newTime.Date > now.Date)
+                //    {
+                //        continue;
+                //    }
+
+
+                //desireDiff = TunningDeviation((double)desireDiff, duration);
+                //desireDiff = desireDiff / (decimal)weightSum;
+
+                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+                {
+                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+                    {
+                        throw new LPGException("Logfile was null.");
+                    }
+
+                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+                        new ThoughtEntry(this, time,
+                            "Desirediff for " + affordance.Name + " is :" +
+                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+                        _calcPerson.HouseholdKey);
+                }
+
+
+
+                
+            }
+
+            
+            return bestAffordance;
+
+
+        }
         public void setNewWeight(string aff, decimal ratio)
         {
             
@@ -1896,7 +2142,47 @@ namespace CalculationEngine.HouseholdElements {
                 new List<ICalcAffordanceBase>();
         }
 
+        
+
     }
+
+    public class State
+        {
+            public List<double> Values { get; set; }
+            public TimeSpan Time { get; set; }
+
+            // 构造函数
+            public State(List<double> values, TimeSpan time)
+            {
+                Values = values;
+                Time = time;
+            }
+
+            // 重写Equals和GetHashCode以便能够作为Dictionary的键
+            public override bool Equals(object obj)
+            {
+                if (obj is State other)
+                {
+                    return Values.SequenceEqual(other.Values) && Time == other.Time;
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked // Overflow is fine, just wrap
+                {
+                    int hash = 17;
+                    // Suitable nullity checks etc, of course :)
+                    foreach (var value in Values)
+                    {
+                        hash = hash * 23 + value.GetHashCode();
+                    }
+                    hash = hash * 23 + Time.GetHashCode();
+                    return hash;
+                }
+            }
+        }
 
     //public class HumanHeatGainManager {
     //    private readonly HumanHeatGainSpecification _hhgs;
@@ -2005,4 +2291,42 @@ namespace CalculationEngine.HouseholdElements {
     //        return person.HouseholdKey.Key + "#" + person.Name + "#" + level.ToString();
     //    }
     //}
+}
+
+public class State
+{
+    public List<double> Values { get; set; }
+    public TimeSpan Time { get; set; }
+
+    // 构造函数
+    public State(List<double> values, TimeSpan time)
+    {
+        Values = values;
+        Time = time;
+    }
+
+    // 重写Equals和GetHashCode以便能够作为Dictionary的键
+    public override bool Equals(object obj)
+    {
+        if (obj is State other)
+        {
+            return Values.SequenceEqual(other.Values) && Time == other.Time;
+        }
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked // Overflow is fine, just wrap
+        {
+            int hash = 17;
+            // Suitable nullity checks etc, of course :)
+            foreach (var value in Values)
+            {
+                hash = hash * 23 + value.GetHashCode();
+            }
+            hash = hash * 23 + Time.GetHashCode();
+            return hash;
+        }
+    }
 }

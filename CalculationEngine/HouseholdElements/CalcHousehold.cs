@@ -413,6 +413,8 @@ namespace CalculationEngine.HouseholdElements {
                         Debug.WriteLine($"Person: {person.Name}, Desire: {kvp.Key}, Weight: {kvp.Value}");
                     }
                 }
+
+               Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                 
             }
 
@@ -873,7 +875,7 @@ namespace CalculationEngine.HouseholdElements {
                         (bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
                         if (NeedCheck)
                         {
-                            CheckAndBuildTraningSet(p, now);
+                            //CheckAndBuildTraningSet(p, now);
                             
                         }
                         if (NeedRecored)

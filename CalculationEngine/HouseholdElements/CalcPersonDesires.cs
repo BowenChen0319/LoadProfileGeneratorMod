@@ -30,6 +30,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -452,6 +453,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 else
                 {
+                    //Debug.WriteLine("Date   " + now.Date);
                     return CalcTotalDeviationAllasAreaNew(duration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
                 }
 
@@ -467,90 +469,44 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        public (decimal totalDeviation, double WeightSum) CalcEffectPartly1(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now)
+        public (decimal totalDeviation, double WeightSum, Dictionary<string, (double,double)> desireName_ValueAfterApply_Dict, Dictionary<string, (double, double)> desireName_ValueBeforeApply_Dict) CalcEffectPartlyRL(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now)
         {
             var satisfactionvalues = affordance.Satisfactionvalues;
-            var affordanceName = affordance.Name;
-            var affordanceNameLower = affordanceName.ToLower(); // 优化字符串操作
-            var duration = affordance.GetDuration();
-            var restTime = 0;
-
-            if (_lookback)
-            {
-                restTime = affordance.GetRestTimeWindows(currentTime);
-            }
-
+            //var affordanceName = affordance.Name;
+            //var affordanceCategory = affordance.AffCategory;
             var interruptable = affordance.IsInterruptable;
-            var words = affordanceName.Split(' ');
-            string affordanceKey = string.Join(" ", words.Take(3));
+            var duration = affordance.GetDuration();
+            //var restTime = 0;
 
-            var edge = new TimeStep(1440, 0, false);
-            var edge1 = new TimeStep(180, 0, false);
-            var edgeWeek = new TimeStep(60 * 24 * 7, 0, false);
-
-            int priorityInfo = 1;
-            decimal modifier = 1;
-            List<string> whiteList = new List<string> { "go to the toilet", "work", "office", "sleep bed", "study", "school" };
-
-            
-
-            _lastAffordanceTime.TryGetValue(affordanceKey, out TimeStep lastTime);
-            DateTime lastDate;
-            _lastAffordanceDate.TryGetValue(affordanceKey, out lastDate);
-
-            if (whiteList.Any(affordance => affordanceNameLower.Contains(affordance.ToLower())))
+            if (_debug_print)
             {
-                if ((currentTime - lastTime) < edge1)
-                {
-                    priorityInfo = 0;
-                }
-                else
-                {
-                    priorityInfo = 2;
-                }
+                //Debug.WriteLine("     aff: " + affordanceName + "   restTime:  "+restTime);
+            }
+
+            var satisfactionvalueRAW = satisfactionvalues;
+            // calc decay
+
+            foreach (var calcDesire in Desires.Values)
+            {
+                calcDesire.TempValue = calcDesire.Value;
+            }
+            //decimal modifier = 1;
+            if (interruptable == true)
+            {
+                return CalcTotalDeviationAllasAreaNewRL(1, satisfactionvalues, out thoughtstring);
             }
             else
             {
-                if ((currentTime - lastTime) < edge)
-                {
-                    if (now.Date == lastDate.Date)
-                    {
-                        modifier *= 0.1m;
-                        priorityInfo = 0;
-                    }
-                }
-                if (duration > 120 && (currentTime - lastTime) < edgeWeek)
-                {
-                    modifier *= 0.1m;
-                    priorityInfo = 0;
-                }
+                return CalcTotalDeviationAllasAreaNewRL(duration, satisfactionvalues, out thoughtstring);
             }
 
-            foreach (var satisfactionvalue in satisfactionvalues)
-            {
-                if (Desires.ContainsKey(satisfactionvalue.DesireID))
-                {
-                    var desire = Desires[satisfactionvalue.DesireID];
-                    var newValue = satisfactionvalue.Value * modifier;
-                    desire.TempValue += newValue > 1 ? newValue / duration : newValue;
-                }
-            }
-
-            if (careForAll)
-            {
-                var calcDuration = interruptable ? 1 : duration;
-                return CalcTotalDeviationAllasAreaNew(calcDuration, satisfactionvalues, out thoughtstring, priorityInfo, restTime);
-            }
-            else
-            {
-                return (CalcEffect(satisfactionvalues, out thoughtstring, affordanceName), -1);
-            }
         }
 
-
-
-        private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasAreaNew1(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
+        private (decimal totalDeviation, double WeightSum, Dictionary<string, (double,double)> desireName_ValueAfterApply, Dictionary<string, (double, double)> desireName_ValueBeforeApply) CalcTotalDeviationAllasAreaNewRL(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring)
         {
+            Dictionary<string, (double,double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (double,double)>();
+            Dictionary<string, (double, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (double, double)>();
+
             decimal totalDeviation = 0;
             StringBuilder? sb = null;
             var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
@@ -559,52 +515,82 @@ namespace CalculationEngine.HouseholdElements {
                 sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
             }
 
-            var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value);
+            var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
 
             double weight_sum = 0;
+
+
+
             foreach (var calcDesire in Desires.Values)
             {
                 var desireID = calcDesire.DesireID;
-                double satisfactionvalueDBL;
-                if (satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueRAW))
-                {
-                    satisfactionvalueDBL = (double)satisfactionvalueRAW;
-                }
-                else
-                {
-                    satisfactionvalueDBL = 0;
-                }
+                satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueDBL);
 
-                var desire = calcDesire;
-                double decayrate = desire.GetDecayRateDoulbe();
-                var currentValueRAW = desire.TempValue;
-                var weight = desire.Weight;
-                double weightDBL = (double)weight;
+                var decayrate = calcDesire.GetDecayRateDoulbe();
+                var currentValueDBL = (double)calcDesire.TempValue;
+                var weightDBL = (double)calcDesire.Weight;
 
-                if(satisfactionvalueDBL > 0)
+                desireName_ValueBeforeApply_Dict[calcDesire.Name] = ((double)calcDesire.Weight, currentValueDBL);
+
+                //var short_duration = 30;
+                var short_duration = int.MaxValue;
+
+                if (satisfactionvalueDBL > 0)
                 {
                     weight_sum += weightDBL;
                 }
-                
 
-                double currentValueDBL = (double)currentValueRAW;
-
-                double profitValue = 0;
-                profitValue = (1 - currentValueDBL);
+                //double Deviration = 1 - currentValueDBL;
+                double deviration = 0;
+                //double profitValue = 0;
                 double updateValue = currentValueDBL;
-                for (var i = 0; i < duration; i++)
+                if (satisfactionvalueDBL > 0)
                 {
-                    updateValue = satisfactionvalueDBL > 0 ? Math.Min(1, updateValue + satisfactionvalueDBL / duration) : updateValue * decayrate;
-                    double diff = (1 - updateValue);
-                    profitValue = profitValue + diff;
+                    if (duration >= short_duration)
+                    {
+                        deviration += ((1 - updateValue) + Math.Max(0, 1 - updateValue - satisfactionvalueDBL)) * Math.Min(((1 - updateValue) / (satisfactionvalueDBL / duration)), duration) / 2;
+                    }
+                    else
+                    {
+                        for (var i = 0; i < duration; i++)
+                        {
+                            updateValue = Math.Min(1, updateValue + (satisfactionvalueDBL / duration));
+                            deviration += (1 - updateValue);
+                        }
+                    }
+                 
                 }
-                double afterValueDBL = updateValue;
+                else
+                {
+                    if (duration >= short_duration)
+                    {
+                        deviration += duration - (updateValue / (Math.Log(decayrate)) * (Math.Pow(decayrate, duration) - 1));
+                    }
+                    else
+                    {
+                        for (var i = 0; i < duration; i++)
+                        {
+                            updateValue *= decayrate;
+                            deviration += (1 - updateValue);
+                        }
+                    }
+                    //for (var i = 0; i < duration; i++)
+                    //{
+                    //    updateValue *= decayrate;
+                    //    profitValue += (1 - updateValue);
+                    //}
+                }
 
-                profitValue = (profitValue * weightDBL) / duration;
-                totalDeviation += (decimal)profitValue;
-                var deviation = (((1 - currentValueRAW) + (1 - (decimal)afterValueDBL)) / 2) * 100;
+                desireName_ValueAfterApply_Dict[calcDesire.Name] = ((double)calcDesire.Weight, updateValue);
+
+                //profitValue = profitValue * weightDBL / duration;
+                var weightedDeviration = deviration * weightDBL;
+
+                totalDeviation += (decimal)weightedDeviration;
+
                 if (sb != null)
                 {
+                    var deviation = (((1 - (decimal)currentValueDBL) + (1 - (decimal)updateValue)) / 2) * 100;
                     sb.Append(calcDesire.Name);
                     sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append("'");
                     sb.Append(deviation.ToString("0#.#", Config.CultureInfo));
@@ -613,49 +599,16 @@ namespace CalculationEngine.HouseholdElements {
                     sb.Append("*");
                     sb.Append(calcDesire.Weight.ToString("0#.#", Config.CultureInfo));
                     sb.Append(_calcRepo.CalcParameters.CSVCharacter);
-                    sb.Append(profitValue.ToString("0#.#", Config.CultureInfo));
+                    sb.Append(deviration.ToString("0#.#", Config.CultureInfo));
                     sb.Append(_calcRepo.CalcParameters.CSVCharacter).Append(" ");
                 }
             }
-            //Debug.WriteLine("    weight-sum:  " + weight_sum);
 
-            //decimal UrgencyRate = 1;
-            //if (restTime > 0)
-            //{
-            //    UrgencyRate = restTime / duration;
-            //}
+            weight_sum = weight_sum < 1 ? 1 : weight_sum;
 
-            if (weight_sum < 1)
-            {
-                weight_sum = 1;
-            }
-            if (sb != null)
-            {
-                thoughtstring = sb.ToString();
-            }
-            else
-            {
-                thoughtstring = null;
-            }
+            thoughtstring = sb?.ToString() ?? null;
 
-            if (priorityInfo == 0)
-            {
-                return (1000000000000000, weight_sum);
-            }
-            else if (priorityInfo == 2)
-            {
-                //return totalDeviation/(decimal)weight_sum;
-
-                //return (TunningDeviation((double)totalDeviation, duration), weight_sum);
-                //return TunningDeviation((double)totalDeviation, duration) * UrgencyRate;
-                return (totalDeviation, weight_sum);
-            }
-            else
-            {
-                //return (TunningDeviation((double)totalDeviation, duration), weight_sum);
-                //return TunningDeviation((double)totalDeviation, duration) * UrgencyRate;
-                return (totalDeviation, weight_sum);
-            }
+            return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict,desireName_ValueBeforeApply_Dict);
         }
 
         private (decimal totalDeviation, double WeightSum) CalcTotalDeviationAllasAreaNew(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, int priorityInfo, int restTime)
@@ -671,6 +624,15 @@ namespace CalculationEngine.HouseholdElements {
             var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
 
             double weight_sum = 0;
+
+
+
+            //Debug.WriteLine("Desires Count: " + Desires.Values.Count + "  Date: ");
+            //get last element from Desires.Values
+
+
+            //Debug.WriteLine("Last Desire Name: " + Desires.Values.Last().Name);
+
             foreach (var calcDesire in Desires.Values)
             {
                 var desireID = calcDesire.DesireID;
