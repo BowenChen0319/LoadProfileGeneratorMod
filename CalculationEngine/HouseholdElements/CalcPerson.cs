@@ -1552,6 +1552,44 @@ namespace CalculationEngine.HouseholdElements {
 
         //}
 
+        public List<double> ToDesireLevels(Dictionary<string, (double, double)> desireName_Value_Dict)
+        {
+            List<double> desire_value_Level = new List<double>();
+            foreach (var kvp in desireName_Value_Dict)
+            {
+                var desire_Info = kvp.Value;
+                double desire_weight = desire_Info.Item1;
+                double desire_valueAfter = desire_Info.Item2;
+
+                int slot = 2;
+
+                if ((desire_weight >= 10))
+                {
+                    slot = 5;
+                }
+                if (desire_weight >= 100)
+                {
+                    slot = 10;
+                }
+
+                var desire_level = (int)(desire_valueAfter / (1 / slot));
+
+                desire_value_Level.Add(desire_level);
+
+            }
+
+            return desire_value_Level;
+        }
+
+        public TimeSpan makeTimeSpan(DateTime time, int offset)
+        {
+            var newTime = time.AddMinutes(offset);
+            var rounded_minutes_new = newTime.Minute - ((newTime.Minute % 15) * 15);
+            newTime = newTime.AddMinutes(-rounded_minutes_new);
+            TimeSpan newTimeState = new TimeSpan(newTime.Hour, newTime.Minute, 0);
+            return newTimeState;
+        }
+
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
@@ -1559,12 +1597,11 @@ namespace CalculationEngine.HouseholdElements {
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
             //var bestaffordances = new List<(ICalcAffordanceBase, double)>();
-
             //bestaffordances.Add(bestAffordance);
-
-            double bestWeightSum = -1;
-
+            //double bestWeightSum = -1;
             //var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int, double>>();
+
+            List<double> desire_level_before = null;
 
             foreach (var affordance in allAvailableAffordances)
             {
@@ -1576,75 +1613,24 @@ namespace CalculationEngine.HouseholdElements {
                 var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
 
-                var roundedTime = now;
-                var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
-                roundedTime = roundedTime.AddMinutes(-rounded_minutes);
-                TimeSpan nowTimeState = new TimeSpan(roundedTime.Hour, roundedTime.Minute, 0);
+                TimeSpan nowTimeState = makeTimeSpan(now, 0);
 
-                var newTime = now.AddMinutes(duration);
-                var rounded_minutes_new = newTime.Minute - ((newTime.Minute % 15) * 15);
-                newTime = newTime.AddMinutes(-rounded_minutes_new);
-                TimeSpan newTimeState = new TimeSpan(newTime.Hour, newTime.Minute, 0);
+                TimeSpan newTimeState = makeTimeSpan(now, duration);
 
-                //List<double> desire_value = desire_ValueAfter.Values.ToList();
-
-                List<double> desire_value_after = new List<double>();
-                foreach(var kvp in desire_ValueAfter)
-                {
-                    var desire_Info = kvp.Value;
-                    double desire_weight = desire_Info.Item1;
-                    double desire_valueAfter = desire_Info.Item2;
-                    
-                    int slot = 2;
-
-                    if ((desire_weight>=10))
-                    {
-                        slot = 5;
-                    }
-                    if (desire_weight >=100)
-                    {
-                        slot = 10;
-                    }
-
-                    var desire_level = (int)(desire_valueAfter / (1 / slot));
-
-                    desire_value_after.Add(desire_level);
-
-                }
+                List<double> desire_level_after = ToDesireLevels(desire_ValueAfter);
                 
                 double alpha = 0.2;
 
                 double gamma = 0.8;
 
-                List<double> desire_value_before = new List<double>();
-                if (true)
+                //List<double> desire_value_before 
+                if (desire_level_before == null)
                 {
-                    
-                    foreach (var kvp in desire_ValueBefore)
-                    {
-                        var desire_Info = kvp.Value;
-                        double desire_weight = desire_Info.Item1;
-                        double desire_valueBefore = desire_Info.Item2;
-
-                        int slot = 1;
-
-                        if ((desire_weight >= 10))
-                        {
-                            slot = 2;
-                        }
-                        if (desire_weight >= 100)
-                        {
-                            slot = 5;
-                        }
-
-                        var desire_level = (int)(desire_valueBefore / (1 / slot));
-
-                        desire_value_before.Add(desire_level);
-
-                    }
-                    this.currentState = new State(desire_value_before, nowTimeState);
+                    desire_level_before = ToDesireLevels(desire_ValueBefore);
+                    this.currentState = new State(desire_level_before, nowTimeState);
                 }
-                State newState = new State(desire_value_after, newTimeState);
+
+                State newState = new State(desire_level_after, newTimeState);
 
                 //State testState1 = new State(desire_value_after, nowTimeState);
 
@@ -1683,8 +1669,6 @@ namespace CalculationEngine.HouseholdElements {
 
                 double maxQ_nS_nA = 0;
                 Dictionary<string, double> Q_newState_actions;
-
-                // Attempt to get the actions for the new state
                 if (qTable.TryGetValue(newState, out Q_newState_actions))
                 {
                     // If found, iterate to find the max Q value among actions
@@ -1704,33 +1688,33 @@ namespace CalculationEngine.HouseholdElements {
                 if(new_Q_S_A > bestQ_S_A)
                 {
 
-                    if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
-                    //if (!firstTimeRecorded)
-                    {
-                        //ML_Time_Aff_Bool_Model.ReloadModel();
+                    //if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
+                    ////if (!firstTimeRecorded)
+                    //{
+                    //    //ML_Time_Aff_Bool_Model.ReloadModel();
 
-                        //var roundedTime = now;
-                        //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
-                        //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
+                    //    //var roundedTime = now;
+                    //    //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
+                    //    //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
 
-                        var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
-                        {
-                            Col0 = now.ToString("HH:mm"),
-                            //Col0 = roundedTime.ToString("HH:mm"),
-                            //Col0 = hourFloat,
-                            Col1 = affordance.Name,
-                        };
+                    //    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
+                    //    {
+                    //        Col0 = now.ToString("HH:mm"),
+                    //        //Col0 = roundedTime.ToString("HH:mm"),
+                    //        //Col0 = hourFloat,
+                    //        Col1 = affordance.Name,
+                    //    };
 
-                        //Load model and predict output
-                        var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
+                    //    //Load model and predict output
+                    //    var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
 
-                        if (result.PredictedLabel == "1")
-                        {
-                            Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
-                            setNewWeight(affordance.Name, 0.1m);
-                            continue;
-                        }
-                    }
+                    //    if (result.PredictedLabel == "1")
+                    //    {
+                    //        Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
+                    //        setNewWeight(affordance.Name, 0.1m);
+                    //        continue;
+                    //    }
+                    //}
 
                     bestQ_S_A = new_Q_S_A;
                     bestAffordance = affordance;
