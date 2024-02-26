@@ -469,13 +469,23 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        public (decimal totalDeviation, double WeightSum, Dictionary<string, (double,double)> desireName_ValueAfterApply_Dict, Dictionary<string, (double, double)> desireName_ValueBeforeApply_Dict) CalcEffectPartlyRL(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now)
+        public (decimal totalDeviation, double WeightSum, Dictionary<string, (double,double)> desireName_ValueAfterApply_Dict, Dictionary<string, (double, double)> desireName_ValueBeforeApply_Dict) CalcEffectPartlyRL(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, List<double>? optionalList = null, List<CalcDesire>? satValue = null, int? newDuration = 0)
         {
+            
             var satisfactionvalues = affordance.Satisfactionvalues;
             //var affordanceName = affordance.Name;
             //var affordanceCategory = affordance.AffCategory;
             var interruptable = affordance.IsInterruptable;
             var duration = affordance.GetDuration();
+            if(newDuration != 0)
+            {
+                duration = (int)newDuration;
+            }
+            if (satValue != null)
+            {
+                satisfactionvalues = satValue;
+            }
+
             //var restTime = 0;
 
             if (_debug_print)
@@ -493,16 +503,16 @@ namespace CalculationEngine.HouseholdElements {
             //decimal modifier = 1;
             if (interruptable == true)
             {
-                return CalcTotalDeviationAllasAreaNewRL(1, satisfactionvalues, out thoughtstring);
+                return CalcTotalDeviationAllasAreaNewRL(1, satisfactionvalues, out thoughtstring,optionalList);
             }
             else
             {
-                return CalcTotalDeviationAllasAreaNewRL(duration, satisfactionvalues, out thoughtstring);
+                return CalcTotalDeviationAllasAreaNewRL(duration, satisfactionvalues, out thoughtstring,optionalList);
             }
 
         }
 
-        private (decimal totalDeviation, double WeightSum, Dictionary<string, (double,double)> desireName_ValueAfterApply, Dictionary<string, (double, double)> desireName_ValueBeforeApply) CalcTotalDeviationAllasAreaNewRL(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring)
+        private (decimal totalDeviation, double WeightSum, Dictionary<string, (double,double)> desireName_ValueAfterApply, Dictionary<string, (double, double)> desireName_ValueBeforeApply) CalcTotalDeviationAllasAreaNewRL(int duration, IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring, List<double>? optionalList = null)
         {
             Dictionary<string, (double,double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (double,double)>();
             Dictionary<string, (double, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (double, double)>();
@@ -519,7 +529,7 @@ namespace CalculationEngine.HouseholdElements {
 
             double weight_sum = 0;
 
-
+            int index = 0;
 
             foreach (var calcDesire in Desires.Values)
             {
@@ -529,6 +539,14 @@ namespace CalculationEngine.HouseholdElements {
                 var decayrate = calcDesire.GetDecayRateDoulbe();
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
+
+                if (optionalList != null && optionalList.Count == Desires.Values.Count)
+                {
+                    // 从optionalList获取对应位置的值作为currentValueDBL的值
+                    currentValueDBL = optionalList[index];
+                }
+
+                index++;
 
                 desireName_ValueBeforeApply_Dict[calcDesire.Name] = ((double)calcDesire.Weight, currentValueDBL);
 

@@ -159,7 +159,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public Dictionary<State,Dictionary<string,double>> qTable = new Dictionary<State, Dictionary<string, double>>();
+        public Dictionary<State,Dictionary<string,(double,int,List<CalcDesire>)>> qTable = new Dictionary<State, Dictionary<string, (double, int, List<CalcDesire>)>>();
   
         public State currentState = null;
 
@@ -1647,13 +1647,14 @@ namespace CalculationEngine.HouseholdElements {
                 if (!qTable.TryGetValue(currentState, out var Q_S))
                 {
                     // Initialize with an empty dictionary if the current state is not found
-                    Q_S = new Dictionary<string, double>();
+                    Q_S = new Dictionary<string, (double, int, List<CalcDesire>)>();
+                    // Dictionary<State,Dictionary<string,(double,int,List<CalcDesire>)>>
                     qTable[currentState] = Q_S;
                 }
 
                 //Debug.WriteLine("should false:  "+currentState.Equals(testState1)+ "should false:  "+currentState.Equals(testState2));
 
-                double Q_S_A;
+                (double, int, List<CalcDesire>) Q_S_A;
                 // Check if the current state has the action, initialize Q_S_A accordingly
                 //double Q_S_A_test;
                 //if(Q_S.TryGetValue(affordance.Guid.ToString(), out Q_S_A_test))
@@ -1662,28 +1663,60 @@ namespace CalculationEngine.HouseholdElements {
                 //}
 
 
-                if (!Q_S.TryGetValue(affordance.Guid.ToString(), out Q_S_A))
+                if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
                 {
-                    Q_S_A = 0; // Initialize to 0 if the action is not found
+                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
 
                 double maxQ_nS_nA = 0;
-                Dictionary<string, double> Q_newState_actions;
+                int maxQ_nS_nA_duration = 0;
+                List<CalcDesire> maxQ_nS_nA_satValus = null;
+                Dictionary<string, (double, int, List<CalcDesire>)> Q_newState_actions;
+                
                 if (qTable.TryGetValue(newState, out Q_newState_actions))
                 {
                     // If found, iterate to find the max Q value among actions
                     foreach (var action in Q_newState_actions)
                     {
-                        if (action.Value > maxQ_nS_nA)
+                        if (action.Value.Item1 > maxQ_nS_nA)
                         {
-                            maxQ_nS_nA = action.Value;
+                            maxQ_nS_nA = action.Value.Item1;
+                            maxQ_nS_nA_duration = action.Value.Item2;
+                            maxQ_nS_nA_satValus = action.Value.Item3;
                         }
                     }
                 }
 
+                double maxQ_nnS_nnA = 0;
+
+                if (maxQ_nS_nA != 0)
+                {
+                    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
+                    List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
+                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                    State new_newState = new State(ToDesireLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+
+                    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                    {
+                        
+                        foreach (var action in Q_newState_actions_nS)
+                        {
+                            if (action.Value.Item1 > maxQ_nnS_nnA)
+                            {
+                                maxQ_nnS_nnA = action.Value.Item1;
+                            }
+                        }
+                        
+                    }
+
+                }
+
+
+
                 // Update the Q value for the current state and action
-                var new_Q_S_A = (1 - alpha) * Q_S_A + alpha * ((double)R_S_A + gamma * maxQ_nS_nA);
-                qTable[currentState][affordance.Guid.ToString()] = new_Q_S_A;
+                var new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * ((double)R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
+                qTable[currentState][affordance.Guid.ToString()] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues);
 
                 if(new_Q_S_A > bestQ_S_A)
                 {
