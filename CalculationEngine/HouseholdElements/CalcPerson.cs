@@ -1668,6 +1668,7 @@ namespace CalculationEngine.HouseholdElements {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
 
+                //first prediction
                 double maxQ_nS_nA = 0;
                 int maxQ_nS_nA_duration = 0;
                 List<CalcDesire> maxQ_nS_nA_satValus = null;
@@ -1687,6 +1688,7 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
 
+                //second prediction
                 double maxQ_nnS_nnA = 0;
 
                 if (maxQ_nS_nA != 0)
