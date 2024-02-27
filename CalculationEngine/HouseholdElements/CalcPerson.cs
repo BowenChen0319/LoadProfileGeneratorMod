@@ -162,7 +162,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public Dictionary<(string , string ), Dictionary<string,(decimal,int,List<CalcDesire>)>> qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, List<CalcDesire>)>>();
+        public Dictionary<(string , string ), Dictionary<string,(decimal,int,Dictionary<int,decimal>)>> qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
 
         public (string, string) currentState = (null, null);
 
@@ -1716,11 +1716,11 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (!qTable.TryGetValue(currentState, out var Q_S))
                 {
-                    Q_S = new Dictionary<string, (decimal, int, List<CalcDesire>)>();
+                    Q_S = new Dictionary<string, (decimal, int, Dictionary<int, decimal>)>();
                     qTable[currentState] = Q_S;
                 }
 
-                (decimal, int, List<CalcDesire>) Q_S_A;
+                (decimal, int, Dictionary<int, decimal>) Q_S_A;
                 
                 if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
                 {
@@ -1730,8 +1730,8 @@ namespace CalculationEngine.HouseholdElements {
                 //first prediction
                 decimal maxQ_nS_nA = 0;
                 int maxQ_nS_nA_duration = 0;
-                List<CalcDesire> maxQ_nS_nA_satValus = null;
-                Dictionary<string, (decimal, int, List<CalcDesire>)> Q_newState_actions;
+                Dictionary<int, decimal> maxQ_nS_nA_satValus = null;
+                Dictionary<string, (decimal, int, Dictionary<int, decimal>)> Q_newState_actions;
                 
                 if (qTable.TryGetValue(newState, out Q_newState_actions))
                 {
@@ -1775,7 +1775,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 // Update the Q value for the current state and action
                 decimal new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
-                qTable[currentState][affordance.Guid.ToString()] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues);
+                qTable[currentState][affordance.Guid.ToString()] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value));
 
                 if(new_Q_S_A > bestQ_S_A)
                 {
