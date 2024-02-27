@@ -53,6 +53,7 @@ using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using System.Text.Json.Serialization;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 #endregion
 
@@ -162,7 +163,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public Dictionary<(string , string ), Dictionary<string,(decimal,int,Dictionary<int,decimal>)>> qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+        public Dictionary<(string , string ), Dictionary<string,(decimal,int,Dictionary<int,decimal>)>> qTable = null;
 
         public (string, string) currentState = (null, null);
 
@@ -1550,10 +1551,109 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        //public void BuildQtable()
-        //{
+        public void SaveQTableToFile()
+        {
+            string baseDir2 = @"C:\Work\ML\Models";
+            //var qtable_toSave = qTable;
 
-        //}
+            var convertedQTable = new Dictionary<string, string>();
+
+            foreach (var outerEntry in qTable)
+            {
+                var outerKey = $"{outerEntry.Key.Item1}§{outerEntry.Key.Item2}";
+                var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
+                    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}^{d.Value}"))}"
+                );
+
+                convertedQTable[outerKey] = String.Join("~", innerDictSerialized);
+            }
+
+            if (!Directory.Exists(baseDir2))
+            {
+                // 创建目录
+                Directory.CreateDirectory(baseDir2);
+
+            }
+            string personName = _calcPerson.Name.Replace("/", "_");
+            string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string jsonString = JsonSerializer.Serialize(convertedQTable, options);
+                File.WriteAllText(filePath, jsonString);
+                Debug.WriteLine("QTable has been successfully saved to " + filePath);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Error saving QTable: " + ex.Message);
+            }
+        }
+
+        public void LoadQTableFromFile()
+        {
+            Debug.WriteLine("Now Loading QTable from file...");
+            string baseDir = @"C:\Work\ML\Models";
+            // 确保目录存在
+            if (!Directory.Exists(baseDir))
+            {
+                Directory.CreateDirectory(baseDir);
+            }
+
+            // 处理文件名以避免路径问题
+            string personName = _calcPerson.Name.Replace("/", "_");
+            string filePath = Path.Combine(baseDir, $"qTable-{personName}.json");
+
+            // 检查文件是否存在
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    var jsonString = File.ReadAllText(filePath);
+                    var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
+
+                    var readed_QTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+
+                    foreach (var outerEntry in convertedQTable)
+                    {
+                        var outerKeyParts = outerEntry.Key.Split('§');
+                        var outerKey = (outerKeyParts[0], outerKeyParts[1]);
+                        var innerDict = new Dictionary<string, (decimal, int, Dictionary<int, decimal>)>();
+
+                        var innerEntries = outerEntry.Value.Split(new string[] { "~" }, StringSplitOptions.None);
+                        foreach (var innerEntry in innerEntries)
+                        {
+                            var parts = innerEntry.Split('¶');
+                            var key = parts[0];
+                            var valueParts = parts[1].Split('‖');
+                            var decimalValue = decimal.Parse(valueParts[0]);
+                            var intValue = int.Parse(valueParts[1]);
+                            var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
+                            var dict = dictParts.Select(p => p.Split('^')).ToDictionary(p => int.Parse(p[0]), p => decimal.Parse(p[1]));
+
+                            innerDict[key] = (decimalValue, intValue, dict);
+                        }
+
+                        readed_QTable[outerKey] = innerDict;
+                    }
+
+                    this.qTable = readed_QTable;
+                    Debug.WriteLine("QTable has been successfully loaded from " + filePath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Error loading QTable: " + ex.Message);
+                    // 出错时，初始化为新的字典
+                    //this.qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+                }
+            }
+            else
+            {
+                // 文件不存在，初始化为新的字典
+                Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
+                this.qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+            }
+        }
+
 
         public List<double> ToDesireLevels(Dictionary<string, (double, double)> desireName_Value_Dict)
         {
@@ -1670,6 +1770,11 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
+            if(qTable == null)
+            {
+                LoadQTableFromFile();
+            }
+            
             //var bestDiff = decimal.MaxValue;
             var bestQ_S_A = decimal.MinValue;
             var bestAffordance = allAvailableAffordances[0];
@@ -1750,32 +1855,32 @@ namespace CalculationEngine.HouseholdElements {
                 //second prediction
                 decimal maxQ_nnS_nnA = 0;
 
-                if (maxQ_nS_nA != 0)
-                {
-                    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
-                    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
-                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                    (string values, string time) new_newState = (string.Join(",", ToDesireLevels(desire_ValueAfter_nS)), makeTimeSpan(TimeAfter_nS, 0));
+                //if (maxQ_nS_nA != 0)
+                //{
+                //    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
+                //    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                //    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
+                //    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                //    (string values, string time) new_newState = (string.Join(",", ToDesireLevels(desire_ValueAfter_nS)), makeTimeSpan(TimeAfter_nS, 0));
 
-                    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                    {
+                //    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                //    {
 
-                        foreach (var action in Q_newState_actions_nS)
-                        {
-                            if (action.Value.Item1 > maxQ_nnS_nnA)
-                            {
-                                maxQ_nnS_nnA = action.Value.Item1;
-                            }
-                        }
+                //        foreach (var action in Q_newState_actions_nS)
+                //        {
+                //            if (action.Value.Item1 > maxQ_nnS_nnA)
+                //            {
+                //                maxQ_nnS_nnA = action.Value.Item1;
+                //            }
+                //        }
 
-                    }
+                //    }
 
-                }
+                //}
 
                 // Update the Q value for the current state and action
                 decimal new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
-                qTable[currentState][affordance.Guid.ToString()] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value));
+                qTable[currentState][affordance.Name] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value));
 
                 if(new_Q_S_A > bestQ_S_A)
                 {

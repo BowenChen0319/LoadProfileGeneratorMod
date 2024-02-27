@@ -416,6 +416,7 @@ namespace CalculationEngine.HouseholdElements {
                 //}
 
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
+                person.SaveQTableToFile();
                 //SaveQTableToFile(person.qTable, person_name);
                 //Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
                 
@@ -874,18 +875,12 @@ namespace CalculationEngine.HouseholdElements {
                     //check and load q-table
                     //if (!p.firstTimeRecorded)
                     //{
-                    //    var qTable = LoadQTableFromFile(p.Name);
-                    //    if (qTable != null)
-                    //    {
-                    //        p.qTable = qTable;
-                    //        Debug.WriteLine($"Q-Table loaded for {p.Name}");
-                            
-                    //    }
+                    //    p.LoadQTableFromFile();
                     //    p.firstTimeRecorded = false;
-                        
+
                     //}
 
-                    
+
                     DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
 
                     bool isEndOfDay = now >= endOfDay;
@@ -909,7 +904,7 @@ namespace CalculationEngine.HouseholdElements {
                     p.NextStepNew(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
 
-                    UpdateTotalWeightedDeviation(p, now);
+                    //UpdateTotalWeightedDeviation(p, now);
 
 
                 }
