@@ -36,6 +36,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using Automation;
 using Automation.ResultFiles;
 using CalculationEngine.Helper;
@@ -405,16 +406,18 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
 
-                Debug.WriteLine($"Name: {person_name}, Count: {person.updatedWeight.Count}");
-                if (person.updatedWeight.Count > 0)
-                {
-                    foreach (var kvp in person.updatedWeight)
-                    {
-                        Debug.WriteLine($"Person: {person.Name}, Desire: {kvp.Key}, Weight: {kvp.Value}");
-                    }
-                }
+                //Debug.WriteLine($"Name: {person_name}, Count: {person.updatedWeight.Count}");
+                //if (person.updatedWeight.Count > 0)
+                //{
+                //    foreach (var kvp in person.updatedWeight)
+                //    {
+                //        Debug.WriteLine($"Person: {person.Name}, Desire: {kvp.Key}, Weight: {kvp.Value}");
+                //    }
+                //}
 
-               Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
+                Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
+                //SaveQTableToFile(person.qTable, person_name);
+                //Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
                 
             }
 
@@ -715,6 +718,7 @@ namespace CalculationEngine.HouseholdElements {
 
             }
         }
+        
 
         public void UpdateAndSaveTrainingCSV(string personName, Dictionary<string, (string, int)> trainingActivitiesForTheDay, bool firstTime)
         {
@@ -866,12 +870,29 @@ namespace CalculationEngine.HouseholdElements {
                 
                 if (calcParameters.UseNewAlgo)
                 {
+
+                    //check and load q-table
+                    //if (!p.firstTimeRecorded)
+                    //{
+                    //    var qTable = LoadQTableFromFile(p.Name);
+                    //    if (qTable != null)
+                    //    {
+                    //        p.qTable = qTable;
+                    //        Debug.WriteLine($"Q-Table loaded for {p.Name}");
+                            
+                    //    }
+                    //    p.firstTimeRecorded = false;
+                        
+                    //}
+
+                    
                     DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
 
                     bool isEndOfDay = now >= endOfDay;
 
                     if (isEndOfDay)
                     {
+                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},");
                         (bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
                         if (NeedCheck)
                         {
@@ -882,6 +903,7 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             allLastHighTWD[p.Name] = now.Date;
                         }
+                        
                     }
 
                     p.NextStepNew(timestep, _locations, _daylightArray,
@@ -1178,3 +1200,6 @@ namespace CalculationEngine.HouseholdElements {
         }
     }
 }
+
+
+

@@ -149,10 +149,11 @@ namespace CalculationEngine {
 
                 int coreCount = Environment.ProcessorCount;
                 Debug.WriteLine($"CPU Core Total：{coreCount}");
-
+                //CalcRepo.CalcParameters.InternalStartTime.AddDays(-90);
                 var now = CalcRepo.CalcParameters.InternalStartTime;
-                //Debug.WriteLine("Starting the simulation");
                 
+                //Debug.WriteLine("Starting the simulation");
+
                 var timestep = new TimeStep(0, CalcRepo.CalcParameters);
 
                 var calcParameters = CalcRepo.CalcParameters;
