@@ -1615,12 +1615,14 @@ namespace CalculationEngine.HouseholdElements {
 
         public string makeTimeSpan(DateTime time, int offset)
         {
+            int unit = 15;
             var newTime = time.AddMinutes(offset);
-            var rounded_minutes_new = newTime.Minute - ((newTime.Minute % 15) * 15);
+            var rounded_minutes_new = newTime.Minute % unit;
             newTime = newTime.AddMinutes(-rounded_minutes_new);
             //TimeSpan newTimeState = new TimeSpan(newTime.Hour, newTime.Minute, 0);
             string prefix = newTime.DayOfWeek == DayOfWeek.Saturday || newTime.DayOfWeek == DayOfWeek.Sunday ? "R:" : "W:";
             string newTimeState = prefix + newTime.ToString("HH:mm");
+            //Debug.WriteLine("Time: "+ "  " + newTimeState);
             return newTimeState;
         }
 
