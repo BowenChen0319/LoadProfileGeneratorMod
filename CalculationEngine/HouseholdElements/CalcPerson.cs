@@ -163,9 +163,9 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public Dictionary<(string , string ), Dictionary<string,(decimal,int,Dictionary<int,decimal>)>> qTable = null;
+        public Dictionary<(Dictionary<string,int> , string ), Dictionary<string,(decimal,int,Dictionary<int,decimal>)>> qTable = null;
 
-        public (string, string) currentState = (null, null);
+        public (Dictionary<string, int>, string) currentState = (null, null);
 
 
         [JetBrains.Annotations.NotNull]
@@ -1560,7 +1560,8 @@ namespace CalculationEngine.HouseholdElements {
 
             foreach (var outerEntry in qTable)
             {
-                var outerKey = $"{outerEntry.Key.Item1}§{outerEntry.Key.Item2}";
+                var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
+                var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
                 var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
                     $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}^{d.Value}"))}"
                 );
@@ -1611,12 +1612,13 @@ namespace CalculationEngine.HouseholdElements {
                     var jsonString = File.ReadAllText(filePath);
                     var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
 
-                    var readed_QTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+                    var readed_QTable = new Dictionary<(Dictionary<string, int>, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>(new CustomKeyComparer());
 
                     foreach (var outerEntry in convertedQTable)
                     {
                         var outerKeyParts = outerEntry.Key.Split('§');
-                        var outerKey = (outerKeyParts[0], outerKeyParts[1]);
+                        var outerKeyDictParts = outerKeyParts[0].Split('±').Select(p => p.Split('⦿')).ToDictionary(p => p[0], p => int.Parse(p[1]));
+                        var outerKey = (outerKeyDictParts, outerKeyParts[1]);
                         var innerDict = new Dictionary<string, (decimal, int, Dictionary<int, decimal>)>();
 
                         var innerEntries = outerEntry.Value.Split(new string[] { "~" }, StringSplitOptions.None);
@@ -1637,7 +1639,18 @@ namespace CalculationEngine.HouseholdElements {
                     }
 
                     this.qTable = readed_QTable;
+
+                    var firstKeyItem1 = this.qTable.Keys.First().Item1;
+
+                    // 遍历并打印所有键值对
+                    foreach (var kvp in firstKeyItem1)
+                    {
+                        Debug.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
+                    }
+
                     Debug.WriteLine("QTable has been successfully loaded from " + filePath);
+
+                    
                 }
                 catch (Exception ex)
                 {
@@ -1650,7 +1663,7 @@ namespace CalculationEngine.HouseholdElements {
             {
                 // 文件不存在，初始化为新的字典
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
-                this.qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+                this.qTable = new Dictionary<(Dictionary<string, int>, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>(new CustomKeyComparer());
             }
         }
 
@@ -1711,6 +1724,34 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             return desire_value_Level;
+        }
+
+        public Dictionary<string, int> MergeDictAndLevels(Dictionary<string, (double, decimal)> desireName_Value_Dict)
+        {
+            var mergedDict = new Dictionary<string, int>(); // 创建新的字典以存储结果
+
+            foreach (var kvp in desireName_Value_Dict)
+            {
+                var key = kvp.Key;
+                var desire_Info = kvp.Value;
+                double desire_weight = desire_Info.Item1;
+                double desire_valueAfter = (double)desire_Info.Item2;
+                
+                //Debug.WriteLine("Desire: " + key + "  Weight: " + desire_weight + "  Value: " + desire_valueAfter);
+
+                int slot = 1;
+                if (desire_weight >= 1) slot = 2;
+                if (desire_weight >= 10) slot = 5;
+                if (desire_weight >= 100) slot = 10;
+
+                //var desire_level = (int)(desire_valueAfter / (1 / slot));
+                var desire_level = (int)Math.Floor(desire_valueAfter * slot);
+
+
+                mergedDict[key] = desire_level; // 将键和计算出的等级值直接合并到新字典中
+            }
+
+            return mergedDict; // 返回合并后的字典
         }
 
         public string makeTimeSpan(DateTime time, int offset)
@@ -1784,7 +1825,7 @@ namespace CalculationEngine.HouseholdElements {
             //double bestWeightSum = -1;
             //var affordanceDetails = new Dictionary<string, Tuple<decimal, int, int, double>>();
 
-            List<int> desire_level_before = null;
+            Dictionary<string, int> desire_level_before = null;
 
             foreach (var affordance in allAvailableAffordances)
             {
@@ -1797,12 +1838,14 @@ namespace CalculationEngine.HouseholdElements {
                 var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
 
+                //Dictionary<string, int> desireName_level_After_Dict = MergeDictAndLevels(desire_ValueAfter);
+
                 string nowTimeState = makeTimeSpan(now, 0);
 
                 string newTimeState = makeTimeSpan(now, duration);
 
                 //List<double> desire_level_after = ToDesireLevels(desire_ValueAfter);
-                List<int> desire_level_after = ToDesireLevels(desire_ValueAfter);
+                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
                 decimal alpha = 0.2m;
 
@@ -1810,11 +1853,16 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (desire_level_before == null)
                 {
-                    desire_level_before = ToDesireLevels(desire_ValueBefore);
-                    this.currentState = new (string.Join(",", desire_level_before), nowTimeState);
+                    desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+                    //foreach (var kvp in desire_level_before)
+                    //{
+                    //    Debug.WriteLine("Desire: " + kvp.Key + "  Level: " + kvp.Value);
+                    //}
+
+                    this.currentState = new (desire_level_before, nowTimeState);
                 }
 
-                (string values, string time) newState = (string.Join(",", desire_level_after), newTimeState);
+                (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
                  var R_S_A = desireDiff + (decimal)1000000;
 
@@ -1855,28 +1903,28 @@ namespace CalculationEngine.HouseholdElements {
                 //second prediction
                 decimal maxQ_nnS_nnA = 0;
 
-                //if (maxQ_nS_nA != 0)
-                //{
-                //    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
-                //    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                //    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
-                //    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                //    (string values, string time) new_newState = (string.Join(",", ToDesireLevels(desire_ValueAfter_nS)), makeTimeSpan(TimeAfter_nS, 0));
+                if (maxQ_nS_nA != 0)
+                {
+                    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
+                    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
+                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
 
-                //    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                //    {
+                    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                    {
 
-                //        foreach (var action in Q_newState_actions_nS)
-                //        {
-                //            if (action.Value.Item1 > maxQ_nnS_nnA)
-                //            {
-                //                maxQ_nnS_nnA = action.Value.Item1;
-                //            }
-                //        }
+                        foreach (var action in Q_newState_actions_nS)
+                        {
+                            if (action.Value.Item1 > maxQ_nnS_nnA)
+                            {
+                                maxQ_nnS_nnA = action.Value.Item1;
+                            }
+                        }
 
-                //    }
+                    }
 
-                //}
+                }
 
                 // Update the Q value for the current state and action
                 decimal new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
@@ -1916,7 +1964,7 @@ namespace CalculationEngine.HouseholdElements {
                     bestQ_S_A = new_Q_S_A;
                     bestAffordance = affordance;
                     //this.currentState = newState;
-
+                    
                 }
 
                 //if (desireDiff == 1000000000000000)
@@ -1971,6 +2019,11 @@ namespace CalculationEngine.HouseholdElements {
                 return sleep;
             }else
             {
+                //var dict = currentState.Item1;
+                //foreach (var kvp in dict)
+                //{
+                //    Debug.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
+                //}
                 return bestAffordance;
             }
             
@@ -2523,5 +2576,47 @@ namespace CalculationEngine.HouseholdElements {
 //        }
 //    }
 
-    
+
 //}
+
+public class CustomKeyComparer : IEqualityComparer<(Dictionary<string, int>, string)>
+{
+    public bool Equals((Dictionary<string, int>, string) x, (Dictionary<string, int>, string) y)
+    {
+        // 检查字符串部分是否相等
+        if (!x.Item2.Equals(y.Item2))
+        {
+            return false;
+        }
+
+        // 检查字典部分的键值对数量是否相等
+        if (x.Item1.Count != y.Item1.Count)
+        {
+            return false;
+        }
+
+        // 检查每个键是否存在于另一个字典中且对应的值相等
+        foreach (var kvp in x.Item1)
+        {
+            if (!y.Item1.TryGetValue(kvp.Key, out var value) || kvp.Value != value)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public int GetHashCode((Dictionary<string, int>, string) obj)
+    {
+        // 计算哈希码
+        int hash = 17;
+        hash = hash * 23 + obj.Item2.GetHashCode();
+        foreach (var kvp in obj.Item1.OrderBy(kvp => kvp.Key))
+        {
+            hash = hash * 23 + kvp.Key.GetHashCode();
+            hash = hash * 23 + kvp.Value.GetHashCode();
+        }
+        return hash;
+    }
+}
