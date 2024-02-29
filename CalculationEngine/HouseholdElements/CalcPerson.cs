@@ -1740,15 +1740,18 @@ namespace CalculationEngine.HouseholdElements {
                 //Debug.WriteLine("Desire: " + key + "  Weight: " + desire_weight + "  Value: " + desire_valueAfter);
 
                 int slot = 1;
-                if (desire_weight >= 1) slot = 2;
-                if (desire_weight >= 10) slot = 5;
-                if (desire_weight >= 100) slot = 10;
+                if (desire_weight >= 1) slot = 1;
+                if (desire_weight >= 10) slot = 3;
+                if (desire_weight >= 100) slot = 5;
 
                 //var desire_level = (int)(desire_valueAfter / (1 / slot));
                 var desire_level = (int)Math.Floor(desire_valueAfter * slot);
 
-
-                mergedDict[key] = desire_level; // 将键和计算出的等级值直接合并到新字典中
+                if(desire_weight >= 50)
+                {
+                    mergedDict[key] = desire_level; // 将键和计算出的等级值直接合并到新字典中
+                }
+                
             }
 
             return mergedDict; // 返回合并后的字典
@@ -1864,7 +1867,13 @@ namespace CalculationEngine.HouseholdElements {
 
                 (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
-                 var R_S_A = desireDiff + (decimal)1000000;
+                 var R_S_A = -desireDiff + (decimal)1000000;
+                //Debug.WriteLine("R_S_A: " + R_S_A);
+
+                //if(affordance.Name.Contains("Sleep"))
+                //{
+                //    R_S_A += (decimal)1000000;
+                //}
 
 
                 if (!qTable.TryGetValue(currentState, out var Q_S))
@@ -1903,28 +1912,28 @@ namespace CalculationEngine.HouseholdElements {
                 //second prediction
                 decimal maxQ_nnS_nnA = 0;
 
-                if (maxQ_nS_nA != 0)
-                {
-                    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
-                    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
-                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+                //if (maxQ_nS_nA != 0)
+                //{
+                //    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
+                //    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                //    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
+                //    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                //    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
 
-                    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                    {
+                //    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                //    {
 
-                        foreach (var action in Q_newState_actions_nS)
-                        {
-                            if (action.Value.Item1 > maxQ_nnS_nnA)
-                            {
-                                maxQ_nnS_nnA = action.Value.Item1;
-                            }
-                        }
+                //        foreach (var action in Q_newState_actions_nS)
+                //        {
+                //            if (action.Value.Item1 > maxQ_nnS_nnA)
+                //            {
+                //                maxQ_nnS_nnA = action.Value.Item1;
+                //            }
+                //        }
 
-                    }
+                //    }
 
-                }
+                //}
 
                 // Update the Q value for the current state and action
                 decimal new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
@@ -1979,6 +1988,7 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     //bestAffordance = affordance;
                     //break;
+                    
                     sleep = affordance;
                 }
 
@@ -2604,7 +2614,9 @@ public class CustomKeyComparer : IEqualityComparer<(Dictionary<string, int>, str
             }
         }
 
+        //Debug.WriteLine("Equal");
         return true;
+        
     }
 
     public int GetHashCode((Dictionary<string, int>, string) obj)
