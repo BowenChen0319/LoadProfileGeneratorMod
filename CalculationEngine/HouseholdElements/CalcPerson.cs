@@ -167,6 +167,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public (Dictionary<string, int>, string) currentState = (null, null);
 
+        public string next_affordance_name = null;
+
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -908,7 +910,7 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubsNew(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromListNewRL(time, availableInterruptingAffordances, true, now);
+                    var bestAffordance = GetBestAffordanceFromListNewRL_Q_Learning(time, availableInterruptingAffordances, true, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     if(_debug_print)
                     {
@@ -1283,7 +1285,7 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromListNewRL(time,  allAffordances, true, now);
+            return GetBestAffordanceFromListNewRL_Q_Learning(time,  allAffordances, true, now);
         }
 
         [JetBrains.Annotations.NotNull]
@@ -1811,18 +1813,21 @@ namespace CalculationEngine.HouseholdElements {
 
         //}
 
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
             if(qTable == null)
             {
                 LoadQTableFromFile();
             }
-            
+            string readed_next_affordance_name = next_affordance_name;
+
             //var bestDiff = decimal.MaxValue;
             var bestQ_S_A = decimal.MinValue;
             var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
+
+            ICalcAffordanceBase sarsa_affordacne = null;
             //var bestaffordances = new List<(ICalcAffordanceBase, double)>();
             //bestaffordances.Add(bestAffordance);
             //double bestWeightSum = -1;
@@ -1840,6 +1845,8 @@ namespace CalculationEngine.HouseholdElements {
                 var weightSum = calcTotalDeviationResult.WeightSum;
                 var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+
+                string sarsa_next_affordance_candi = null;
 
                 //Dictionary<string, int> desireName_level_After_Dict = MergeDictAndLevels(desire_ValueAfter);
 
@@ -1905,6 +1912,8 @@ namespace CalculationEngine.HouseholdElements {
                             maxQ_nS_nA = action.Value.Item1;
                             maxQ_nS_nA_duration = action.Value.Item2;
                             maxQ_nS_nA_satValus = action.Value.Item3;
+                            
+                            sarsa_next_affordance_candi = action.Key;
                         }
                     }
                 }
@@ -1941,46 +1950,12 @@ namespace CalculationEngine.HouseholdElements {
 
                 if(new_Q_S_A > bestQ_S_A)
                 {
-
-                    //if (!firstTimeRecorded && (now.Hour >= 19 || now.Hour <= 3))
-                    ////if (!firstTimeRecorded)
-                    //{
-                    //    //ML_Time_Aff_Bool_Model.ReloadModel();
-
-                    //    //var roundedTime = now;
-                    //    //var rounded_minutes = roundedTime.Minute - ((roundedTime.Minute % 15) * 15);
-                    //    //roundedTime = roundedTime.AddMinutes(-rounded_minutes);
-
-                    //    var sampleData = new ML_Time_Aff_Bool_Model.ModelInput()
-                    //    {
-                    //        Col0 = now.ToString("HH:mm"),
-                    //        //Col0 = roundedTime.ToString("HH:mm"),
-                    //        //Col0 = hourFloat,
-                    //        Col1 = affordance.Name,
-                    //    };
-
-                    //    //Load model and predict output
-                    //    var result = ML_Time_Aff_Bool_Model.Predict(sampleData, _calcPerson.Name);
-
-                    //    if (result.PredictedLabel == "1")
-                    //    {
-                    //        Debug.WriteLine("ML: " + _calcPerson.Name + " Time:   " + now + "  Name:  " + affordance.Name);
-                    //        setNewWeight(affordance.Name, 0.1m);
-                    //        continue;
-                    //    }
-                    //}
-
                     bestQ_S_A = new_Q_S_A;
                     bestAffordance = affordance;
                     //this.currentState = newState;
+                    next_affordance_name = sarsa_next_affordance_candi;
                     
                 }
-
-                //if (desireDiff == 1000000000000000)
-                //{
-                //    continue;
-                //}
-
 
 
                 //V1 if sleep in the wait list, then direct run it
@@ -1992,16 +1967,10 @@ namespace CalculationEngine.HouseholdElements {
                     sleep = affordance;
                 }
 
-                //V2 & V3
-                //if (duration >= 120)
-                //{
-                //    DateTime newTime = now.AddMinutes(duration);
-                //    //if (newTime.TimeOfDay > new TimeSpan(1, 0, 0) && newTime.Date > now.Date)
-                //    if (newTime.Date > now.Date)
-                //    {
-                //        continue;
-                //    }
-
+                if(affordance.Name == readed_next_affordance_name)
+                {
+                    sarsa_affordacne = affordance;
+                }
 
                 //desireDiff = TunningDeviation((double)desireDiff, duration);
                 //desireDiff = desireDiff / (decimal)weightSum;
@@ -2019,25 +1988,21 @@ namespace CalculationEngine.HouseholdElements {
                             desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
                         _calcPerson.HouseholdKey);
                 }
-
-
-
-                
+               
             }
-            if(sleep != null)
+
+            //if (sleep != null)
+            //{
+            //    return sleep;
+            //}
+
+            if (sarsa_affordacne != null)
             {
-                return sleep;
-            }else
-            {
-                //var dict = currentState.Item1;
-                //foreach (var kvp in dict)
-                //{
-                //    Debug.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
-                //}
-                return bestAffordance;
+                return sarsa_affordacne;
             }
-            
-            //return bestAffordance;
+
+
+            return bestAffordance;
 
 
         }
