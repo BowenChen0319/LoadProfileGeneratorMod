@@ -163,7 +163,7 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public Dictionary<(Dictionary<string,int> , string ), Dictionary<string,(decimal,int,Dictionary<int,decimal>)>> qTable = null;
+        public Dictionary<(Dictionary<string,int> , string ), Dictionary<string,(double,int,Dictionary<int,double>)>> qTable = null;
 
         public (Dictionary<string, int>, string) currentState = (null, null);
 
@@ -1614,14 +1614,14 @@ namespace CalculationEngine.HouseholdElements {
                     var jsonString = File.ReadAllText(filePath);
                     var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
 
-                    var readed_QTable = new Dictionary<(Dictionary<string, int>, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>(new CustomKeyComparer());
+                    var readed_QTable = new Dictionary<(Dictionary<string, int>, string), Dictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
 
                     foreach (var outerEntry in convertedQTable)
                     {
                         var outerKeyParts = outerEntry.Key.Split('§');
                         var outerKeyDictParts = outerKeyParts[0].Split('±').Select(p => p.Split('⦿')).ToDictionary(p => p[0], p => int.Parse(p[1]));
                         var outerKey = (outerKeyDictParts, outerKeyParts[1]);
-                        var innerDict = new Dictionary<string, (decimal, int, Dictionary<int, decimal>)>();
+                        var innerDict = new Dictionary<string, (double, int, Dictionary<int, double>)>();
 
                         var innerEntries = outerEntry.Value.Split(new string[] { "~" }, StringSplitOptions.None);
                         foreach (var innerEntry in innerEntries)
@@ -1629,10 +1629,10 @@ namespace CalculationEngine.HouseholdElements {
                             var parts = innerEntry.Split('¶');
                             var key = parts[0];
                             var valueParts = parts[1].Split('‖');
-                            var decimalValue = decimal.Parse(valueParts[0]);
+                            var decimalValue = double.Parse(valueParts[0]);
                             var intValue = int.Parse(valueParts[1]);
                             var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
-                            var dict = dictParts.Select(p => p.Split('^')).ToDictionary(p => int.Parse(p[0]), p => decimal.Parse(p[1]));
+                            var dict = dictParts.Select(p => p.Split('^')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
 
                             innerDict[key] = (decimalValue, intValue, dict);
                         }
@@ -1665,7 +1665,7 @@ namespace CalculationEngine.HouseholdElements {
             {
                 // 文件不存在，初始化为新的字典
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
-                this.qTable = new Dictionary<(Dictionary<string, int>, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>(new CustomKeyComparer());
+                this.qTable = new Dictionary<(Dictionary<string, int>, string), Dictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
             }
         }
 
@@ -1728,7 +1728,7 @@ namespace CalculationEngine.HouseholdElements {
             return desire_value_Level;
         }
 
-        public Dictionary<string, int> MergeDictAndLevels(Dictionary<string, (double, decimal)> desireName_Value_Dict)
+        public Dictionary<string, int> MergeDictAndLevels(Dictionary<string, (double, double)> desireName_Value_Dict)
         {
             var mergedDict = new Dictionary<string, int>(); // 创建新的字典以存储结果
 
@@ -1737,7 +1737,7 @@ namespace CalculationEngine.HouseholdElements {
                 var key = kvp.Key;
                 var desire_Info = kvp.Value;
                 double desire_weight = desire_Info.Item1;
-                double desire_valueAfter = (double)desire_Info.Item2;
+                double desire_valueAfter = desire_Info.Item2;
                 
                 //Debug.WriteLine("Desire: " + key + "  Weight: " + desire_weight + "  Value: " + desire_valueAfter);
 
@@ -1823,7 +1823,7 @@ namespace CalculationEngine.HouseholdElements {
             string readed_next_affordance_name = next_affordance_name;
 
             //var bestDiff = decimal.MaxValue;
-            var bestQ_S_A = decimal.MinValue;
+            var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
 
@@ -1857,9 +1857,9 @@ namespace CalculationEngine.HouseholdElements {
                 //List<double> desire_level_after = ToDesireLevels(desire_ValueAfter);
                 Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
-                decimal alpha = 0.2m;
+                double alpha = 0.2;
 
-                decimal gamma = 0.8m;
+                double gamma = 0.8;
 
                 if (desire_level_before == null)
                 {
@@ -1874,7 +1874,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
-                 var R_S_A = -desireDiff + (decimal)1000000;
+                 var R_S_A = -desireDiff + 1000000;
                 //Debug.WriteLine("R_S_A: " + R_S_A);
 
                 //if(affordance.Name.Contains("Sleep"))
@@ -1885,11 +1885,11 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (!qTable.TryGetValue(currentState, out var Q_S))
                 {
-                    Q_S = new Dictionary<string, (decimal, int, Dictionary<int, decimal>)>();
+                    Q_S = new Dictionary<string, (double, int, Dictionary<int, double>)>();
                     qTable[currentState] = Q_S;
                 }
 
-                (decimal, int, Dictionary<int, decimal>) Q_S_A;
+                (double, int, Dictionary<int, double>) Q_S_A;
                 
                 if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
                 {
@@ -1897,10 +1897,10 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 //first prediction
-                decimal maxQ_nS_nA = 0;
+                double maxQ_nS_nA = 0;
                 int maxQ_nS_nA_duration = 0;
-                Dictionary<int, decimal> maxQ_nS_nA_satValus = null;
-                Dictionary<string, (decimal, int, Dictionary<int, decimal>)> Q_newState_actions;
+                Dictionary<int, double> maxQ_nS_nA_satValus = null;
+                Dictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
                 
                 if (qTable.TryGetValue(newState, out Q_newState_actions))
                 {
@@ -1919,7 +1919,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 //second prediction
-                decimal maxQ_nnS_nnA = 0;
+                double maxQ_nnS_nnA = 0;
 
                 //if (maxQ_nS_nA != 0)
                 //{
@@ -1945,8 +1945,8 @@ namespace CalculationEngine.HouseholdElements {
                 //}
 
                 // Update the Q value for the current state and action
-                decimal new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
-                qTable[currentState][affordance.Name] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value));
+                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
+                qTable[currentState][affordance.Name] = (new_Q_S_A,affordance.GetDuration(),affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
 
                 if(new_Q_S_A > bestQ_S_A)
                 {
