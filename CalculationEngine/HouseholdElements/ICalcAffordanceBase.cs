@@ -70,6 +70,8 @@ namespace CalculationEngine.HouseholdElements
         string? TimeLimitName { get; }
         bool AreThereDuplicateEnergyProfiles();
         int GetDuration();
+
+        int GetRealDuration(TimeStep now);
         string? AreDeviceProfilesEmpty();
         int GetRestTimeWindows(TimeStep time);
         BusynessType IsBusyNew([NotNull] TimeStep time, [NotNull] CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true);

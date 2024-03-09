@@ -662,7 +662,8 @@ namespace CalculationEngine.HouseholdElements {
             }
             else
             {
-                duration = affordance.GetDuration();
+                //duration = affordance.GetDuration();
+                duration = affordance.GetRealDuration(currentTime);
             }
 
             if (satValue != null)

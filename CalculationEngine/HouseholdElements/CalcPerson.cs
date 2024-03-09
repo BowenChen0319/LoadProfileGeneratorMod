@@ -1132,15 +1132,19 @@ namespace CalculationEngine.HouseholdElements {
 
             //apply the effect
 
-            //var dura = bestaff.GetDuration();
-            //Debug.WriteLine("Activating " + bestaff.Name+" Time: "+dura);
-            //Debug.WriteLine(bestaff.GetDuration);
+            //int RealdurationInMinutes = bestaff.GetRealDuration(currentTimeStep);
+
             bestaff.Activate(currentTimeStep, Name,  CurrentLocation,
                 out var personTimeProfile);
             
             //PersonDesires.ApplyAffordanceEffect(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name);
             int durationInMinutes = personTimeProfile.StepValues.Count;
+
+            //Debug.WriteLine("Time:" +now+ "Activating R " + bestaff.Name + " Time: " + durationInMinutes);
             //int testDuration = 
+            
+            //Debug.WriteLine("Activating D " + bestaff.Name + " Time: " + RealdurationInMinutes);
+
             if (bestaff?.IsInterruptable == false)
             {
                 //for (var i = 0; i <= durationInMinutes; i++)
@@ -1837,7 +1841,8 @@ namespace CalculationEngine.HouseholdElements {
 
             foreach (var affordance in allAvailableAffordances)
             {
-                var duration = affordance.GetDuration();
+                //var duration = affordance.GetDuration();
+                var duration = affordance.GetRealDuration(time);
 
                 //var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL(affordance, time, careForAll, out var thoughtstring, now);
                 var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
@@ -1991,16 +1996,25 @@ namespace CalculationEngine.HouseholdElements {
                
             }
 
-            //if (sleep != null)
-            //{
-            //    return sleep;
-            //}
-
-            if (sarsa_affordacne != null)
+            if (sleep != null)
             {
-                return sarsa_affordacne;
+                return sleep;
             }
 
+
+
+            //if (sarsa_affordacne != null)
+            //{
+            //    return sarsa_affordacne;
+            //}
+            double epsilon = 0.1;
+
+            Random rnd = new Random(time.InternalStep);
+
+            if (rnd.NextDouble() < epsilon)
+            {
+                return allAvailableAffordances[rnd.Next(allAvailableAffordances.Count)];
+            }
 
             return bestAffordance;
 

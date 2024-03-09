@@ -119,6 +119,7 @@ namespace CalculationEngine.HouseholdElements
 
         public abstract int GetDuration();
 
+        public abstract int GetRealDuration(TimeStep now);
         public int CalcAffordanceSerial { get; }
 
         public CalcAffordanceType CalcAffordanceType { get; }

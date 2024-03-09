@@ -144,6 +144,11 @@ namespace CalculationEngine.HouseholdElements {
             return _durations;
         }
 
+        public override int GetRealDuration(TimeStep now)
+        {
+            return _durations;
+        }
+
         [NotNull]
         public override string AreDeviceProfilesEmpty()
         {

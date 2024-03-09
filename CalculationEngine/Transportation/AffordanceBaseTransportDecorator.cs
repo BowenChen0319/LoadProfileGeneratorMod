@@ -243,6 +243,11 @@ namespace CalculationEngine.Transportation {
             return _sourceAffordance.GetDuration();
         }
 
+        public int GetRealDuration(TimeStep now)
+        {
+            return _sourceAffordance.GetRealDuration(now);
+        }
+
         public string? AreDeviceProfilesEmpty()
         {
             return _sourceAffordance.AreDeviceProfilesEmpty();

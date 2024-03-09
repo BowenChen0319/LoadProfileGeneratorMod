@@ -124,6 +124,27 @@ namespace CalculationEngine.HouseholdElements {
             
         }
 
+        public override int GetRealDuration(TimeStep now)
+        {
+            var duration = 0; // 初始化duration变量
+
+            // 检查_timeFactorsForTimes字典中是否存在now.InternalStep这个键
+            if (_timeFactorsForTimes.ContainsKey(now.InternalStep))
+            {
+                // 如果存在，使用_timeFactorsForTimes[now.InternalStep]作为参数
+                duration = CalcProfile.GetNewLengthAfterCompressExpand(_personProfile.StepValues.Count, _timeFactorsForTimes[now.InternalStep]);
+            }
+            else
+            {
+                // 如果不存在，直接使用_personProfile.StepValues.Count作为duration
+                duration = _personProfile.StepValues.Count;
+            }
+
+            return duration;
+        }
+
+
+
         public override void Activate(TimeStep startTime, string activatorName, CalcLocation personSourceLocation, out ICalcProfile personTimeProfile)
         {   
             //Debug.WriteLine("Activating " + Name + " at " + startTime.InternalStep);
