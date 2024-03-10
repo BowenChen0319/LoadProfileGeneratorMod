@@ -54,6 +54,7 @@ using Newtonsoft.Json.Linq;
 using System.Text.Json.Serialization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using static System.Collections.Specialized.BitVector32;
 
 #endregion
 
@@ -1753,7 +1754,7 @@ namespace CalculationEngine.HouseholdElements {
                 //var desire_level = (int)(desire_valueAfter / (1 / slot));
                 var desire_level = (int)Math.Floor(desire_valueAfter * slot);
 
-                if(desire_weight >= 50)
+                if(desire_weight >= 100)
                 {
                     mergedDict[key] = desire_level; // 将键和计算出的等级值直接合并到新字典中
                 }
@@ -1774,6 +1775,7 @@ namespace CalculationEngine.HouseholdElements {
             string newTimeState = prefix + newTime.ToString("HH:mm");
             //Debug.WriteLine("Time: "+ "  " + newTimeState);
             return newTimeState;
+            //return "";
         }
 
         //public (double, DateTime, int, Dictionary<string, (double, double)>, List<CalcDesire>) getMaxQ(double maxQ_nS_nA, DateTime now, int maxQ_nS_nA_duration, Dictionary<string, (double, double)> desire_ValueAfter, List<CalcDesire> maxQ_nS_nA_satValus)
@@ -1826,6 +1828,12 @@ namespace CalculationEngine.HouseholdElements {
             }
             string readed_next_affordance_name = next_affordance_name;
 
+            double epsilon1 = 0.1;
+            Random rnd1 = new Random(time.InternalStep);
+            Random rnd2 = new Random(time.InternalStep+1);
+            bool random1 = (rnd1.NextDouble() < epsilon1);
+            bool random2 = (rnd2.NextDouble() < epsilon1);
+            
             //var bestDiff = decimal.MaxValue;
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
@@ -1862,6 +1870,23 @@ namespace CalculationEngine.HouseholdElements {
                 //List<double> desire_level_after = ToDesireLevels(desire_ValueAfter);
                 Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
+                //TimeStep currentTimeStep = time;
+                //TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+                //HashSet<string> nextAllAffordanceNames = new HashSet<string>();
+                //var srcList = _normalPotentialAffs.PotentialAffordances;
+                //foreach (var calcAffordanceBase in srcList)
+                //{
+                //    var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
+                //    //
+                //    //Debug.WriteLine(busynessResult);
+                //    if (busynessResult == 1)
+                //    {
+                //        //resultingAff.Add(calcAffordanceBase);
+                //        nextAllAffordanceNames.Add(calcAffordanceBase.Name);
+                //    }
+                //}
+                ////var NextAllAffordances = NewGetAllViableAffordancesAndSubsNew(nextTimeStep, null, false, _normalPotentialAffs, false);
+                
                 double alpha = 0.2;
 
                 double gamma = 0.8;
@@ -1880,13 +1905,6 @@ namespace CalculationEngine.HouseholdElements {
                 (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
                  var R_S_A = -desireDiff + 1000000;
-                //Debug.WriteLine("R_S_A: " + R_S_A);
-
-                //if(affordance.Name.Contains("Sleep"))
-                //{
-                //    R_S_A += (decimal)1000000;
-                //}
-
 
                 if (!qTable.TryGetValue(currentState, out var Q_S))
                 {
@@ -1912,6 +1930,7 @@ namespace CalculationEngine.HouseholdElements {
                     // If found, iterate to find the max Q value among actions
                     foreach (var action in Q_newState_actions)
                     {
+                        //if (action.Value.Item1 > maxQ_nS_nA && nextAllAffordanceNames.Contains(action.Key))
                         if (action.Value.Item1 > maxQ_nS_nA)
                         {
                             maxQ_nS_nA = action.Value.Item1;
@@ -1921,33 +1940,40 @@ namespace CalculationEngine.HouseholdElements {
                             sarsa_next_affordance_candi = action.Key;
                         }
                     }
+
+                    if (random2 && Q_newState_actions.Count > 1)
+                    {
+                        var action = Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count));
+                        maxQ_nS_nA = action.Value.Item1;
+                        maxQ_nS_nA_duration = action.Value.Item2;
+                        maxQ_nS_nA_satValus = action.Value.Item3;
+
+                        sarsa_next_affordance_candi = action.Key;
+                    }
                 }
 
                 //second prediction
                 double maxQ_nnS_nnA = 0;
 
-                //if (maxQ_nS_nA != 0)
-                //{
-                //    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
-                //    List<decimal> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                //    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
-                //    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                //    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+                if (maxQ_nS_nA != 0)
+                {
+                    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
+                    List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
+                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
 
-                //    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                //    {
-
-                //        foreach (var action in Q_newState_actions_nS)
-                //        {
-                //            if (action.Value.Item1 > maxQ_nnS_nnA)
-                //            {
-                //                maxQ_nnS_nnA = action.Value.Item1;
-                //            }
-                //        }
-
-                //    }
-
-                //}
+                    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                    {
+                        foreach (var action in Q_newState_actions_nS)
+                        {
+                            if (action.Value.Item1 > maxQ_nnS_nnA)
+                            {
+                                maxQ_nnS_nnA = action.Value.Item1;
+                            }
+                        }
+                    }
+                }
 
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
@@ -1962,13 +1988,11 @@ namespace CalculationEngine.HouseholdElements {
                     
                 }
 
-
                 //V1 if sleep in the wait list, then direct run it
                 if (weightSum >= 1000)
                 {
                     //bestAffordance = affordance;
-                    //break;
-                    
+                    //break;                    
                     sleep = affordance;
                 }
 
@@ -1977,23 +2001,18 @@ namespace CalculationEngine.HouseholdElements {
                     sarsa_affordacne = affordance;
                 }
 
-                //desireDiff = TunningDeviation((double)desireDiff, duration);
-                //desireDiff = desireDiff / (decimal)weightSum;
-
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
                 {
                     if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
                     {
                         throw new LPGException("Logfile was null.");
                     }
-
                     _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
                         new ThoughtEntry(this, time,
                             "Desirediff for " + affordance.Name + " is :" +
                             desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
                         _calcPerson.HouseholdKey);
-                }
-               
+                }               
             }
 
             if (sleep != null)
@@ -2001,23 +2020,17 @@ namespace CalculationEngine.HouseholdElements {
                 return sleep;
             }
 
-
-
-            //if (sarsa_affordacne != null)
-            //{
-            //    return sarsa_affordacne;
-            //}
-            double epsilon = 0.1;
-
-            Random rnd = new Random(time.InternalStep);
-
-            if (rnd.NextDouble() < epsilon)
+            if (sarsa_affordacne != null)
             {
-                return allAvailableAffordances[rnd.Next(allAvailableAffordances.Count)];
+                return sarsa_affordacne;
+            }
+
+            if (random1)
+            {
+                return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
             }
 
             return bestAffordance;
-
 
         }
         
@@ -2170,9 +2183,6 @@ namespace CalculationEngine.HouseholdElements {
                 //here exist a filter!!!
             }
             
-            //bool foundWorkAsTeacher2 = resultingAff.Any(a => a.Name == "work as teacher");
-            //bool foundVisit2 = resultingAff.Any(a => a.Name == "visit the theater");
-
             //if(getOnlyInterrupting == false)
             //{
             //    Debug.WriteLine("Found worker before " + foundWorkAsTeacher1 + "    found worker after " + foundWorkAsTeacher2

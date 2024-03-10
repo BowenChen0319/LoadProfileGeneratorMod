@@ -72,7 +72,7 @@ namespace CalculationController.Queue {
             int selectedRandomSeed,
             TimeSpan externalTimeResolution, bool writeExcelColumn, bool showSettlingPeriod, int settlingDays,
             int affordanceRepetitionCount, [NotNull] CalculationProfiler calculationProfiler, string resultPath, bool transportationEnabled,
-            bool enableIdlemode, [NotNull] string decimalSeperator, bool flexibilityEnabled, bool useNewAlgo)
+            bool enableIdlemode, [NotNull] string decimalSeperator, bool flexibilityEnabled, bool useNewAlgo=true)
         {
             OfficialSimulationStartTime = officialSimulationStartTime;
             OfficialSimulationEndTime = officialSimulationEndTime;
