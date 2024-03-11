@@ -126,17 +126,17 @@ namespace CalculationEngine.HouseholdElements {
 
         public override int GetRealDuration(TimeStep now)
         {
-            var duration = 0; // 初始化duration变量
+            int duration;
 
-            // 检查_timeFactorsForTimes字典中是否存在now.InternalStep这个键
-            if (_timeFactorsForTimes.ContainsKey(now.InternalStep))
+            // 尝试获取timeFactorsForTimes字典中的值
+            if (_timeFactorsForTimes.TryGetValue(now.InternalStep, out double timeFactor))
             {
-                // 如果存在，使用_timeFactorsForTimes[now.InternalStep]作为参数
-                duration = CalcProfile.GetNewLengthAfterCompressExpand(_personProfile.StepValues.Count, _timeFactorsForTimes[now.InternalStep]);
+                // 如果存在，则使用timeFactor计算duration
+                duration = CalcProfile.GetNewLengthAfterCompressExpand(_personProfile.StepValues.Count, timeFactor);
             }
             else
             {
-                // 如果不存在，直接使用_personProfile.StepValues.Count作为duration
+                // 如果不存在，则直接使用_personProfile.StepValues.Count作为duration
                 duration = _personProfile.StepValues.Count;
             }
 

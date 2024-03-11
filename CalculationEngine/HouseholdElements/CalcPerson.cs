@@ -1828,11 +1828,13 @@ namespace CalculationEngine.HouseholdElements {
             }
             string readed_next_affordance_name = next_affordance_name;
 
-            double epsilon1 = 0.1;
-            Random rnd1 = new Random(time.InternalStep);
-            Random rnd2 = new Random(time.InternalStep+1);
-            bool random1 = (rnd1.NextDouble() < epsilon1);
-            bool random2 = (rnd2.NextDouble() < epsilon1);
+            //double epsilon1 = 0.1;
+            //Random rnd1 = new Random(time.InternalStep);
+            //Random rnd2 = new Random(time.InternalStep+1);
+            //bool random1 = (rnd1.NextDouble() < epsilon1);
+            //bool random2 = (rnd2.NextDouble() < epsilon1);
+
+
             
             //var bestDiff = decimal.MaxValue;
             var bestQ_S_A = double.MinValue;
@@ -1850,7 +1852,7 @@ namespace CalculationEngine.HouseholdElements {
             foreach (var affordance in allAvailableAffordances)
             {
                 //var duration = affordance.GetDuration();
-                var duration = affordance.GetRealDuration(time);
+                //var duration = affordance.GetRealDuration(time);
 
                 //var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL(affordance, time, careForAll, out var thoughtstring, now);
                 var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
@@ -1858,6 +1860,7 @@ namespace CalculationEngine.HouseholdElements {
                 var weightSum = calcTotalDeviationResult.WeightSum;
                 var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+                var duration = calcTotalDeviationResult.realDuration;
 
                 string sarsa_next_affordance_candi = null;
 
@@ -1941,39 +1944,39 @@ namespace CalculationEngine.HouseholdElements {
                         }
                     }
 
-                    if (random2 && Q_newState_actions.Count > 1)
-                    {
-                        var action = Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count));
-                        maxQ_nS_nA = action.Value.Item1;
-                        maxQ_nS_nA_duration = action.Value.Item2;
-                        maxQ_nS_nA_satValus = action.Value.Item3;
+                    //if (random2 && Q_newState_actions.Count > 1)
+                    //{
+                    //    var action = Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count));
+                    //    maxQ_nS_nA = action.Value.Item1;
+                    //    maxQ_nS_nA_duration = action.Value.Item2;
+                    //    maxQ_nS_nA_satValus = action.Value.Item3;
 
-                        sarsa_next_affordance_candi = action.Key;
-                    }
+                    //    sarsa_next_affordance_candi = action.Key;
+                    //}
                 }
 
                 //second prediction
                 double maxQ_nnS_nnA = 0;
 
-                if (maxQ_nS_nA != 0)
-                {
-                    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
-                    List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
-                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+                //if (maxQ_nS_nA != 0)
+                //{
+                //    var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(maxQ_nS_nA_duration);
+                //    List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                //    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, maxQ_nS_nA_satValus, maxQ_nS_nA_duration);
+                //    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                //    (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
 
-                    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                    {
-                        foreach (var action in Q_newState_actions_nS)
-                        {
-                            if (action.Value.Item1 > maxQ_nnS_nnA)
-                            {
-                                maxQ_nnS_nnA = action.Value.Item1;
-                            }
-                        }
-                    }
-                }
+                //    if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                //    {
+                //        foreach (var action in Q_newState_actions_nS)
+                //        {
+                //            if (action.Value.Item1 > maxQ_nnS_nnA)
+                //            {
+                //                maxQ_nnS_nnA = action.Value.Item1;
+                //            }
+                //        }
+                //    }
+                //}
 
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
@@ -2020,15 +2023,15 @@ namespace CalculationEngine.HouseholdElements {
                 return sleep;
             }
 
-            if (sarsa_affordacne != null)
-            {
-                return sarsa_affordacne;
-            }
+            //if (sarsa_affordacne != null)
+            //{
+            //    return sarsa_affordacne;
+            //}
 
-            if (random1)
-            {
-                return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
-            }
+            //if (random1)
+            //{
+            //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+            //}
 
             return bestAffordance;
 
