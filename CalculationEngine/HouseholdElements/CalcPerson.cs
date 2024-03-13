@@ -2054,7 +2054,6 @@ namespace CalculationEngine.HouseholdElements {
                                     max_prediction = prediction;
                                     sarsa_next_affordance_candi = action.Key;
                                 }
-
                             }
                         }
                         else
@@ -2076,6 +2075,7 @@ namespace CalculationEngine.HouseholdElements {
                 else
                 {
                     next_affordance_name = "";
+                    //max_prediction = 1000000 * gamma + 1000000 * gamma * gamma;
                 }
 
                 // Update the Q value for the current state and action
@@ -2130,11 +2130,6 @@ namespace CalculationEngine.HouseholdElements {
             {
                 return sarsa_affordacne;
             }
-
-            //if (random1)
-            //{
-            //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
-            //}
 
             return bestAffordance;
 
