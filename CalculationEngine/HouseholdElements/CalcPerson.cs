@@ -1964,6 +1964,7 @@ namespace CalculationEngine.HouseholdElements {
 
             Dictionary<string, int> desire_level_before = null;
 
+            //current prediction
             foreach (var affordance1 in allAvailableAffordances)
             {
                 if (affordance1.Name.Contains("Replacement Activity"))
@@ -2024,13 +2025,7 @@ namespace CalculationEngine.HouseholdElements {
                     {
                         KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();
                         
-                        if (random2)
-                        {
-                            action = Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count));
-                        }else
-                        {
-                            action = action1;
-                        }
+                        action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
 
                         double Q_nS_nA = action.Value.Item1;
                         int Q_nS_nA_duration = action.Value.Item2;
@@ -2044,6 +2039,7 @@ namespace CalculationEngine.HouseholdElements {
                         var R_S_A_nS = -next_desireDiff + 1000000;
                         Q_nS_nA = R_S_A_nS;
 
+                        //second prediction
                         var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
                         (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
 
@@ -2076,16 +2072,6 @@ namespace CalculationEngine.HouseholdElements {
                             break;
                         }
                     }
-
-                    //if (random2 && Q_newState_actions.Count > 1)
-                    //{
-                    //    var action = Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count));
-                    //    maxQ_nS_nA = action.Value.Item1;
-                    //    maxQ_nS_nA_duration = action.Value.Item2;
-                    //    maxQ_nS_nA_satValus = action.Value.Item3;
-
-                    //    sarsa_next_affordance_candi = action.Key;
-                    //}
                 }
                 else
                 {
