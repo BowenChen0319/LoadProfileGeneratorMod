@@ -911,7 +911,7 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubsNew(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromListNewRL_SARSA(time, availableInterruptingAffordances, true, now);
+                    var bestAffordance = GetBestAffordanceFromList_RL(time, availableInterruptingAffordances, true, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     if(_debug_print)
                     {
@@ -1290,7 +1290,7 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromListNewRL_SARSA(time,  allAffordances, true, now);
+            return GetBestAffordanceFromList_RL(time,  allAffordances, true, now);
         }
 
         [JetBrains.Annotations.NotNull]
@@ -1867,16 +1867,6 @@ namespace CalculationEngine.HouseholdElements {
                             sarsa_next_affordance_candi = action.Key;
                         }
                     }
-
-                    //if (random2 && Q_newState_actions.Count > 1)
-                    //{
-                    //    var action = Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count));
-                    //    maxQ_nS_nA = action.Value.Item1;
-                    //    maxQ_nS_nA_duration = action.Value.Item2;
-                    //    maxQ_nS_nA_satValus = action.Value.Item3;
-
-                    //    sarsa_next_affordance_candi = action.Key;
-                    //}
                 }
                 else
                 {
@@ -1938,6 +1928,13 @@ namespace CalculationEngine.HouseholdElements {
 
             return bestAffordance;
 
+        }
+
+        private ICalcAffordanceBase GetBestAffordanceFromList_RL([JetBrains.Annotations.NotNull] TimeStep time,
+                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        {
+            return GetBestAffordanceFromListNewRL_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_SARSA(time, allAvailableAffordances, careForAll, now);
         }
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
