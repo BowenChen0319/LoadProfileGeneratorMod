@@ -1933,8 +1933,8 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromList_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
-            return GetBestAffordanceFromListNewRL_Q_Learning(time, allAvailableAffordances, careForAll, now);
-            //return GetBestAffordanceFromListNewRL_SARSA(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_SARSA(time, allAvailableAffordances, careForAll, now);
         }
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
@@ -1947,12 +1947,12 @@ namespace CalculationEngine.HouseholdElements {
             string readed_next_affordance_name = next_affordance_name;
 
             double epsilon1 = 0.05;
-            Random rnd1 = new Random(time.InternalStep);
-            Random rnd2 = new Random(time.InternalStep + 1);
-            bool random1 = (rnd1.NextDouble() < epsilon1);
-            bool random2 = (rnd2.NextDouble() < epsilon1);
-            random1= false;
-            random2 = false;
+            //Random rnd1 = new Random(time.InternalStep);
+            //Random rnd2 = new Random(time.InternalStep + 1);
+            //bool random1 = (rnd1.NextDouble() < epsilon1);
+            //bool random2 = (rnd2.NextDouble() < epsilon1);
+            bool random1= false;
+            bool random2 = false;
 
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
@@ -1961,15 +1961,15 @@ namespace CalculationEngine.HouseholdElements {
 
             Dictionary<string, int> desire_level_before = null;
 
-            //current prediction
-            foreach (var affordance1 in allAvailableAffordances)
+            //first prediction
+            foreach (var affordance in allAvailableAffordances)
             {
-                if (affordance1.Name.Contains("Replacement Activity"))
+                if (affordance.Name.Contains("Replacement Activity"))
                 {
                     continue;
                 }
 
-                ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
+                //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
 
                 var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
@@ -2012,19 +2012,21 @@ namespace CalculationEngine.HouseholdElements {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
 
-                //first prediction
+                //second prediction
                 double max_prediction = 0;
                 Dictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
 
                 if (qTable.TryGetValue(newState, out Q_newState_actions))
                 {
-                    foreach (var action1 in Q_newState_actions)
+                    foreach (var action in Q_newState_actions)
                     {
-                        KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();
+                        //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();
                         
-                        action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
+                        //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
 
-                        double Q_nS_nA = action.Value.Item1;
+                        
+
+                        //double Q_nS_nA = action.Value.Item1;
                         int Q_nS_nA_duration = action.Value.Item2;
                         Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
 
@@ -2034,36 +2036,26 @@ namespace CalculationEngine.HouseholdElements {
                         
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
-                        Q_nS_nA = R_S_A_nS;
+                        
 
-                        //second prediction
+                        //third prediction (arg max)
                         var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
                         (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+                        double max_Q_nnS_nnA = 0;
 
                         if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
                         {
-                            foreach (var action2 in Q_newState_actions_nS)
-                            {
-                                double Q_nnS_nnA = action2.Value.Item1;
-                                double prediction = Q_nS_nA * gamma + Q_nnS_nnA * gamma * gamma;
-                                if (prediction > max_prediction)
-                                {
-                                    max_prediction = prediction;
-                                    sarsa_next_affordance_candi = action.Key;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            double prediction = Q_nS_nA * gamma + 0 * gamma * gamma;
-                            if (prediction > max_prediction)
-                            {
-                                max_prediction = prediction;
-                                sarsa_next_affordance_candi = action.Key;
-                            }
+                            max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
                         }
 
-                        if(random2)
+                        double prediction = R_S_A_nS * gamma + max_Q_nnS_nnA * gamma * gamma;
+                        if (prediction > max_prediction)
+                        {
+                            max_prediction = prediction;
+                            sarsa_next_affordance_candi = action.Key;
+                        }
+
+                        if (random2)
                         {
                             break;
                         }
