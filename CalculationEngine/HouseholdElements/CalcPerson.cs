@@ -1781,9 +1781,9 @@ namespace CalculationEngine.HouseholdElements {
                 //Debug.WriteLine("Desire: " + key + "  Weight: " + desire_weight + "  Value: " + desire_valueAfter);
 
                 int slot = 1;
-                if (desire_weight >= 1) slot = 1;
-                if (desire_weight >= 20) slot = 2;
-                if (desire_weight >= 100) slot = 5;
+                if (desire_weight >= 1) slot = 2;
+                if (desire_weight >= 20) slot = 3;
+                if (desire_weight >= 100) slot = 8;
 
                 //var desire_level = (int)(desire_valueAfter / (1 / slot));
                 var desire_level = (int)Math.Floor(desire_valueAfter * slot);
@@ -1836,6 +1836,8 @@ namespace CalculationEngine.HouseholdElements {
             ICalcAffordanceBase sarsa_affordacne = null;
 
             Dictionary<string, int> desire_level_before = null;
+
+
 
             foreach (var affordance in allAvailableAffordances)
             {
@@ -2019,6 +2021,9 @@ namespace CalculationEngine.HouseholdElements {
             ICalcAffordanceBase sarsa_affordacne = null;
             Dictionary<string, int> desire_level_before = null;
 
+            //var desireIDs = allAvailableAffordances.SelectMany(affordance => affordance.Satisfactionvalues.Select(s => s.DesireID)).ToHashSet();
+
+
             object locker = new object();
 
             //first prediction
@@ -2044,6 +2049,22 @@ namespace CalculationEngine.HouseholdElements {
                 string nowTimeState = makeTimeSpan(now, 0);
                 string newTimeState = makeTimeSpan(now, duration);
 
+                TimeStep currentTimeStep = time;
+                TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+                HashSet<string> nextAllAffordanceNames = new HashSet<string>();
+                var srcList = _normalPotentialAffs.PotentialAffordances;
+                foreach (var calcAffordanceBase in srcList)
+                {
+                    var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
+                    //
+                    //Debug.WriteLine(busynessResult);
+                    if (busynessResult == 1)
+                    {
+                        //resultingAff.Add(calcAffordanceBase);
+                        nextAllAffordanceNames.Add(calcAffordanceBase.Name);
+                    }
+                }
+
                 Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
                 double alpha = 0.2;
@@ -2055,7 +2076,7 @@ namespace CalculationEngine.HouseholdElements {
                     this.currentState = new(desire_level_before, nowTimeState);
                 }
 
-                (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
+                (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
 
                 var R_S_A = -desireDiff + 1000000;
 
@@ -2083,6 +2104,10 @@ namespace CalculationEngine.HouseholdElements {
                         //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
                         //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
                         //double Q_nS_nA = action.Value.Item1;
+                        if(!nextAllAffordanceNames.Contains(action.Key))
+                        {
+                            continue;
+                        }
                         int Q_nS_nA_duration = action.Value.Item2;
                         Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
 
