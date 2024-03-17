@@ -127,7 +127,6 @@ namespace CalculationEngine.HouseholdElements {
         public override int GetRealDuration(TimeStep now)
         {
             int duration;
-
             // 尝试获取timeFactorsForTimes字典中的值
             if (_timeFactorsForTimes.TryGetValue(now.InternalStep, out double timeFactor))
             {
@@ -329,14 +328,19 @@ namespace CalculationEngine.HouseholdElements {
             //    return -100;
             //}
 
-            if(time.InternalStep >= IsBusyArray.Length || IsBusyArray[time.InternalStep] == false)
+            int result = 1;
+            if(time.InternalStep < IsBusyArray.Length)
             {
-                return 0;
+                if(IsBusyArray[time.InternalStep] == true)
+                {
+                    result = 0;
+                }
+
             }
-            else
-            {
-                return 1;
-            }
+
+            return result;
+
+           
             
         }
 

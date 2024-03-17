@@ -887,17 +887,37 @@ namespace CalculationEngine.HouseholdElements {
 
                     if (isEndOfDay)
                     {
-                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},");
-                        (bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
-                        if (NeedCheck)
+                        string result;
+                        string foundResultSum;
+                        if (p.searchCounter != 0)
                         {
-                            //CheckAndBuildTraningSet(p, now);
+                            double percentage = (double)p.foundCounter / p.searchCounter * 100;
+                            result = percentage.ToString("F3") + "%";
+                            p.sumFoundCounter += p.foundCounter;
+                            p.sumSearchCounter += p.searchCounter;
+                            double sumPercentage = (double)p.sumFoundCounter / p.sumSearchCounter * 100;
+                            foundResultSum = sumPercentage.ToString("F3") + "%";
+                        }
+                        else
+                        {
+                            result = "N/A"; 
+                            double sumPercentage = (double)p.sumFoundCounter / p.sumSearchCounter * 100;
+                            foundResultSum = sumPercentage.ToString("F3") + "%";
+                        }
+                        p.searchCounter = 0;
+                        p.foundCounter = 0;
+
+                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {result}, {foundResultSum}");
+                        //(bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
+                        //if (NeedCheck)
+                        //{
+                        //    //CheckAndBuildTraningSet(p, now);
                             
-                        }
-                        if (NeedRecored)
-                        {
-                            allLastHighTWD[p.Name] = now.Date;
-                        }
+                        //}
+                        //if (NeedRecored)
+                        //{
+                        //    allLastHighTWD[p.Name] = now.Date;
+                        //}
                         
                     }
 
