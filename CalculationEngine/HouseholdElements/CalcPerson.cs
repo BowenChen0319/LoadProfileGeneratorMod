@@ -2062,21 +2062,21 @@ namespace CalculationEngine.HouseholdElements {
                 string nowTimeState = makeTimeSpan(now, 0);
                 string newTimeState = makeTimeSpan(now, duration);
 
-                //TimeStep currentTimeStep = time;
-                //TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
-                //HashSet<string> nextAllAffordanceNames = new HashSet<string>();
-                //var srcList = _normalPotentialAffs.PotentialAffordances;
-                //foreach (var calcAffordanceBase in srcList)
-                //{
-                //    var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
-                //    //
-                //    //Debug.WriteLine(busynessResult);
-                //    if (busynessResult == 1 && !calcAffordanceBase.Name.Contains("Replacement Activity"))
-                //    {
-                //        //resultingAff.Add(calcAffordanceBase);
-                //        nextAllAffordanceNames.Add(calcAffordanceBase.Name);
-                //    }
-                //}
+                TimeStep currentTimeStep = time;
+                TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+                HashSet<string> nextAllAffordanceNames = new HashSet<string>();
+                var srcList = _normalPotentialAffs.PotentialAffordances;
+                foreach (var calcAffordanceBase in srcList)
+                {
+                    var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
+                    //
+                    //Debug.WriteLine(busynessResult);
+                    if (busynessResult == 1 && !calcAffordanceBase.Name.Contains("Replacement Activity"))
+                    {
+                        //resultingAff.Add(calcAffordanceBase);
+                        nextAllAffordanceNames.Add(calcAffordanceBase.Name);
+                    }
+                }
 
                 Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
@@ -2133,17 +2133,17 @@ namespace CalculationEngine.HouseholdElements {
                 double max_prediction = 0;
                 ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
 
-               
+               affordanceSearchCounter+=nextAllAffordanceNames.Count;
                 if (qTable.TryGetValue(newState, out Q_newState_actions))
                 {
-                    affordanceSearchCounter += Q_newState_actions.Count;
+                    //affordanceSearchCounter += Q_newState_actions.Count;
                     foreach (var action in Q_newState_actions)
                     {
                         //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
                         //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
                         //double Q_nS_nA = action.Value.Item1;
 
-                        //if(!nextAllAffordanceNames.Contains(action.Key))
+                        //if (!nextAllAffordanceNames.Contains(action.Key))
                         //{
                         //    continue;
                         //}
