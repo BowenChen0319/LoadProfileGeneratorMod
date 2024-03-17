@@ -2176,7 +2176,8 @@ namespace CalculationEngine.HouseholdElements {
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
                 var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                qTable[currentState][affordance.Name] = QSA_Info;
+                //qTable[currentState][affordance.Name] = QSA_Info;
+                qTable[currentState].AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
                 //if (new_Q_S_A > bestQ_S_A)
                 //{
