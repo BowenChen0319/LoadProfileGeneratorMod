@@ -2157,7 +2157,8 @@ namespace CalculationEngine.HouseholdElements {
         {
             //return GetBestAffordanceFromListNewRL_Pre_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Post_Q_Learning(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
         }
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
@@ -2561,18 +2562,6 @@ namespace CalculationEngine.HouseholdElements {
 
                 var R_S_A = -desireDiff + 1000000;
 
-                //if (!qTable.TryGetValue(currentState, out var Q_S))
-                //{
-                //    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                //    //qTable[currentState] = Q_S;
-                //    qTable.AddOrUpdate(currentState, Q_S, (key, existingVal) => Q_S);
-
-                //}
-                //else
-                //{
-                //    affordanceFoundCounter++;
-                //}
-
                 var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
 
                 if (Q_S.Count > 0)
@@ -2606,10 +2595,6 @@ namespace CalculationEngine.HouseholdElements {
                         //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
                         //double Q_nS_nA = action.Value.Item1;
 
-                        //if (!nextAllAffordanceNames.Contains(action.Key))
-                        //{
-                        //    continue;
-                        //}
                         affordanceFoundCounter++;
                         double Q_nS_nA = action.Value.Item1;
                         int Q_nS_nA_duration = action.Value.Item2;
@@ -2622,13 +2607,12 @@ namespace CalculationEngine.HouseholdElements {
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
 
-                        //third prediction (arg max)
+                        //third prediction
                         var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
                         (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
-                        double max_Q_nnS_nnA = 0;
-
+                        
                         ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_new_nextState_actions;
-                        if (qTable.TryGetValue(new_newState, out Q_new_nextState_actions))
+                        if (qTable.TryGetValue(new_newState, out Q_new_nextState_actions) && affordance.Name==readed_next_affordance_name)
                         {
                             foreach (var action2 in Q_new_nextState_actions)
                             {
@@ -2647,7 +2631,7 @@ namespace CalculationEngine.HouseholdElements {
                                 (Dictionary<string, int>, string time) new_new_newState = (MergeDictAndLevels(desire_ValueAfter_nnS), makeTimeSpan(TimeAfter_nnS, 0));
                                 double max_Q_nnnS_nnnA = 0;
 
-                                //fourth prediction
+                                //fourth prediction (arg max)
                                 affordanceSearchCounter++;
                                 if (max_qTable.TryGetValue(new_new_newState, out var Q_newState_actions_nS))
                                 {
@@ -2658,14 +2642,9 @@ namespace CalculationEngine.HouseholdElements {
 
                                 //double prediction = R_S_A_nS * gamma + R_S_A_nnS * gamma * gamma + max_Q_nnnS_nnnA * gamma * gamma * gamma;
                                 double prediction = 0;
-                                if (max_Q_nnnS_nnnA > 0)
-                                {
-                                    prediction = R_S_A_nS * gamma + R_S_A_nnS * gamma * gamma + max_Q_nnnS_nnnA * gamma * gamma * gamma;
-                                }
-                                else
-                                {
-                                    prediction = R_S_A_nS * gamma + Q_nnS_nnA * gamma * gamma;
-                                }
+                                
+                                prediction = (max_Q_nnnS_nnnA > 0) ? R_S_A_nS * gamma + R_S_A_nnS * Math.Pow(gamma, 2) + max_Q_nnnS_nnnA * Math.Pow(gamma, 3) : R_S_A_nS * gamma + Q_nnS_nnA * Math.Pow(gamma, 2);
+                                
                                 if (prediction > max_prediction)
                                 {
                                     max_prediction = prediction;
@@ -2676,7 +2655,16 @@ namespace CalculationEngine.HouseholdElements {
                         }
                         else
                         {
-                            double prediction = Q_nS_nA * gamma;
+                            //third prediction (arg max)
+                            double max_Q_nnS_nnA = 0;
+                            if (max_qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                            {
+                                //max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
+                                max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
+                            }
+
+                            //double prediction = Q_nS_nA * gamma;
+                            double prediction =(max_Q_nnS_nnA > 0)? R_S_A_nS * gamma + max_Q_nnS_nnA * Math.Pow(gamma, 2) : Q_nS_nA * gamma;
                             if (prediction > max_prediction)
                             {
                                 max_prediction = prediction;
@@ -2704,20 +2692,6 @@ namespace CalculationEngine.HouseholdElements {
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
-                //if (new_Q_S_A > bestQ_S_A)
-                //{
-                //    lock (locker)
-                //    {
-                //        if (new_Q_S_A > bestQ_S_A)
-                //        {
-                //            bestQ_S_A = new_Q_S_A;
-                //            bestAffordance = affordance;
-                //            best_affordance_name = affordance.Name;
-                //            next_affordance_name = sarsa_next_affordance_candi;
-                //            bestQSA_inCurrentState = QSA_Info;
-                //        }
-                //    }
-                //}
 
                 lock (locker)
                 {
@@ -2767,29 +2741,26 @@ namespace CalculationEngine.HouseholdElements {
                             desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
                         _calcPerson.HouseholdKey);
                 }
-
-                //if(random1)
-                //{
-                //    bestAffordance = affordance;
-                //    break;
-                //}
             });
 
-            max_qTable.AddOrUpdate(
-                currentState,
-                new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                {
-                    [best_affordance_name] = bestQSA_inCurrentState
-                },
-                (key, existingVal) =>
-                {
-                    var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+            if (best_affordance_name != "")
+            {
+                max_qTable.AddOrUpdate(
+                    currentState,
+                    new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
                     {
                         [best_affordance_name] = bestQSA_inCurrentState
-                    };
-                    return newDict; // 返回新的字典作为该键的值
-                }
-            );
+                    },
+                    (key, existingVal) =>
+                    {
+                        var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+                        {
+                            [best_affordance_name] = bestQSA_inCurrentState
+                        };
+                        return newDict; // 返回新的字典作为该键的值
+                    }
+                );
+            }
 
             searchCounter += currentSearchCounter;
             foundCounter += currentFoundCounter;
