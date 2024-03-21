@@ -2396,18 +2396,12 @@ namespace CalculationEngine.HouseholdElements {
                 //V1 if sleep in the wait list, then direct run it
                 if (weightSum >= 1000)
                 {
-                    if (weightSum >= 1000)
-                    {
-                        sleep = affordance;
-                    }
+                    sleep = affordance;
                 }
 
                 if (affordance.Name == readed_next_affordance_name)
                 {
-                    if (affordance.Name == readed_next_affordance_name)
-                    {
-                        sarsa_affordacne = affordance;
-                    }
+                    sarsa_affordacne = affordance;
                 }
 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
@@ -2715,18 +2709,12 @@ namespace CalculationEngine.HouseholdElements {
                 //V1 if sleep in the wait list, then direct run it
                 if (weightSum >= 1000)
                 {
-                    if (weightSum >= 1000)
-                    {
-                        sleep = affordance;
-                    }
+                    sleep = affordance;
                 }
 
                 if (affordance.Name == readed_next_affordance_name)
                 {
-                    if (affordance.Name == readed_next_affordance_name)
-                    {
-                        sarsa_affordacne = affordance;
-                    }
+                    sarsa_affordacne = affordance;
                 }
 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
