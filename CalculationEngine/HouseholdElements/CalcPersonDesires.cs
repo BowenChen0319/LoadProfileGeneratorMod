@@ -647,14 +647,14 @@ namespace CalculationEngine.HouseholdElements {
             return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict,desireName_ValueBeforeApply_Dict);
         }
 
-        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, List<double>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0)
+        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, List<double>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0, bool? interruptable = false)
         {
 
             //List<CalcDesire> satisfactionvalues;
             Dictionary<int, double> satisfactionvalues;
             //var affordanceName = affordance.Name;
             //var affordanceCategory = affordance.AffCategory;
-            bool interruptable;
+            //bool interruptable;
             int duration;
             if (newDuration != 0)
             {
@@ -678,10 +678,6 @@ namespace CalculationEngine.HouseholdElements {
             if (affordance != null)
             {
                 interruptable = affordance.IsInterruptable;
-            }
-            else
-            {
-                interruptable = false;
             }
 
             //var restTime = 0;

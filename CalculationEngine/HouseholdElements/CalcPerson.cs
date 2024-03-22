@@ -2157,8 +2157,8 @@ namespace CalculationEngine.HouseholdElements {
         {
             //return GetBestAffordanceFromListNewRL_Pre_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Post_Q_Learning(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
-            //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
         }
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
@@ -2209,12 +2209,17 @@ namespace CalculationEngine.HouseholdElements {
                 int affordanceFoundCounter = 0;
                 //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
 
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+                int duration = affordance.GetRealDuration(time);
+                bool isInterruptable = affordance.IsInterruptable;
+                var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstring, now, satValue: satisfactionvalues, newDuration: duration, interruptable: isInterruptable);
+
+                //var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
                 var weightSum = calcTotalDeviationResult.WeightSum;
                 var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                var duration = calcTotalDeviationResult.realDuration;
+                //var duration = calcTotalDeviationResult.realDuration;
 
                 string sarsa_next_affordance_candi = "";
 
@@ -2313,7 +2318,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
                         List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
+                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
 
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
@@ -2345,11 +2350,7 @@ namespace CalculationEngine.HouseholdElements {
                         //}
                     }
                 }
-                else
-                {
-                    
-                    next_affordance_name = "";
-                }
+
 
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
@@ -2507,12 +2508,16 @@ namespace CalculationEngine.HouseholdElements {
                 int affordanceFoundCounter = 0;
                 //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
 
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+                int duration = affordance.GetRealDuration(time);
+                bool isInterruptable = affordance.IsInterruptable;
+                var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
+                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstring, now, satValue: satisfactionvalues,newDuration: duration, interruptable:isInterruptable);
+                
                 var desireDiff = calcTotalDeviationResult.totalDeviation;
                 var weightSum = calcTotalDeviationResult.WeightSum;
                 var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                var duration = calcTotalDeviationResult.realDuration;
+                //var duration = calcTotalDeviationResult.realDuration;
 
                 string sarsa_next_affordance_candi = "";
 
@@ -2596,7 +2601,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
                         List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
+                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
 
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
@@ -2616,7 +2621,7 @@ namespace CalculationEngine.HouseholdElements {
 
                                 var TimeAfter_nnS = TimeAfter_nS.AddMinutes(Q_nS_nA_duration);
                                 List<double> DesireValueAfter_nnS = desire_ValueAfter_nS.Values.Select(value => value.Item2).ToList();
-                                var calcTotalDeviationResultAfter_nnS = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstrin_new_nnS, now, DesireValueAfter_nnS, Q_nnS_nnA_satValus, Q_nnS_nnA_duration);
+                                var calcTotalDeviationResultAfter_nnS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new_nnS, now, DesireValueAfter_nnS, Q_nnS_nnA_satValus, Q_nnS_nnA_duration);
 
                                 var next_desireDiff_nnS = calcTotalDeviationResultAfter_nnS.totalDeviation;
                                 var R_S_A_nnS = -next_desireDiff_nnS + 1000000;
@@ -2673,10 +2678,7 @@ namespace CalculationEngine.HouseholdElements {
                         //}
                     }
                 }
-                else
-                {
-                    next_affordance_name = "";
-                }
+
 
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
