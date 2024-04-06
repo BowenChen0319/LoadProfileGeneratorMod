@@ -164,9 +164,9 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,Dictionary<int,double>)>> qTable = null;
+        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,Dictionary<int,double>)>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
 
-        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>> max_qTable = null;
+        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>> max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
 
         public (Dictionary<string, int>, string) currentState = (null, null);
 
@@ -1587,10 +1587,10 @@ namespace CalculationEngine.HouseholdElements {
                 var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
                 var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
                 var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
-                    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}^{d.Value}"))}"
+                    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}"
                 );
 
-                convertedQTable[outerKey] = String.Join("~", innerDictSerialized);
+                convertedQTable[outerKey] = String.Join("★", innerDictSerialized);
             }
 
             if (!Directory.Exists(baseDir2))
@@ -1618,6 +1618,13 @@ namespace CalculationEngine.HouseholdElements {
         {
             LoadQTableFromFile(false);
             LoadQTableFromFile(true);
+            if(this.qTable.Count == 0 || this.max_qTable.Count == 0)
+            {
+                Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
+                Logger.Info("No saved QTable found. Initializing a new QTable.");
+                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+            }
         }
 
         public void LoadQTableFromFile(Boolean isMax)
@@ -1662,7 +1669,7 @@ namespace CalculationEngine.HouseholdElements {
                         var outerKey = (outerKeyDictParts, outerKeyParts[1]);
                         var innerDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
 
-                        var innerEntries = outerEntry.Value.Split(new string[] { "~" }, StringSplitOptions.None);
+                        var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
                         foreach (var innerEntry in innerEntries)
                         {
                             var parts = innerEntry.Split('¶');
@@ -1671,7 +1678,7 @@ namespace CalculationEngine.HouseholdElements {
                             var decimalValue = double.Parse(valueParts[0]);
                             var intValue = int.Parse(valueParts[1]);
                             var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
-                            var dict = dictParts.Select(p => p.Split('^')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
+                            var dict = dictParts.Select(p => p.Split('⨁')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
 
                             innerDict[key] = (decimalValue, intValue, dict);
                         }
@@ -1697,20 +1704,25 @@ namespace CalculationEngine.HouseholdElements {
                     //}
 
                     Debug.WriteLine("QTable has been successfully loaded from " + filePath);
+                    Logger.Info("QTable has been successfully loaded from " + filePath);
 
-                    
+
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine("Error loading QTable: " + ex.Message);
+                    Logger.Info("Error loading QTable: " + ex.Message);
+                    //Logger.Error("Error loading QTable: " + ex.Message);
                     // 出错时，初始化为新的字典
-                    //this.qTable = new Dictionary<(string, string), Dictionary<string, (decimal, int, Dictionary<int, decimal>)>>();
+                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
                 }
             }
             else
             {
                 // 文件不存在，初始化为新的字典
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
+                Logger.Info("No saved QTable found. Initializing a new QTable.");
                 this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
                 this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
             }
@@ -1824,7 +1836,7 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Pre_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
-            if(qTable == null)
+            if(qTable.Count == 0)
             {
                 LoadQTableFromFile();
             }
@@ -1999,7 +2011,7 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Post_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
                                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
-            if (qTable == null)
+            if (qTable.Count == 0)
             {
                 LoadQTableFromFile();
             }
@@ -2164,7 +2176,7 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
-            if (qTable == null)
+            if (qTable.Count == 0)
             {
                 LoadQTableFromFile();
             }
@@ -2318,7 +2330,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
                         List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
+                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
 
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
