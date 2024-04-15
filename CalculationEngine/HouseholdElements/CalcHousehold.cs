@@ -417,7 +417,8 @@ namespace CalculationEngine.HouseholdElements {
 
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                 Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
-                person.SaveQTableToFile();
+                //person.SaveQTableToFile();
+                person.SaveTwoQTableToFile();
                 //SaveQTableToFile(person.qTable, person_name);
                 //Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
                 
@@ -909,7 +910,7 @@ namespace CalculationEngine.HouseholdElements {
                         p.foundCounter = 0;
 
                         Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {result}, {foundResultSum}");
-                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {result}, {foundResultSum}");
+                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {p.qTable2.Count}, {result}, {foundResultSum}");
                         //(bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
                         //if (NeedCheck)
                         //{
