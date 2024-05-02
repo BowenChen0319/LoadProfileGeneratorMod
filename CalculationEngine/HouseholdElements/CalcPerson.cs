@@ -185,6 +185,12 @@ namespace CalculationEngine.HouseholdElements {
 
         public int sumFoundCounter = 0;
 
+        public double averageReward = 0;
+
+        public DateTime lastSleepTime = new DateTime();
+
+        public Dictionary<DateTime, int> TableNumberEachDay = new Dictionary<DateTime, int>();
+
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -2019,6 +2025,8 @@ namespace CalculationEngine.HouseholdElements {
                 LoadTwoQTableFromFile();
             }
 
+            //double bestAverageR_S_A = 0;
+            //double sleepAverageR_S_A = 0;
             //string readed_next_affordance_name = next_affordance_name;
             //string best_affordance_name = "";
             (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
@@ -2039,6 +2047,36 @@ namespace CalculationEngine.HouseholdElements {
 
             Dictionary<string, int> desire_level_before = null;
 
+            double alpha = 0.2;// 0.2 is defult
+
+            //double alpha = 0.5 * Math.Pow(0.997, 0.5 * (qTable.Count + qTable2.Count));
+            //if (TableNumberEachDay.Count > 3)
+            //{
+            //    int TableNumberToday = this.qTable.Count + this.qTable2.Count;
+            //    int TableNumberLastWeek = TableNumberToday;
+                
+            //    if (this.TableNumberEachDay.TryGetValue(now.Date.AddDays(-3), out var lastWeekTableNumber))
+            //    {
+            //        TableNumberLastWeek = lastWeekTableNumber;
+            //        int DeltaTableNumber = TableNumberToday - TableNumberLastWeek;
+            //        //alpha = 0.0148 * DeltaTableNumber + 0.01;
+            //        alpha = ((DeltaTableNumber + 10 - 1) / 10) * 0.1;
+            //        if (alpha > 0.5)
+            //        {
+            //            alpha = 0.5;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        alpha = 0.2;
+            //    }
+            //}
+
+            //TimeSpan sleepDiff = now - lastSleepTime;
+            //if(sleepDiff.TotalHours > 23)
+            //{
+            //    alpha = 0.5;
+            //}
 
             foreach (var affordance in allAvailableAffordances)
             {
@@ -2060,8 +2098,10 @@ namespace CalculationEngine.HouseholdElements {
                 string newTimeState = makeTimeSpan(now, duration);
                 Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
-                double alpha = 0.2;
-                double gamma = 0.8;
+                
+
+
+                double gamma = 0.95; //defult 0.8
 
                 if (desire_level_before == null)
                 {
@@ -2071,7 +2111,9 @@ namespace CalculationEngine.HouseholdElements {
 
                 (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
-                var R_S_A = -desireDiff + 1000000;
+                var R_S_A = -desireDiff + 1000000; //desireDiff less is better, R_S_A more is better
+
+                //var averageR_S_A = R_S_A / duration;
 
                 var selectedQTable1 = updateA ? qTable : qTable2;
 
@@ -2141,6 +2183,7 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     bestQ_S_A = new_Q_S_A;
                     bestAffordance = affordance;
+                    //bestAverageR_S_A = averageR_S_A;
                     //this.currentState = newState;
 
                 }
@@ -2149,6 +2192,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (weightSum >= 1000)
                 {
                     sleep = affordance;
+                    //sleepAverageR_S_A = averageR_S_A;
                 }
 
                 if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
@@ -2166,8 +2210,12 @@ namespace CalculationEngine.HouseholdElements {
 
             }
 
+            this.TableNumberEachDay[now.Date] = this.qTable.Count + this.qTable2.Count;
+
             if (sleep != null)
             {
+                //averageReward = sleepAverageR_S_A;
+                this.lastSleepTime = now;
                 return sleep;
             }
 
@@ -2177,6 +2225,7 @@ namespace CalculationEngine.HouseholdElements {
             //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
             //}
 
+            //averageReward = bestAverageR_S_A;
             return bestAffordance;
 
         }
@@ -2508,8 +2557,8 @@ namespace CalculationEngine.HouseholdElements {
             //return GetBestAffordanceFromListNewRL_Pre_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Post_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
-            //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_Double_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_Double_Q_Learning(time, allAvailableAffordances, careForAll, now);
         }
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
@@ -2596,7 +2645,7 @@ namespace CalculationEngine.HouseholdElements {
                 Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
                 double alpha = 0.2;
-                double gamma = 0.8;
+                double gamma = 0.8; //0.8
 
                 if (desire_level_before == null)
                 {

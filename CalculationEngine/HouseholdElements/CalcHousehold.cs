@@ -417,10 +417,16 @@ namespace CalculationEngine.HouseholdElements {
 
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                 Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
-                //person.SaveQTableToFile();
-                person.SaveTwoQTableToFile();
-                //SaveQTableToFile(person.qTable, person_name);
-                //Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
+                if(person.qTable2.Count > 0)
+                {
+                    person.SaveTwoQTableToFile();
+                }
+                else
+                {
+                    person.SaveQTableToFile();
+                }
+
+                Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
                 
             }
 
@@ -909,8 +915,20 @@ namespace CalculationEngine.HouseholdElements {
                         p.searchCounter = 0;
                         p.foundCounter = 0;
 
-                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {result}, {foundResultSum}");
-                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {p.qTable2.Count}, {result}, {foundResultSum}");
+                        int DeltaTableNumber = 0;
+                        //if(p.TableNumberEachDay.Count > 3)
+                        //{
+                            
+                        //    int TableNumberToday = p.qTable.Count + p.qTable2.Count;
+                        //    int TableNumberLastWeek = TableNumberToday;
+                        //    if(p.TableNumberEachDay.TryGetValue(now.Date.AddDays(-3), out var lastWeekTableNumber))
+                        //    {
+                        //        TableNumberLastWeek = lastWeekTableNumber;
+                        //    }
+                        //    DeltaTableNumber = TableNumberToday - TableNumberLastWeek;
+                        //}
+                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {p.qTable2.Count}, {p.qTable.Count+ p.qTable2.Count},{result}, {foundResultSum},  {DeltaTableNumber}");
+                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {p.qTable2.Count}, {result}, {foundResultSum}, {DeltaTableNumber}");
                         //(bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
                         //if (NeedCheck)
                         //{
