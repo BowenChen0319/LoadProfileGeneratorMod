@@ -191,6 +191,8 @@ namespace CalculationEngine.HouseholdElements {
 
         public Dictionary<DateTime, int> TableNumberEachDay = new Dictionary<DateTime, int>();
 
+        public Dictionary<string, int> remainTimeOtherPerson = new Dictionary<string, int>();
+
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -920,7 +922,7 @@ namespace CalculationEngine.HouseholdElements {
                                        bool ignoreAlreadyExecutedActivities, DateTime now)
         {
             if (_currentAffordance?.IsInterruptable == true &&
-                !_isCurrentlyPriorityAffordanceRunning) {
+                !_isCurrentlyPriorityAffordanceRunning && remainTimeOtherPerson.Values.Max()< 30) {
                 PotentialAffs aff;
                 if (IsSick[time.InternalStep]) {
                     aff = _sicknessPotentialAffs;

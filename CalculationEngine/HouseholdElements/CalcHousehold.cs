@@ -887,7 +887,9 @@ namespace CalculationEngine.HouseholdElements {
                     //    p.firstTimeRecorded = false;
 
                     //}
+                    var remainTimeFromAllPerson = _persons?.ToDictionary(person => person.Name, person => person._remainingExecutionSteps) ?? new Dictionary<string, int>();
 
+                    p.remainTimeOtherPerson = remainTimeFromAllPerson;
 
                     DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
 
