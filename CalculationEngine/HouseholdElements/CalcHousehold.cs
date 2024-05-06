@@ -811,8 +811,6 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-
-
         public void UpdateTotalWeightedDeviation(CalcPerson p, DateTime now)
         {
             string personName = p.Name; // 获取人员名称
@@ -897,6 +895,8 @@ namespace CalculationEngine.HouseholdElements {
 
                     if (isEndOfDay)
                     {
+                        p.executedAffordance = new Dictionary<DateTime, (string,string)>();
+                        
                         string result;
                         string foundResultSum;
                         if (p.searchCounter != 0)

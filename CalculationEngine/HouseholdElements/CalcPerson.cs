@@ -193,6 +193,9 @@ namespace CalculationEngine.HouseholdElements {
 
         public Dictionary<string, int> remainTimeOtherPerson = new Dictionary<string, int>();
 
+        public Dictionary<DateTime, (string, string)> executedAffordance = new Dictionary<DateTime, (string, string)>();
+
+        public bool isHumanInterventionInvolved = true;
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -921,8 +924,13 @@ namespace CalculationEngine.HouseholdElements {
         private void InterruptIfNeededNew([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                        bool ignoreAlreadyExecutedActivities, DateTime now)
         {
-            if (_currentAffordance?.IsInterruptable == true &&
-                !_isCurrentlyPriorityAffordanceRunning && remainTimeOtherPerson.Values.Max()< 30) {
+            bool otherPersonNotBusy = true; // other person's activity almost done
+            if (isHumanInterventionInvolved)
+            {
+                otherPersonNotBusy = remainTimeOtherPerson.Values.Max() < 30;
+            }
+
+            if (_currentAffordance?.IsInterruptable == true && !_isCurrentlyPriorityAffordanceRunning && otherPersonNotBusy) {
                 PotentialAffs aff;
                 if (IsSick[time.InternalStep]) {
                     aff = _sicknessPotentialAffs;
@@ -1160,6 +1168,9 @@ namespace CalculationEngine.HouseholdElements {
 
             bestaff.Activate(currentTimeStep, Name,  CurrentLocation,
                 out var personTimeProfile);
+
+            //add to list of executed affordances
+            executedAffordance[now] = (bestaff.Name, bestaff.AffCategory);
             
             //PersonDesires.ApplyAffordanceEffect(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name);
             int durationInMinutes = personTimeProfile.StepValues.Count;
@@ -1583,7 +1594,11 @@ namespace CalculationEngine.HouseholdElements {
         public void SaveQTableToFile()
         {
             SaveQTableToFile(false);
-            SaveQTableToFile(true);
+            if (this.max_qTable.Count > 0)
+            {
+                SaveQTableToFile(true);
+            }
+            
         }
 
         public void SaveQTableToFile(Boolean ismax)
@@ -1691,6 +1706,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 
                 
+                
             }
             
         }
@@ -1699,7 +1715,7 @@ namespace CalculationEngine.HouseholdElements {
         {
             LoadQTableFromFile(false);
             LoadQTableFromFile(true);
-            if(this.qTable.Count == 0 || this.max_qTable.Count == 0)
+            if(this.qTable.Count == 0 && this.max_qTable.Count == 0)
             {
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
@@ -2598,6 +2614,16 @@ namespace CalculationEngine.HouseholdElements {
             //foreach (var affordance in allAvailableAffordances)
             Parallel.ForEach(allAvailableAffordances, affordance =>
             {
+                bool existsInPastThreeHoursCurrent = false;
+                DateTime threeHoursAgo = now.AddHours(-3);
+
+                if (isHumanInterventionInvolved)
+                {
+                    existsInPastThreeHoursCurrent = executedAffordance
+                       .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == affordance.AffCategory)
+                       .Any();
+                }
+
                 if (affordance.Name.Contains("Replacement Activity"))
                 {
                     //continue;
@@ -2705,14 +2731,29 @@ namespace CalculationEngine.HouseholdElements {
                     //affordanceSearchCounter += Q_newState_actions.Count;
                     foreach (var action in Q_newState_actions)
                     {
+
+                        bool existsInPastThreeHours = false;
+
+                        if (isHumanInterventionInvolved)
+                        {
+                            if (action.Key == affordance.Name)
+                            {
+                                continue;
+                            }
+
+                            string category = _normalPotentialAffs.PotentialAffordances.FirstOrDefault(aff => aff.Name == action.Key)?.AffCategory;
+                            if(category!=null)
+                            {
+                                existsInPastThreeHours = executedAffordance
+                               .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == category)
+                               .Any();
+                            }
+                        }
+
                         //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
                         //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
                         //double Q_nS_nA = action.Value.Item1;
 
-                        //if (!nextAllAffordanceNames.Contains(action.Key))
-                        //{
-                        //    continue;
-                        //}
                         affordanceFoundCounter++;
                         double Q_nS_nA = action.Value.Item1;
                         int Q_nS_nA_duration = action.Value.Item2;
@@ -2731,10 +2772,10 @@ namespace CalculationEngine.HouseholdElements {
                         double max_Q_nnS_nnA = 0;
 
                         affordanceSearchCounter++;
-                        if (max_qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+                        if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
                         {
-                            //max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
-                            max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
+                            max_Q_nnS_nnA = Q_newState_actions_nS.Select(action => action.Value.Item1).DefaultIfEmpty(0).Max();
+                            //max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
                             affordanceFoundCounter++;
                         }
 
@@ -2743,7 +2784,12 @@ namespace CalculationEngine.HouseholdElements {
                         if (prediction > max_prediction)
                         {
                             max_prediction = prediction;
-                            sarsa_next_affordance_candi = action.Key;
+
+                            if(!existsInPastThreeHours)
+                            {
+                                sarsa_next_affordance_candi = action.Key;
+                            }
+                            //sarsa_next_affordance_candi = action.Key;
                         }
 
                         //if (random2)
@@ -2762,24 +2808,10 @@ namespace CalculationEngine.HouseholdElements {
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
-                //if (new_Q_S_A > bestQ_S_A)
-                //{
-                //    lock (locker)
-                //    {
-                //        if (new_Q_S_A > bestQ_S_A)
-                //        {
-                //            bestQ_S_A = new_Q_S_A;
-                //            bestAffordance = affordance;
-                //            best_affordance_name = affordance.Name;
-                //            next_affordance_name = sarsa_next_affordance_candi;
-                //            bestQSA_inCurrentState = QSA_Info;
-                //        }
-                //    }
-                //}
 
                 lock (locker)
                 {
-                    if (new_Q_S_A > bestQ_S_A)
+                    if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
                     {
                         bestQ_S_A = new_Q_S_A;
                         bestAffordance = affordance;
@@ -2827,21 +2859,21 @@ namespace CalculationEngine.HouseholdElements {
                 //}
             });
 
-            max_qTable.AddOrUpdate(
-                currentState, 
-                new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                {
-                    [best_affordance_name] = bestQSA_inCurrentState
-                },                
-                (key, existingVal) =>
-                {
-                    var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                    {
-                        [best_affordance_name] = bestQSA_inCurrentState
-                    };
-                    return newDict; // 返回新的字典作为该键的值
-                }
-            );
+            //max_qTable.AddOrUpdate(
+            //    currentState, 
+            //    new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+            //    {
+            //        [best_affordance_name] = bestQSA_inCurrentState
+            //    },                
+            //    (key, existingVal) =>
+            //    {
+            //        var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+            //        {
+            //            [best_affordance_name] = bestQSA_inCurrentState
+            //        };
+            //        return newDict; // 返回新的字典作为该键的值
+            //    }
+            //);
 
             searchCounter += currentSearchCounter;
             foundCounter += currentFoundCounter;
