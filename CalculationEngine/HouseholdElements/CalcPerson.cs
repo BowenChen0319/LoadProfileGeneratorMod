@@ -1811,8 +1811,16 @@ namespace CalculationEngine.HouseholdElements {
                     Logger.Info("Error loading QTable: " + ex.Message);
                     //Logger.Error("Error loading QTable: " + ex.Message);
                     // 出错时，初始化为新的字典
-                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                    this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    if (!isMax)
+                    {
+                        this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    }
+                    else
+                    {
+                        this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    }
+                    
+                    
                 }
             }
             else
@@ -1820,8 +1828,14 @@ namespace CalculationEngine.HouseholdElements {
                 // 文件不存在，初始化为新的字典
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
-                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                if (!isMax)
+                {
+                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                }
+                else
+                {
+                    this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                }
             }
         }
 
@@ -2144,7 +2158,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 (double, int, Dictionary<int, double>) Q_S_A;
 
-                if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
+                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
                 {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
@@ -2315,7 +2329,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 (double, int, Dictionary<int, double>) Q_S_A;
                 
-                if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
+                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
                 {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
@@ -2482,7 +2496,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 (double, int, Dictionary<int, double>) Q_S_A;
 
-                if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
+                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
                 {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
@@ -2588,7 +2602,7 @@ namespace CalculationEngine.HouseholdElements {
             }
             string readed_next_affordance_name = next_affordance_name;
             next_affordance_name = "";
-            string best_affordance_name = "";
+            //string best_affordance_name = "";
             (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
             
             int currentSearchCounter = allAvailableAffordances.Count;
@@ -2633,6 +2647,7 @@ namespace CalculationEngine.HouseholdElements {
                     }
                     return;
                 }
+
                 int affordanceSearchCounter = 0;
                 int affordanceFoundCounter = 0;
                 //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
@@ -2657,6 +2672,7 @@ namespace CalculationEngine.HouseholdElements {
                 TimeStep currentTimeStep = time;
                 TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
                 HashSet<string> nextAllAffordanceNames = new HashSet<string>();
+                
                 var srcList = _normalPotentialAffs.PotentialAffordances;
                 foreach (var calcAffordanceBase in srcList)
                 {
@@ -2713,7 +2729,7 @@ namespace CalculationEngine.HouseholdElements {
                 (double, int, Dictionary<int, double>) Q_S_A;
 
                 affordanceSearchCounter++;
-                if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
+                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
                 {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }else
@@ -2808,25 +2824,32 @@ namespace CalculationEngine.HouseholdElements {
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
+                if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+                {
+                    lock (locker)
+                    {
+                        if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+                        {
+                            bestQ_S_A = new_Q_S_A;
+                            bestAffordance = affordance;
+                            //best_affordance_name = affordance.Name;
+                            if (affordance.Name == readed_next_affordance_name)
+                            {
+                                next_affordance_name = sarsa_next_affordance_candi;
+                            }
+
+                            bestQSA_inCurrentState = QSA_Info;
+                        }
+                    }
+                }
 
                 lock (locker)
                 {
-                    if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
-                    {
-                        bestQ_S_A = new_Q_S_A;
-                        bestAffordance = affordance;
-                        best_affordance_name = affordance.Name;
-                        if(affordance.Name == readed_next_affordance_name)
-                        {
-                            next_affordance_name = sarsa_next_affordance_candi;
-                        }
-                        
-                        bestQSA_inCurrentState = QSA_Info;
-                    }
                     currentSearchCounter += affordanceSearchCounter;
                     currentFoundCounter += affordanceFoundCounter;
-
                 }
+
+
 
                 //V1 if sleep in the wait list, then direct run it
                 if (weightSum >= 1000)
@@ -2902,14 +2925,15 @@ namespace CalculationEngine.HouseholdElements {
                 LoadQTableFromFile();
             }
             string readed_next_affordance_name = next_affordance_name;
-            next_affordance_name = "";
-            string best_affordance_name = "";
-            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+            next_affordance_name = ""; //reset the next affordance name
+            string best_affordance_name = ""; //initialize the best affordance name
+            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>()); //initialize the best QSA information in current state
 
-            int currentSearchCounter = allAvailableAffordances.Count;
+            //initialize the search and found counter, im order to track the learning process
+            int currentSearchCounter = allAvailableAffordances.Count; 
             int currentFoundCounter = 0;
 
-            //double epsilon1 = 0.05;
+            //double epsilon1 = 0.05;  // for the random part
             //Random rnd1 = new Random(time.InternalStep);
             //Random rnd2 = new Random(time.InternalStep + 1);
             //bool random1 = (rnd1.NextDouble() < epsilon1);
@@ -2919,8 +2943,8 @@ namespace CalculationEngine.HouseholdElements {
 
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
-            ICalcAffordanceBase sarsa_affordacne = null;
+            ICalcAffordanceBase sleep = null; //save slot for the sleep affordance
+            ICalcAffordanceBase sarsa_affordacne = null; //save slot for the sarsa affordance, which is the best next affordance
             Dictionary<string, int> desire_level_before = null;
 
             object locker = new object();
@@ -2953,13 +2977,13 @@ namespace CalculationEngine.HouseholdElements {
                 var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
                 //var duration = calcTotalDeviationResult.realDuration;
 
-                string sarsa_next_affordance_candi = "";
+                string sarsa_next_affordance_candi = ""; //candidate of sarsa next affordance
 
-                string nowTimeState = makeTimeSpan(now, 0);
-                string newTimeState = makeTimeSpan(now, duration);
+                string nowTimeState = makeTimeSpan(now, 0); //current time state
+                string newTimeState = makeTimeSpan(now, duration); //next time state, which after the execution of the affordance
 
-                TimeStep currentTimeStep = time;
-                TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+                TimeStep currentTimeStep = time; //current time step
+                TimeStep nextTimeStep = currentTimeStep.AddSteps(duration); //next time step, which after the execution of the affordance
                 HashSet<string> nextAllAffordanceNames = new HashSet<string>();
                 var srcList = _normalPotentialAffs.PotentialAffordances;
                 foreach (var calcAffordanceBase in srcList)
@@ -3005,7 +3029,8 @@ namespace CalculationEngine.HouseholdElements {
                 (double, int, Dictionary<int, double>) Q_S_A;
 
                 affordanceSearchCounter++;
-                if (!Q_S.TryGetValue((affordance.Guid.ToString()), out Q_S_A))
+
+                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
                 {
                     Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
                 }
@@ -3122,24 +3147,29 @@ namespace CalculationEngine.HouseholdElements {
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
-
-                lock (locker)
+                if (new_Q_S_A > bestQ_S_A)
                 {
-                    if (new_Q_S_A > bestQ_S_A)
+                    lock (locker)
                     {
-                        bestQ_S_A = new_Q_S_A;
-                        bestAffordance = affordance;
-                        best_affordance_name = affordance.Name;
-                        if (affordance.Name == readed_next_affordance_name)
+                        if (new_Q_S_A > bestQ_S_A)
                         {
-                            next_affordance_name = sarsa_next_affordance_candi;
-                        }
+                            bestQ_S_A = new_Q_S_A;
+                            bestAffordance = affordance;
+                            best_affordance_name = affordance.Name;
+                            if (affordance.Name == readed_next_affordance_name)
+                            {
+                                next_affordance_name = sarsa_next_affordance_candi;
+                            }
 
-                        bestQSA_inCurrentState = QSA_Info;
+                            bestQSA_inCurrentState = QSA_Info;
+                        }
                     }
+                }
+
+                   lock (locker)
+                {
                     currentSearchCounter += affordanceSearchCounter;
                     currentFoundCounter += affordanceFoundCounter;
-
                 }
 
                 //V1 if sleep in the wait list, then direct run it
