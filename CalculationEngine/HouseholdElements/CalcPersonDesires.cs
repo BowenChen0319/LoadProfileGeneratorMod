@@ -706,6 +706,18 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
+        public Dictionary<string, (int, double)>  GetCurrentDesireValue()
+        {
+            Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (int, double)>();
+
+            foreach (var calcDesire in Desires.Values)
+            {
+                desireName_ValueBeforeApply_Dict[calcDesire.Name] = (((int)calcDesire.Weight), (double)calcDesire.TempValue);
+            }
+
+            return desireName_ValueBeforeApply_Dict;
+        }
+
         private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, Dictionary<string, (int, double)> desireName_ValueBeforeApply, int realDuration) CalcTotalDeviationAllasAreaNewRL_New(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, List<double>? optionalList = null)
         {
             Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (int, double)>();

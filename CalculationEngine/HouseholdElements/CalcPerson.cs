@@ -2603,7 +2603,7 @@ namespace CalculationEngine.HouseholdElements {
             string readed_next_affordance_name = next_affordance_name;
             next_affordance_name = "";
             //string best_affordance_name = "";
-            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+            //(double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
             
             int currentSearchCounter = allAvailableAffordances.Count;
             int currentFoundCounter = 0;
@@ -2620,9 +2620,18 @@ namespace CalculationEngine.HouseholdElements {
             var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
             ICalcAffordanceBase sarsa_affordacne = null;
-            Dictionary<string, int> desire_level_before = null;
+            
+
+            //ConcurrentDictionary<int,(double,ICalcAffordanceBase)> bestAffordanceInfo = new ConcurrentDictionary<int, (double, ICalcAffordanceBase)>();
+
+            //bestAffordanceInfo.TryAdd(0, (double.MinValue, allAvailableAffordances[0]));
+
+            var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
+            var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+            this.currentState = new(desire_level_before, makeTimeSpan(now, 0));
 
             object locker = new object();
+
 
             //first prediction
             //foreach (var affordance in allAvailableAffordances)
@@ -2691,17 +2700,17 @@ namespace CalculationEngine.HouseholdElements {
                 double alpha = 0.2;
                 double gamma = 0.8; //0.8
 
-                if (desire_level_before == null)
-                {
-                    lock(locker)
-                    {
-                        if (desire_level_before == null)
-                        {
-                            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                            this.currentState = new(desire_level_before, nowTimeState);                        
-                        }
-                    }
-                }
+                //if (desire_level_before == null)
+                //{
+                //    lock(locker)
+                //    {
+                //        if (desire_level_before == null)
+                //        {
+                //            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+                //            this.currentState = new(desire_level_before, nowTimeState);                        
+                //        }
+                //    }
+                //}
 
                 (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
 
@@ -2838,7 +2847,7 @@ namespace CalculationEngine.HouseholdElements {
                                 next_affordance_name = sarsa_next_affordance_candi;
                             }
 
-                            bestQSA_inCurrentState = QSA_Info;
+                            //bestQSA_inCurrentState = QSA_Info;
                         }
                     }
                 }
