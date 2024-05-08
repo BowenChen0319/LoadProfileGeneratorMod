@@ -55,6 +55,7 @@ using System.Text.Json.Serialization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using static System.Collections.Specialized.BitVector32;
+using System.Threading;
 
 #endregion
 
@@ -2650,10 +2651,11 @@ namespace CalculationEngine.HouseholdElements {
                 if (affordance.Name.Contains("Replacement Activity"))
                 {
                     //continue;
-                    lock (locker)
-                    {
-                        currentFoundCounter++;
-                    }
+                    //lock (locker)
+                    //{
+                    //    currentFoundCounter++;
+                    //}
+                    Interlocked.Increment(ref currentFoundCounter);
                     return;
                 }
 
@@ -2700,17 +2702,6 @@ namespace CalculationEngine.HouseholdElements {
                 double alpha = 0.2;
                 double gamma = 0.8; //0.8
 
-                //if (desire_level_before == null)
-                //{
-                //    lock(locker)
-                //    {
-                //        if (desire_level_before == null)
-                //        {
-                //            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                //            this.currentState = new(desire_level_before, nowTimeState);                        
-                //        }
-                //    }
-                //}
 
                 (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
 
@@ -2852,12 +2843,13 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
 
-                lock (locker)
-                {
-                    currentSearchCounter += affordanceSearchCounter;
-                    currentFoundCounter += affordanceFoundCounter;
-                }
-
+                //lock (locker)
+                //{
+                //    currentSearchCounter += affordanceSearchCounter;
+                //    currentFoundCounter += affordanceFoundCounter;
+                //}
+                Interlocked.Add(ref currentSearchCounter, affordanceSearchCounter);
+                Interlocked.Add(ref currentFoundCounter, affordanceFoundCounter);
 
 
                 //V1 if sleep in the wait list, then direct run it
