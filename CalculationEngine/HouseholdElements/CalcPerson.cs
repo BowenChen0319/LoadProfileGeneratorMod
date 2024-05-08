@@ -2617,8 +2617,8 @@ namespace CalculationEngine.HouseholdElements {
             //bool random1= false;
             //bool random2 = false;
 
-            //var bestQ_S_A = double.MinValue;
-            //var bestAffordance = allAvailableAffordances[0];
+            var bestQ_S_A = double.MinValue;
+            var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
             ICalcAffordanceBase sarsa_affordacne = null;
             
@@ -2631,9 +2631,6 @@ namespace CalculationEngine.HouseholdElements {
             var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
             this.currentState = new(desire_level_before, makeTimeSpan(now, 0));
 
-            ConcurrentDictionary<string, (double, ICalcAffordanceBase)> bestAffordanceInfo = new ConcurrentDictionary<string, (double, ICalcAffordanceBase)>();
-            string key = "MainKey";  // 因为这里我们不使用类封装状态，使用一个固定键作为标识符
-            bestAffordanceInfo[key] = (double.MinValue, allAvailableAffordances[0]);
 
             object locker = new object();
 
@@ -2828,32 +2825,22 @@ namespace CalculationEngine.HouseholdElements {
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
-                //if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
-                //{
-                //    lock (locker)
-                //    {
-                //        if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
-                //        {
-                //            bestQ_S_A = new_Q_S_A;
-                //            bestAffordance = affordance;
-                //            //best_affordance_name = affordance.Name;
-                //            if (affordance.Name == readed_next_affordance_name)
-                //            {
-                //                next_affordance_name = sarsa_next_affordance_candi;
-                //            }
-
-                //            //bestQSA_inCurrentState = QSA_Info;
-                //        }
-                //    }
-                //}
-
-                if(new_Q_S_A > bestAffordanceInfo[key].Item1 && !existsInPastThreeHoursCurrent)
+                if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
                 {
-                    
-                    bestAffordanceInfo[key] = (new_Q_S_A, affordance);
-                    if (affordance.Name == readed_next_affordance_name)
+                    lock (locker)
                     {
-                        next_affordance_name = sarsa_next_affordance_candi;
+                        if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+                        {
+                            bestQ_S_A = new_Q_S_A;
+                            bestAffordance = affordance;
+                            //best_affordance_name = affordance.Name;
+                            if (affordance.Name == readed_next_affordance_name)
+                            {
+                                next_affordance_name = sarsa_next_affordance_candi;
+                            }
+
+                            //bestQSA_inCurrentState = QSA_Info;
+                        }
                     }
                 }
 
@@ -2928,7 +2915,6 @@ namespace CalculationEngine.HouseholdElements {
                 return sarsa_affordacne;
             }
 
-            var bestAffordance = bestAffordanceInfo[key].Item2;
             return bestAffordance;
 
         }
