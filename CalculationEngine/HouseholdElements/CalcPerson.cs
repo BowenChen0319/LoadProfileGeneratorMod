@@ -56,6 +56,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using static System.Collections.Specialized.BitVector32;
 using System.Threading;
+using System.Timers;
 
 #endregion
 
@@ -2590,8 +2591,10 @@ namespace CalculationEngine.HouseholdElements {
             //return GetBestAffordanceFromListNewRL_Pre_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Post_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Double_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_n_step_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            
         }
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
@@ -2777,11 +2780,14 @@ namespace CalculationEngine.HouseholdElements {
                         Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
 
                         var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
-                        List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
+                        //List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstrin_new, now, desire_ValueAfter, Q_nS_nA_satValus, Q_nS_nA_duration);
 
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
+
+
+
 
                         //third prediction (arg max)
                         var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
@@ -2918,6 +2924,252 @@ namespace CalculationEngine.HouseholdElements {
             return bestAffordance;
 
         }
+
+        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_n_step_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
+                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        {
+            //If the QTable is empty, then load it from the file
+            if (qTable.Count == 0)
+            {
+                LoadQTableFromFile();
+            }
+
+            //Initilize the variables
+            var bestQ_S_A = double.MinValue;
+            var bestAffordance = allAvailableAffordances[0];
+            ICalcAffordanceBase sleep = null;
+
+            var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
+            var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+            this.currentState = new(desire_level_before, makeTimeSpan(now, 0));
+
+            int currentSearchCounter = allAvailableAffordances.Count;
+            int currentFoundCounter = 0;
+
+            //Initilize the Lock object
+            object locker = new object();
+
+            //First prediction, in Parallel Computing
+            Parallel.ForEach(allAvailableAffordances, affordance =>
+            {
+                //If the affordance is a replacement activity, then skip it
+                if (affordance.Name.Contains("Replacement Activity"))
+                {
+                    Interlocked.Increment(ref currentFoundCounter);
+                    return;
+                }
+
+                //Hyperparameters
+                double alpha = 0.2;
+                double gamma = 0.8; //0.8
+
+                bool existsInPastThreeHoursCurrent = false;
+                DateTime threeHoursAgo = now.AddHours(-3);
+
+                //initiliz the Search and Found Counter
+                int affordanceSearchCounter = 0;
+                int affordanceFoundCounter = 0;
+
+                //Check is this affordance and his similar affordance already executed in the last 3 hours
+                if (isHumanInterventionInvolved)
+                {
+                    existsInPastThreeHoursCurrent = executedAffordance
+                       .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == affordance.AffCategory)
+                       .Any();
+                }
+
+
+                //GetNextStateAndQ_R_Value(state, time,now)// input: State, time, now // output: Q, R, next state
+                var firstStageQ_Learning_Info = Q_Learning_Stage1(affordance, currentState, time, now);
+                var R_S_A = firstStageQ_Learning_Info.R_S_A;
+                var Q_S_A = firstStageQ_Learning_Info.Q_S_A;
+                var newState = firstStageQ_Learning_Info.newState;
+                var desire_ValueAfter = firstStageQ_Learning_Info.desire_ValueAfter;
+                var weightSum = firstStageQ_Learning_Info.weightSum;
+                var TimeAfter = firstStageQ_Learning_Info.TimeAfter;
+                var duration = firstStageQ_Learning_Info.duration;
+
+                affordanceFoundCounter += Q_S_A.Item1 > 0 ? 1 : 0; //Update Counter, if this state is already visited, then increase the FoundCounter
+
+
+                //Start n-step prediction, variable initialization
+                double prediction = R_S_A;
+                (Dictionary<string, int>, string) nextState = newState; //new state
+                int restDuration = 0;
+                DateTime nextTime = TimeAfter;
+                Dictionary<string, (int, double)> AffNameDesireValue = desire_ValueAfter;
+                TimeStep nextStep = time.AddSteps(duration);
+                int n = 2;
+
+                affordanceSearchCounter += n+1;// Update Counter
+
+                //Get n-step prediction Infomation 
+                for (int i = n; i >= 0; i--)
+                {
+                    var prediction_info = getNewStateAndRewardFromState(nextState, i, nextTime, nextStep,AffNameDesireValue);
+                    prediction += Math.Pow(gamma, n-i+1) * prediction_info.Q_or_R_Value;
+                    nextState = prediction_info.newState;
+                    restDuration += prediction_info.Duration;
+                    nextTime = prediction_info.TimeAfter_nS;
+                    AffNameDesireValue = prediction_info.desireName_ValueAfter;
+                    nextStep = prediction_info.nextStep;
+                    affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
+                }
+
+
+                // Update the Q value for the current state and action
+                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
+                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
+                var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+                currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
+
+                //Get Best Affordance
+                if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+                {
+                    lock (locker)
+                    {
+                        if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+                        {
+                            bestQ_S_A = new_Q_S_A;
+                            bestAffordance = affordance;
+                        }
+                    }
+                }
+
+                //Update local Search and Found Counter
+                Interlocked.Add(ref currentSearchCounter, affordanceSearchCounter);
+                Interlocked.Add(ref currentFoundCounter, affordanceFoundCounter);
+
+                //if sleep in the wait list, then it has the highest priority
+                if (weightSum >= 1000)
+                {
+                    sleep = affordance;
+                }
+
+            });
+
+            //Update global daily Search and Found Counter
+            searchCounter += currentSearchCounter;
+            foundCounter += currentFoundCounter;
+
+            //return affordance
+            if (sleep != null)
+            {
+                return sleep;
+            }
+
+            return bestAffordance;
+
+        }
+
+        public ((double, int, Dictionary<int, double>) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, Dictionary<string, (int, double)> desire_ValueAfter, double weightSum, DateTime TimeAfter, int duration) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
+        {
+            int duration = affordance.GetRealDuration(time);
+            bool isInterruptable = affordance.IsInterruptable;
+            var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
+            var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstring, now, satValue: satisfactionvalues, newDuration: duration, interruptable: isInterruptable);
+
+            var desireDiff = calcTotalDeviationResult.totalDeviation;
+            var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+            var weightSum = calcTotalDeviationResult.WeightSum;
+
+            string newTimeState = makeTimeSpan(now, duration);
+
+            TimeStep currentTimeStep = time;
+            TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+
+            Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+
+            (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
+            var R_S_A = -desireDiff + 1000000;
+            var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+
+            (double, int, Dictionary<int, double>) Q_S_A;
+
+            if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+            {
+                Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+            }
+
+            var TimeAfter = now.AddMinutes(duration);
+
+            return (Q_S_A, R_S_A, newState, desire_ValueAfter, weightSum,TimeAfter, duration);
+        }
+
+
+        public ((Dictionary<string, int>, string time) newState, double Q_or_R_Value, DateTime TimeAfter_nS, int Duration, Dictionary<string, (int, double)> desireName_ValueAfter, TimeStep nextStep, bool alreadyVisited) getNewStateAndRewardFromState((Dictionary<string, int>, string) currentState, int iteration, DateTime time, TimeStep step,Dictionary<string, (int, double)> desireName_ValueBefore)
+        {
+            if (desireName_ValueBefore == null)
+            {
+                return ((null, ""), 0, time, 0, null, null, false);
+            }
+            
+            string maxActionKey = "";
+            double maxQ_Value = 0;
+            int duration = 0;
+            Dictionary<int, double> satValues = null;
+
+            if (qTable.TryGetValue(currentState, out var Q_newState_actions_nS))
+            {
+                if (Q_newState_actions_nS != null && Q_newState_actions_nS.Any())
+                {
+                    var maxAction = Q_newState_actions_nS
+                    .MaxBy(action => action.Value.Item1); // 找到具有最大Q值的动作
+
+                    if (maxAction.Key != null)
+                    {
+                        maxQ_Value = maxAction.Value.Item1; // 最大的Q值
+                        maxActionKey = maxAction.Key; // 对应的动作键
+                        duration = maxAction.Value.Item2; // 对应的动作时长
+                        satValues = maxAction.Value.Item3; // 对应的满意度值
+                        //duration = _normalPotentialAffs.PotentialAffordances.FirstOrDefault(aff => aff.Name == maxAction.Key) ?.GetRealDuration(step) ?? 0;
+                        //duration = duration == 0 ? maxAction.Value.Item2 : duration;
+                    }
+                }
+                
+            }
+
+            TimeStep nextStep = step.AddSteps(duration);
+
+            if (maxQ_Value == 0)
+            {
+                return ((null, ""), 0, time, 0, null, null, false);
+            }
+            else
+            {
+                if (iteration == 0)
+                {                    
+                    return ((null, ""), maxQ_Value, time.AddMinutes(duration), duration,null, null, true);
+                }
+                else
+                {
+                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, new TimeStep(), true, out var thoughtstrin_new, new DateTime(), desireName_ValueBefore, satValues, duration);
+                    var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
+                    var R_S_A_nS = -next_desireDiff + 1000000;
+                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+                    string newTimeState = makeTimeSpan(time, duration);
+                    Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter_nS);
+                    (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
+
+                    qTable.TryGetValue(currentState, out var Q_newState_actions_nS_next);
+                    if(Q_newState_actions_nS_next == null || !Q_newState_actions_nS_next.Any())//new state have't benn visited, so return Q Value
+                    {
+                        return ((null, ""), maxQ_Value, time.AddMinutes(duration), duration, null, null, true); ;
+                    }
+                    else // new state are visited, so return R value
+                    {
+                        return (newState, R_S_A_nS, time.AddMinutes(duration), duration, desire_ValueAfter_nS, nextStep, true);
+                    }
+
+                    
+                }
+            }
+
+            
+
+
+        }
+
 
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_3_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
                                               [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
@@ -3061,8 +3313,8 @@ namespace CalculationEngine.HouseholdElements {
                         Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
 
                         var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
-                        List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, DesireValueAfter_nS, Q_nS_nA_satValus, Q_nS_nA_duration);
+                        //List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, desire_ValueAfter, Q_nS_nA_satValus, Q_nS_nA_duration);
 
                         var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
                         var R_S_A_nS = -next_desireDiff + 1000000;
@@ -3081,8 +3333,8 @@ namespace CalculationEngine.HouseholdElements {
                                 Dictionary<int, double> Q_nnS_nnA_satValus = action2.Value.Item3;
 
                                 var TimeAfter_nnS = TimeAfter_nS.AddMinutes(Q_nS_nA_duration);
-                                List<double> DesireValueAfter_nnS = desire_ValueAfter_nS.Values.Select(value => value.Item2).ToList();
-                                var calcTotalDeviationResultAfter_nnS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new_nnS, now, DesireValueAfter_nnS, Q_nnS_nnA_satValus, Q_nnS_nnA_duration);
+                                //List<double> DesireValueAfter_nnS = desire_ValueAfter_nS.Values.Select(value => value.Item2).ToList();
+                                var calcTotalDeviationResultAfter_nnS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new_nnS, now, desire_ValueAfter_nS, Q_nnS_nnA_satValus, Q_nnS_nnA_duration);
 
                                 var next_desireDiff_nnS = calcTotalDeviationResultAfter_nnS.totalDeviation;
                                 var R_S_A_nnS = -next_desireDiff_nnS + 1000000;

@@ -647,7 +647,7 @@ namespace CalculationEngine.HouseholdElements {
             return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict,desireName_ValueBeforeApply_Dict);
         }
 
-        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, List<double>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0, bool? interruptable = false)
+        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0, bool? interruptable = false)
         {
 
             //List<CalcDesire> satisfactionvalues;
@@ -718,7 +718,7 @@ namespace CalculationEngine.HouseholdElements {
             return desireName_ValueBeforeApply_Dict;
         }
 
-        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, Dictionary<string, (int, double)> desireName_ValueBeforeApply, int realDuration) CalcTotalDeviationAllasAreaNewRL_New(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, List<double>? optionalList = null)
+        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, Dictionary<string, (int, double)> desireName_ValueBeforeApply, int realDuration) CalcTotalDeviationAllasAreaNewRL_New(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
         {
             Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (int, double)>();
             Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (int, double)>();
@@ -738,9 +738,11 @@ namespace CalculationEngine.HouseholdElements {
 
             int index = 0;
 
+
             foreach (var calcDesire in Desires.Values)
             {
                 var desireID = calcDesire.DesireID;
+                var DesireName = calcDesire.Name;
                 satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueDBL);
 
                 
@@ -748,10 +750,12 @@ namespace CalculationEngine.HouseholdElements {
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
 
+
+
                 if (optionalList != null && optionalList.Count == Desires.Values.Count)
                 {
                     // 从optionalList获取对应位置的值作为currentValueDBL的值
-                    currentValueDBL = optionalList[index];
+                    currentValueDBL = optionalList[DesireName].Item2;
                 }
 
                 index++;
