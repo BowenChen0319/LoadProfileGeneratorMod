@@ -2938,7 +2938,7 @@ namespace CalculationEngine.HouseholdElements {
                 LoadQTableFromFile();
             }
 
-            int predictionStep = 5; //>=2
+            int predictionStep = 4; //>=2
             n_step_backUpdate(size: predictionStep);
 
             //Initilize the variables
@@ -3104,8 +3104,11 @@ namespace CalculationEngine.HouseholdElements {
                         result += n_step_update_info.ElementAt(i).Item4 * Math.Pow(gamma, i);
                     }
 
-                   
-                    result += n_step_update_info.ElementAt(temp_Size-1).Item3 * Math.Pow(gamma, 3);
+                    var lastElement = n_step_update_info.ElementAt(temp_Size - 1);
+                    var lastQ_Value = qTable.GetOrAdd(lastElement.Item1, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>())[lastElement.Item2].Item1;
+
+                    //result += n_step_update_info.ElementAt(temp_Size-1).Item3 * Math.Pow(gamma, temp_Size);
+                    result += lastQ_Value * Math.Pow(gamma, temp_Size);
                     var alpha = 0.2;
                     var newQ_Value = (1-alpha) * oldQ_Info.Item1 + alpha * result;
 
