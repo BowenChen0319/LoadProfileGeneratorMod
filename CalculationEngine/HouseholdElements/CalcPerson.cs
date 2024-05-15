@@ -2938,7 +2938,8 @@ namespace CalculationEngine.HouseholdElements {
                 LoadQTableFromFile();
             }
 
-            n_step_backUpdate();
+            int predictionStep = 5; //>=2
+            n_step_backUpdate(size: predictionStep);
 
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
@@ -3007,7 +3008,7 @@ namespace CalculationEngine.HouseholdElements {
                 DateTime nextTime = TimeAfter;
                 Dictionary<string, (int, double)> AffNameDesireValue = desire_ValueAfter;
                 TimeStep nextStep = time.AddSteps(duration);
-                int n = 2;
+                int n = predictionStep-2;
 
                 affordanceSearchCounter += n+1;// Update Counter
 
@@ -3075,10 +3076,11 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        public void n_step_backUpdate(((Dictionary<string, int>, string), string, double, double)? updateInfo = null)
+        public void n_step_backUpdate(((Dictionary<string, int>, string), string, double, double)? updateInfo = null, int? size = null)
         {
-            var temp_Size = 4;// 4
-            
+            var temp_Size = (size != null)? size.Value : 5;
+
+
             if (updateInfo != null && !updateInfo.Value.Item2.Contains("Replacement Activity"))
             {
                 if (n_step_update_info.Count >= temp_Size)
@@ -3102,7 +3104,7 @@ namespace CalculationEngine.HouseholdElements {
                         result += n_step_update_info.ElementAt(i).Item4 * Math.Pow(gamma, i);
                     }
 
-                    // 加上第四个元素的 item3 * gamma^4
+                   
                     result += n_step_update_info.ElementAt(temp_Size-1).Item3 * Math.Pow(gamma, 3);
                     var alpha = 0.2;
                     var newQ_Value = (1-alpha) * oldQ_Info.Item1 + alpha * result;
@@ -3165,14 +3167,14 @@ namespace CalculationEngine.HouseholdElements {
                 if (Q_newState_actions_nS != null && Q_newState_actions_nS.Any())
                 {
                     var maxAction = Q_newState_actions_nS
-                    .MaxBy(action => action.Value.Item1); // 找到具有最大Q值的动作
+                    .MaxBy(action => action.Value.Item1); 
 
                     if (maxAction.Key != null)
                     {
-                        maxQ_Value = maxAction.Value.Item1; // 最大的Q值
-                        maxActionKey = maxAction.Key; // 对应的动作键
-                        duration = maxAction.Value.Item2; // 对应的动作时长
-                        satValues = maxAction.Value.Item3; // 对应的满意度值
+                        maxQ_Value = maxAction.Value.Item1; 
+                        maxActionKey = maxAction.Key; 
+                        duration = maxAction.Value.Item2; 
+                        satValues = maxAction.Value.Item3; 
                         //duration = _normalPotentialAffs.PotentialAffordances.FirstOrDefault(aff => aff.Name == maxAction.Key) ?.GetRealDuration(step) ?? 0;
                         //duration = duration == 0 ? maxAction.Value.Item2 : duration;
                     }
