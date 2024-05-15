@@ -199,6 +199,10 @@ namespace CalculationEngine.HouseholdElements {
 
         public bool isHumanInterventionInvolved = true;
 
+        public Queue<((Dictionary<string, int>, string), string, double, double)> n_step_update_info = new Queue<((Dictionary<string, int>, string), string, double, double)>();
+
+        public double gamma = 0.8; //0.8
+
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
 
@@ -2934,10 +2938,14 @@ namespace CalculationEngine.HouseholdElements {
                 LoadQTableFromFile();
             }
 
+            n_step_backUpdate();
+
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
+            (double, double) Q_R_Value = (0,0);
+            (double, double) Q_R_Value_Sleep = (0, 0);
 
             var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
             var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
@@ -2961,7 +2969,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 //Hyperparameters
                 double alpha = 0.2;
-                double gamma = 0.8; //0.8
+                
 
                 bool existsInPastThreeHoursCurrent = false;
                 DateTime threeHoursAgo = now.AddHours(-3);
@@ -3032,6 +3040,7 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             bestQ_S_A = new_Q_S_A;
                             bestAffordance = affordance;
+                            Q_R_Value = (new_Q_S_A, R_S_A);
                         }
                     }
                 }
@@ -3044,6 +3053,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (weightSum >= 1000)
                 {
                     sleep = affordance;
+                    Q_R_Value_Sleep = (new_Q_S_A, R_S_A);
                 }
 
             });
@@ -3055,11 +3065,52 @@ namespace CalculationEngine.HouseholdElements {
             //return affordance
             if (sleep != null)
             {
+                n_step_backUpdate((currentState, sleep.Name, Q_R_Value_Sleep.Item1, Q_R_Value_Sleep.Item2));
                 return sleep;
+
             }
 
+            n_step_backUpdate((currentState, bestAffordance.Name, Q_R_Value.Item1, Q_R_Value.Item2));
             return bestAffordance;
 
+        }
+
+        public void n_step_backUpdate(((Dictionary<string, int>, string), string, double, double)? updateInfo = null)
+        {
+            var temp_Size = 4;// 4
+            
+            if (updateInfo != null && !updateInfo.Value.Item2.Contains("Replacement Activity"))
+            {
+                if (n_step_update_info.Count >= temp_Size)
+                {
+                    n_step_update_info.Dequeue();
+                }
+                n_step_update_info.Enqueue(updateInfo.Value);
+            }
+            else
+            {
+                if (n_step_update_info.Count >= temp_Size)
+                {
+                    var firstElement = n_step_update_info.ElementAt(0);
+                    var firstState = firstElement.Item1;
+                    var firstStateData = qTable.GetOrAdd(firstState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+                    var oldQ_Info = firstStateData[firstElement.Item2];
+
+                    double result = 0.0;
+                    for (int i = 0; i < temp_Size-1; i++)
+                    {
+                        result += n_step_update_info.ElementAt(i).Item4 * Math.Pow(gamma, i);
+                    }
+
+                    // 加上第四个元素的 item3 * gamma^4
+                    result += n_step_update_info.ElementAt(temp_Size-1).Item3 * Math.Pow(gamma, 3);
+                    var alpha = 0.2;
+                    var newQ_Value = (1-alpha) * oldQ_Info.Item1 + alpha * result;
+
+                    var newQ_Info = (newQ_Value, oldQ_Info.Item2,oldQ_Info.Item3);
+                    firstStateData.AddOrUpdate(firstElement.Item2, newQ_Info, (key, oldValue) => newQ_Info);
+                }
+            }
         }
 
         public ((double, int, Dictionary<int, double>) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, Dictionary<string, (int, double)> desire_ValueAfter, double weightSum, DateTime TimeAfter, int duration) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
