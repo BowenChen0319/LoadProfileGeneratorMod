@@ -166,13 +166,13 @@ namespace CalculationEngine.HouseholdElements {
 
         //public Dictionary<(State, string), double> qTable = new Dictionary<(State, string), double>();
 
-        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,Dictionary<int,double>)>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,Dictionary<int,double>,double, (Dictionary<string, int>, string))>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
 
-        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>> max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>> max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
 
-        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>> qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>> qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
 
-        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>> max_qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>> max_qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
 
 
         public (Dictionary<string, int>, string) currentState = (null, null);
@@ -1620,10 +1620,12 @@ namespace CalculationEngine.HouseholdElements {
             {
                 var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
                 var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
+                //var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
+                //    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}‖{innerEntry.Value.Item4}"
+                //);
                 var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
-                    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}"
-                );
-
+                        $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}‖{innerEntry.Value.Item4}‖{string.Join("¥", innerEntry.Value.Item5.Item1.Select(d => $"{d.Key}○{d.Value}"))}♯{innerEntry.Value.Item5.Item2}"
+                    );
                 convertedQTable[outerKey] = String.Join("★", innerDictSerialized);
             }
 
@@ -1649,84 +1651,84 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        public void SaveTwoQTableToFile()
-        {
-            for (int i = 0; i < 1; i++)
-            {
-                bool ismax = i == 1;
+        //public void SaveTwoQTableToFile()
+        //{
+        //    for (int i = 0; i < 1; i++)
+        //    {
+        //        bool ismax = i == 1;
 
-                for (int j=0; j<2; j++)
-                {
+        //        for (int j=0; j<2; j++)
+        //        {
                     
-                    bool isTableA = j == 1;
+        //            bool isTableA = j == 1;
 
-                    string baseDir2 = @"C:\Work\ML\Models";
-                    //var qtable_toSave = qTable;
+        //            string baseDir2 = @"C:\Work\ML\Models";
+        //            //var qtable_toSave = qTable;
 
-                    var convertedQTable = new Dictionary<string, string>();
+        //            var convertedQTable = new Dictionary<string, string>();
 
-                    //var qTable_tosave = ismax ? max_qTable : qTable;
-                    var qTable_tosave = qTable;
+        //            //var qTable_tosave = ismax ? max_qTable : qTable;
+        //            var qTable_tosave = qTable;
 
-                    if(isTableA)
-                    {
-                        qTable_tosave = qTable;
-                    }
-                    else
-                    {
-                        qTable_tosave = qTable2;
-                    }
+        //            if(isTableA)
+        //            {
+        //                qTable_tosave = qTable;
+        //            }
+        //            else
+        //            {
+        //                qTable_tosave = qTable2;
+        //            }
 
-                    foreach (var outerEntry in qTable_tosave)
-                    {
-                        var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
-                        var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
-                        var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
-                            $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}"
-                        );
+        //            foreach (var outerEntry in qTable_tosave)
+        //            {
+        //                var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
+        //                var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
+        //                var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
+        //                    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}‖{innerEntry.Value.Item4}‖{string.Join("±", innerEntry.Value.Item5.Item1.Select(d => $"{d.Key}⦿{d.Value}"))}§{innerEntry.Value.Item5.Item2}"
+        //                 );
 
-                        convertedQTable[outerKey] = String.Join("★", innerDictSerialized);
-                    }
+        //                convertedQTable[outerKey] = String.Join("★", innerDictSerialized);
+        //            }
 
-                    if (!Directory.Exists(baseDir2))
-                    {
-                        // 创建目录
-                        Directory.CreateDirectory(baseDir2);
+        //            if (!Directory.Exists(baseDir2))
+        //            {
+        //                // 创建目录
+        //                Directory.CreateDirectory(baseDir2);
 
-                    }
-                    string personName = _calcPerson.Name.Replace("/", "_");
-                    //string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
-                    string qTableType = j == 0 ? "qTable-1" : "qTable-2";
-                    string filePath = ismax ? Path.Combine(baseDir2, $"{qTableType}-{personName}-max.json") : Path.Combine(baseDir2, $"{qTableType}-{personName}.json");
-                    try
-                    {
-                        var options = new JsonSerializerOptions { WriteIndented = true };
-                        string jsonString = JsonSerializer.Serialize(convertedQTable, options);
-                        File.WriteAllText(filePath, jsonString);
-                        Debug.WriteLine("QTable has been successfully saved to " + filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine("Error saving QTable: " + ex.Message);
-                    }
-                }
+        //            }
+        //            string personName = _calcPerson.Name.Replace("/", "_");
+        //            //string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
+        //            string qTableType = j == 0 ? "qTable-1" : "qTable-2";
+        //            string filePath = ismax ? Path.Combine(baseDir2, $"{qTableType}-{personName}-max.json") : Path.Combine(baseDir2, $"{qTableType}-{personName}.json");
+        //            try
+        //            {
+        //                var options = new JsonSerializerOptions { WriteIndented = true };
+        //                string jsonString = JsonSerializer.Serialize(convertedQTable, options);
+        //                File.WriteAllText(filePath, jsonString);
+        //                Debug.WriteLine("QTable has been successfully saved to " + filePath);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Debug.WriteLine("Error saving QTable: " + ex.Message);
+        //            }
+        //        }
                 
                 
                 
-            }
+        //    }
             
-        }
+        //}
 
         public void LoadQTableFromFile()
         {
             LoadQTableFromFile(false);
-            LoadQTableFromFile(true);
+            //LoadQTableFromFile(true);
             if(this.qTable.Count == 0 && this.max_qTable.Count == 0)
             {
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
-                Logger.Info("No saved QTable found. Initializing a new QTable.");
-                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                Logger.Info("After the Loading, No saved QTable found. Initializing a new QTable.");
+                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
+                this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
             }
         }
 
@@ -1763,14 +1765,14 @@ namespace CalculationEngine.HouseholdElements {
                     var jsonString = File.ReadAllText(filePath);
                     var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
 
-                    var readed_QTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    var readed_QTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
 
                     foreach (var outerEntry in convertedQTable)
                     {
                         var outerKeyParts = outerEntry.Key.Split('§');
                         var outerKeyDictParts = outerKeyParts[0].Split('±').Select(p => p.Split('⦿')).ToDictionary(p => p[0], p => int.Parse(p[1]));
                         var outerKey = (outerKeyDictParts, outerKeyParts[1]);
-                        var innerDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+                        var innerDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string))>();
 
                         var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
                         foreach (var innerEntry in innerEntries)
@@ -1782,8 +1784,16 @@ namespace CalculationEngine.HouseholdElements {
                             var intValue = int.Parse(valueParts[1]);
                             var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
                             var dict = dictParts.Select(p => p.Split('⨁')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
+                            var r_value = double.Parse(valueParts[3]);
 
-                            innerDict[key] = (decimalValue, intValue, dict);
+                            var newStateParts = valueParts[4].Split('♯');
+                            var newStateDictParts = newStateParts[0].Split('¥').Select(p => p.Split('○')).ToDictionary(p => p[0], p => int.Parse(p[1]));
+                            var newState = (newStateDictParts, newStateParts[1]);
+
+                            innerDict[key] = (decimalValue, intValue, dict, r_value, newState);
+
+                            //innerDict[key] = (decimalValue, intValue, dict, r_value);
+                            
                         }
 
                         readed_QTable[outerKey] = innerDict;
@@ -1819,11 +1829,11 @@ namespace CalculationEngine.HouseholdElements {
                     // 出错时，初始化为新的字典
                     if (!isMax)
                     {
-                        this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                        this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>> (new CustomKeyComparer());
                     }
                     else
                     {
-                        this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                        this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
                     }
                     
                     
@@ -1836,118 +1846,119 @@ namespace CalculationEngine.HouseholdElements {
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
                 if (!isMax)
                 {
-                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
                 }
                 else
                 {
-                    this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+                    this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
                 }
             }
         }
 
-        public void LoadTwoQTableFromFile()
-        {
-            for (int j=0; j< 1; j++)
-            {
-                bool isMax = j == 1;
-                for (int i = 0; i < 2; i++)
-                {
-                    if (isMax)
-                    {
-                        Debug.WriteLine("Now Loading Max QTable from file...");
-                    }
-                    else
-                    {
-                        Debug.WriteLine("Now Loading QTable from file...");
-                    }
-                    string baseDir = @"C:\Work\ML\Models";
-                    // 确保目录存在
-                    if (!Directory.Exists(baseDir))
-                    {
-                        Directory.CreateDirectory(baseDir);
-                    }
+        //public void LoadTwoQTableFromFile()
+        //{
+        //    for (int j=0; j< 1; j++)
+        //    {
+        //        bool isMax = j == 1;
+        //        for (int i = 0; i < 2; i++)
+        //        {
+        //            if (isMax)
+        //            {
+        //                Debug.WriteLine("Now Loading Max QTable from file...");
+        //            }
+        //            else
+        //            {
+        //                Debug.WriteLine("Now Loading QTable from file...");
+        //            }
+        //            string baseDir = @"C:\Work\ML\Models";
+        //            // 确保目录存在
+        //            if (!Directory.Exists(baseDir))
+        //            {
+        //                Directory.CreateDirectory(baseDir);
+        //            }
 
-                    // 处理文件名以避免路径问题
-                    string personName = _calcPerson.Name.Replace("/", "_");
-                    string qTableType = i == 0 ? "qTable-1" : "qTable-2";
-                    string filePath = Path.Combine(baseDir, $"{qTableType}-{personName}.json");
-                    //if (isMax)
-                    //{
-                    //    filePath = Path.Combine(baseDir, $"{qTableType}-{personName}-max.json");
-                    //}
+        //            // 处理文件名以避免路径问题
+        //            string personName = _calcPerson.Name.Replace("/", "_");
+        //            string qTableType = i == 0 ? "qTable-1" : "qTable-2";
+        //            string filePath = Path.Combine(baseDir, $"{qTableType}-{personName}.json");
+        //            //if (isMax)
+        //            //{
+        //            //    filePath = Path.Combine(baseDir, $"{qTableType}-{personName}-max.json");
+        //            //}
 
-                    // 检查文件是否存在
-                    if (File.Exists(filePath))
-                    {
-                        try
-                        {
-                            var jsonString = File.ReadAllText(filePath);
-                            var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
+        //            // 检查文件是否存在
+        //            if (File.Exists(filePath))
+        //            {
+        //                try
+        //                {
+        //                    var jsonString = File.ReadAllText(filePath);
+        //                    var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
 
-                            var readed_QTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        //                    var readed_QTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double)>>(new CustomKeyComparer());
 
-                            foreach (var outerEntry in convertedQTable)
-                            {
-                                var outerKeyParts = outerEntry.Key.Split('§');
-                                var outerKeyDictParts = outerKeyParts[0].Split('±').Select(p => p.Split('⦿')).ToDictionary(p => p[0], p => int.Parse(p[1]));
-                                var outerKey = (outerKeyDictParts, outerKeyParts[1]);
-                                var innerDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //                    foreach (var outerEntry in convertedQTable)
+        //                    {
+        //                        var outerKeyParts = outerEntry.Key.Split('§');
+        //                        var outerKeyDictParts = outerKeyParts[0].Split('±').Select(p => p.Split('⦿')).ToDictionary(p => p[0], p => int.Parse(p[1]));
+        //                        var outerKey = (outerKeyDictParts, outerKeyParts[1]);
+        //                        var innerDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double)>();
 
-                                var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
-                                foreach (var innerEntry in innerEntries)
-                                {
-                                    var parts = innerEntry.Split('¶');
-                                    var key = parts[0];
-                                    var valueParts = parts[1].Split('‖');
-                                    var decimalValue = double.Parse(valueParts[0]);
-                                    var intValue = int.Parse(valueParts[1]);
-                                    var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
-                                    var dict = dictParts.Select(p => p.Split('⨁')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
+        //                        var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
+        //                        foreach (var innerEntry in innerEntries)
+        //                        {
+        //                            var parts = innerEntry.Split('¶');
+        //                            var key = parts[0];
+        //                            var valueParts = parts[1].Split('‖');
+        //                            var decimalValue = double.Parse(valueParts[0]);
+        //                            var intValue = int.Parse(valueParts[1]);
+        //                            var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
+        //                            var dict = dictParts.Select(p => p.Split('⨁')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
+        //                            var r_value = double.Parse(valueParts[3]);
 
-                                    innerDict[key] = (decimalValue, intValue, dict);
-                                }
+        //                            innerDict[key] = (decimalValue, intValue, dict, r_value);
+        //                        }
 
-                                readed_QTable[outerKey] = innerDict;
-                            }
-                            if (i == 0)
-                            {
-                                this.qTable = readed_QTable;
-                            }
-                            else
-                            {
-                                this.qTable2 = readed_QTable;
-                            }
-                            Debug.WriteLine("QTable has been successfully loaded from " + filePath);
-                            Logger.Info("QTable has been successfully loaded from " + filePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine("Error loading QTable: " + ex.Message);
-                            Logger.Info("Error loading QTable: " + ex.Message);
-                            //Logger.Error("Error loading QTable: " + ex.Message);
-                            // 出错时，初始化为新的字典
-                            this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                            //this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                            //this.max_qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                            this.qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        // 文件不存在，初始化为新的字典
-                        Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
-                        Logger.Info("No saved QTable found. Initializing a new QTable.");
-                        this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                        //this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                        //this.max_qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                        this.qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
-                        break;
-                    }
-                }
-            }
+        //                        readed_QTable[outerKey] = innerDict;
+        //                    }
+        //                    if (i == 0)
+        //                    {
+        //                        this.qTable = readed_QTable;
+        //                    }
+        //                    else
+        //                    {
+        //                        this.qTable2 = readed_QTable;
+        //                    }
+        //                    Debug.WriteLine("QTable has been successfully loaded from " + filePath);
+        //                    Logger.Info("QTable has been successfully loaded from " + filePath);
+        //                }
+        //                catch (Exception ex)
+        //                {
+        //                    Debug.WriteLine("Error loading QTable: " + ex.Message);
+        //                    Logger.Info("Error loading QTable: " + ex.Message);
+        //                    //Logger.Error("Error loading QTable: " + ex.Message);
+        //                    // 出错时，初始化为新的字典
+        //                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double)>>(new CustomKeyComparer());
+        //                    //this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        //                    //this.max_qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        //                    this.qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double)>>(new CustomKeyComparer());
+        //                    break;
+        //                }
+        //            }
+        //            else
+        //            {
+        //                // 文件不存在，初始化为新的字典
+        //                Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
+        //                Logger.Info("No saved QTable found. Initializing a new QTable.");
+        //                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double)>>(new CustomKeyComparer());
+        //                //this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        //                //this.max_qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>>(new CustomKeyComparer());
+        //                this.qTable2 = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double)>>(new CustomKeyComparer());
+        //                break;
+        //            }
+        //        }
+        //    }
             
-        }
+        //}
 
 
 
@@ -2055,539 +2066,539 @@ namespace CalculationEngine.HouseholdElements {
             //return "";
         }
 
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Double_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            if (qTable.Count == 0)
-            {
-                LoadTwoQTableFromFile();
-            }
+        //private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Double_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        //{
+        //    if (qTable.Count == 0)
+        //    {
+        //        LoadTwoQTableFromFile();
+        //    }
 
-            //double bestAverageR_S_A = 0;
-            //double sleepAverageR_S_A = 0;
-            //string readed_next_affordance_name = next_affordance_name;
-            //string best_affordance_name = "";
-            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+        //    //double bestAverageR_S_A = 0;
+        //    //double sleepAverageR_S_A = 0;
+        //    //string readed_next_affordance_name = next_affordance_name;
+        //    //string best_affordance_name = "";
+        //    (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
 
-            //double epsilon1 = 0.1;
-            //Random rnd1 = new Random(time.InternalStep);
-            //Random rnd2 = new Random(time.InternalStep+1);
-            //bool random1 = (rnd1.NextDouble() < epsilon1);
-            //bool random2 = (rnd2.NextDouble() < epsilon1);
+        //    //double epsilon1 = 0.1;
+        //    //Random rnd1 = new Random(time.InternalStep);
+        //    //Random rnd2 = new Random(time.InternalStep+1);
+        //    //bool random1 = (rnd1.NextDouble() < epsilon1);
+        //    //bool random2 = (rnd2.NextDouble() < epsilon1);
 
-            var random = new Random(time.InternalStep);
-            bool updateA = random.NextDouble() < 0.5;
+        //    var random = new Random(time.InternalStep);
+        //    bool updateA = random.NextDouble() < 0.5;
 
-            var bestQ_S_A = double.MinValue;
-            var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
-            //ICalcAffordanceBase sarsa_affordacne = null;
+        //    var bestQ_S_A = double.MinValue;
+        //    var bestAffordance = allAvailableAffordances[0];
+        //    ICalcAffordanceBase sleep = null;
+        //    //ICalcAffordanceBase sarsa_affordacne = null;
 
-            Dictionary<string, int> desire_level_before = null;
+        //    Dictionary<string, int> desire_level_before = null;
 
-            double alpha = 0.2;// 0.2 is defult
+        //    double alpha = 0.2;// 0.2 is defult
 
-            //double alpha = 0.5 * Math.Pow(0.997, 0.5 * (qTable.Count + qTable2.Count));
-            //if (TableNumberEachDay.Count > 3)
-            //{
-            //    int TableNumberToday = this.qTable.Count + this.qTable2.Count;
-            //    int TableNumberLastWeek = TableNumberToday;
+        //    //double alpha = 0.5 * Math.Pow(0.997, 0.5 * (qTable.Count + qTable2.Count));
+        //    //if (TableNumberEachDay.Count > 3)
+        //    //{
+        //    //    int TableNumberToday = this.qTable.Count + this.qTable2.Count;
+        //    //    int TableNumberLastWeek = TableNumberToday;
                 
-            //    if (this.TableNumberEachDay.TryGetValue(now.Date.AddDays(-3), out var lastWeekTableNumber))
-            //    {
-            //        TableNumberLastWeek = lastWeekTableNumber;
-            //        int DeltaTableNumber = TableNumberToday - TableNumberLastWeek;
-            //        //alpha = 0.0148 * DeltaTableNumber + 0.01;
-            //        alpha = ((DeltaTableNumber + 10 - 1) / 10) * 0.1;
-            //        if (alpha > 0.5)
-            //        {
-            //            alpha = 0.5;
-            //        }
-            //    }
-            //    else
-            //    {
-            //        alpha = 0.2;
-            //    }
-            //}
+        //    //    if (this.TableNumberEachDay.TryGetValue(now.Date.AddDays(-3), out var lastWeekTableNumber))
+        //    //    {
+        //    //        TableNumberLastWeek = lastWeekTableNumber;
+        //    //        int DeltaTableNumber = TableNumberToday - TableNumberLastWeek;
+        //    //        //alpha = 0.0148 * DeltaTableNumber + 0.01;
+        //    //        alpha = ((DeltaTableNumber + 10 - 1) / 10) * 0.1;
+        //    //        if (alpha > 0.5)
+        //    //        {
+        //    //            alpha = 0.5;
+        //    //        }
+        //    //    }
+        //    //    else
+        //    //    {
+        //    //        alpha = 0.2;
+        //    //    }
+        //    //}
 
-            //TimeSpan sleepDiff = now - lastSleepTime;
-            //if(sleepDiff.TotalHours > 23)
-            //{
-            //    alpha = 0.5;
-            //}
+        //    //TimeSpan sleepDiff = now - lastSleepTime;
+        //    //if(sleepDiff.TotalHours > 23)
+        //    //{
+        //    //    alpha = 0.5;
+        //    //}
 
-            foreach (var affordance in allAvailableAffordances)
-            {
-                if (affordance.Name.Contains("Replacement Activity"))
-                {
-                    continue;
-                }
+        //    foreach (var affordance in allAvailableAffordances)
+        //    {
+        //        if (affordance.Name.Contains("Replacement Activity"))
+        //        {
+        //            continue;
+        //        }
 
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                var duration = calcTotalDeviationResult.realDuration;
+        //        var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+        //        var desireDiff = calcTotalDeviationResult.totalDeviation;
+        //        var weightSum = calcTotalDeviationResult.WeightSum;
+        //        var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+        //        var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+        //        var duration = calcTotalDeviationResult.realDuration;
 
-                //string sarsa_next_affordance_candi = null;
+        //        //string sarsa_next_affordance_candi = null;
 
-                string nowTimeState = makeTimeSpan(now, 0);
-                string newTimeState = makeTimeSpan(now, duration);
-                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+        //        string nowTimeState = makeTimeSpan(now, 0);
+        //        string newTimeState = makeTimeSpan(now, duration);
+        //        Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
                 
 
 
-                double gamma = 0.95; //defult 0.8
+        //        double gamma = 0.95; //defult 0.8
 
-                if (desire_level_before == null)
-                {
-                    desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                    this.currentState = new(desire_level_before, nowTimeState);
-                }
+        //        if (desire_level_before == null)
+        //        {
+        //            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+        //            this.currentState = new(desire_level_before, nowTimeState);
+        //        }
 
-                (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
+        //        (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
-                var R_S_A = -desireDiff + 1000000; //desireDiff less is better, R_S_A more is better
+        //        var R_S_A = -desireDiff + 1000000; //desireDiff less is better, R_S_A more is better
 
-                //var averageR_S_A = R_S_A / duration;
+        //        //var averageR_S_A = R_S_A / duration;
 
-                var selectedQTable1 = updateA ? qTable : qTable2;
+        //        var selectedQTable1 = updateA ? qTable : qTable2;
 
 
-                if (!selectedQTable1.TryGetValue(currentState, out var Q_S))
-                {
-                    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                    selectedQTable1[currentState] = Q_S;
-                }
+        //        if (!selectedQTable1.TryGetValue(currentState, out var Q_S))
+        //        {
+        //            Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //            selectedQTable1[currentState] = Q_S;
+        //        }
 
-                (double, int, Dictionary<int, double>) Q_S_A;
+        //        (double, int, Dictionary<int, double>) Q_S_A;
 
-                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-                {
-                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-                }
+        //        if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+        //        {
+        //            Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+        //        }
 
-                //first prediction
-                double maxQ_nS_nA = 0;
-                string maxQ_nS_nA_name = "";
+        //        //first prediction
+        //        double maxQ_nS_nA = 0;
+        //        string maxQ_nS_nA_name = "";
                 
                 
                 
-                ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
+        //        ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
 
-                var selectedQTable2 = updateA ? qTable2 : qTable;
+        //        var selectedQTable2 = updateA ? qTable2 : qTable;
 
-                if (selectedQTable1.TryGetValue(newState, out Q_newState_actions))
-                {
-                    var action = Q_newState_actions.OrderByDescending(a => a.Value.Item1).FirstOrDefault();
+        //        if (selectedQTable1.TryGetValue(newState, out Q_newState_actions))
+        //        {
+        //            var action = Q_newState_actions.OrderByDescending(a => a.Value.Item1).FirstOrDefault();
 
-                    maxQ_nS_nA_name = action.Key;
+        //            maxQ_nS_nA_name = action.Key;
                     
                     
                     
-                }
+        //        }
 
                 
 
-                if (selectedQTable2.TryGetValue(newState, out var Q_newState_actions_fromTable2))
-                {
+        //        if (selectedQTable2.TryGetValue(newState, out var Q_newState_actions_fromTable2))
+        //        {
                    
-                    if (maxQ_nS_nA_name!=null && Q_newState_actions_fromTable2.TryGetValue(maxQ_nS_nA_name, out var actionValueFromTable2))
-                    {
+        //            if (maxQ_nS_nA_name!=null && Q_newState_actions_fromTable2.TryGetValue(maxQ_nS_nA_name, out var actionValueFromTable2))
+        //            {
                         
-                        maxQ_nS_nA = actionValueFromTable2.Item1;
-                    }
-                }
+        //                maxQ_nS_nA = actionValueFromTable2.Item1;
+        //            }
+        //        }
 
-                // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma);
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                selectedQTable1[currentState][affordance.Name] = QSA_Info;
+        //        // Update the Q value for the current state and action
+        //        double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma);
+        //        var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
+        //        selectedQTable1[currentState][affordance.Name] = QSA_Info;
 
-                //new_Q_S_A = Table1Value +  Table2Value
-                if (selectedQTable2.TryGetValue(currentState, out var Q_CurrentState_actions_fromTable2))
-                {
+        //        //new_Q_S_A = Table1Value +  Table2Value
+        //        if (selectedQTable2.TryGetValue(currentState, out var Q_CurrentState_actions_fromTable2))
+        //        {
                     
-                    if (Q_CurrentState_actions_fromTable2.TryGetValue(affordance.Name, out var CurrentActionValueFromTable2))
-                    {
+        //            if (Q_CurrentState_actions_fromTable2.TryGetValue(affordance.Name, out var CurrentActionValueFromTable2))
+        //            {
                         
-                        new_Q_S_A += CurrentActionValueFromTable2.Item1;
-                    }
-                }
+        //                new_Q_S_A += CurrentActionValueFromTable2.Item1;
+        //            }
+        //        }
 
-                if (new_Q_S_A > bestQ_S_A)
-                {
-                    bestQ_S_A = new_Q_S_A;
-                    bestAffordance = affordance;
-                    //bestAverageR_S_A = averageR_S_A;
-                    //this.currentState = newState;
+        //        if (new_Q_S_A > bestQ_S_A)
+        //        {
+        //            bestQ_S_A = new_Q_S_A;
+        //            bestAffordance = affordance;
+        //            //bestAverageR_S_A = averageR_S_A;
+        //            //this.currentState = newState;
 
-                }
+        //        }
 
-                //V1 if sleep in the wait list, then direct run it
-                if (weightSum >= 1000)
-                {
-                    sleep = affordance;
-                    //sleepAverageR_S_A = averageR_S_A;
-                }
+        //        //V1 if sleep in the wait list, then direct run it
+        //        if (weightSum >= 1000)
+        //        {
+        //            sleep = affordance;
+        //            //sleepAverageR_S_A = averageR_S_A;
+        //        }
 
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+        //        {
+        //            if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+        //            {
+        //                throw new LPGException("Logfile was null.");
+        //            }
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
 
-            }
+        //    }
 
-            this.TableNumberEachDay[now.Date] = this.qTable.Count + this.qTable2.Count;
+        //    this.TableNumberEachDay[now.Date] = this.qTable.Count + this.qTable2.Count;
 
-            if (sleep != null)
-            {
-                //averageReward = sleepAverageR_S_A;
-                this.lastSleepTime = now;
-                return sleep;
-            }
-
-
-            //if (random1)
-            //{
-            //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
-            //}
-
-            //averageReward = bestAverageR_S_A;
-            return bestAffordance;
-
-        }
+        //    if (sleep != null)
+        //    {
+        //        //averageReward = sleepAverageR_S_A;
+        //        this.lastSleepTime = now;
+        //        return sleep;
+        //    }
 
 
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Pre_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            if(qTable.Count == 0)
-            {
-                LoadQTableFromFile();
-            }
-            string readed_next_affordance_name = next_affordance_name;
-            string best_affordance_name = "";
-            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+        //    //if (random1)
+        //    //{
+        //    //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+        //    //}
 
-            //double epsilon1 = 0.1;
-            //Random rnd1 = new Random(time.InternalStep);
-            //Random rnd2 = new Random(time.InternalStep+1);
-            //bool random1 = (rnd1.NextDouble() < epsilon1);
-            //bool random2 = (rnd2.NextDouble() < epsilon1);
+        //    //averageReward = bestAverageR_S_A;
+        //    return bestAffordance;
 
-            var bestQ_S_A = double.MinValue;
-            var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
-            ICalcAffordanceBase sarsa_affordacne = null;
+        //}
 
-            Dictionary<string, int> desire_level_before = null;
+
+        //private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Pre_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        //{
+        //    if(qTable.Count == 0)
+        //    {
+        //        LoadQTableFromFile();
+        //    }
+        //    string readed_next_affordance_name = next_affordance_name;
+        //    string best_affordance_name = "";
+        //    (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+
+        //    //double epsilon1 = 0.1;
+        //    //Random rnd1 = new Random(time.InternalStep);
+        //    //Random rnd2 = new Random(time.InternalStep+1);
+        //    //bool random1 = (rnd1.NextDouble() < epsilon1);
+        //    //bool random2 = (rnd2.NextDouble() < epsilon1);
+
+        //    var bestQ_S_A = double.MinValue;
+        //    var bestAffordance = allAvailableAffordances[0];
+        //    ICalcAffordanceBase sleep = null;
+        //    ICalcAffordanceBase sarsa_affordacne = null;
+
+        //    Dictionary<string, int> desire_level_before = null;
 
             
-            foreach (var affordance in allAvailableAffordances)
-            {
-                if(affordance.Name.Contains("Replacement Activity"))
-                {
-                    continue;
-                }
+        //    foreach (var affordance in allAvailableAffordances)
+        //    {
+        //        if(affordance.Name.Contains("Replacement Activity"))
+        //        {
+        //            continue;
+        //        }
 
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                var duration = calcTotalDeviationResult.realDuration;
+        //        var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+        //        var desireDiff = calcTotalDeviationResult.totalDeviation;
+        //        var weightSum = calcTotalDeviationResult.WeightSum;
+        //        var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+        //        var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+        //        var duration = calcTotalDeviationResult.realDuration;
 
-                string sarsa_next_affordance_candi = null;
+        //        string sarsa_next_affordance_candi = null;
 
-                string nowTimeState = makeTimeSpan(now, 0);
-                string newTimeState = makeTimeSpan(now, duration);
-                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+        //        string nowTimeState = makeTimeSpan(now, 0);
+        //        string newTimeState = makeTimeSpan(now, duration);
+        //        Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
-                double alpha = 0.2;
-                double gamma = 0.8;
+        //        double alpha = 0.2;
+        //        double gamma = 0.8;
 
-                if (desire_level_before == null)
-                {
-                    desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                    this.currentState = new (desire_level_before, nowTimeState);
-                }
+        //        if (desire_level_before == null)
+        //        {
+        //            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+        //            this.currentState = new (desire_level_before, nowTimeState);
+        //        }
 
-                (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
+        //        (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
-                 var R_S_A = -desireDiff + 1000000;
+        //         var R_S_A = -desireDiff + 1000000;
 
-                if (!qTable.TryGetValue(currentState, out var Q_S))
-                {
-                    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                    qTable[currentState] = Q_S;
-                }
+        //        if (!qTable.TryGetValue(currentState, out var Q_S))
+        //        {
+        //            Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //            qTable[currentState] = Q_S;
+        //        }
 
-                (double, int, Dictionary<int, double>) Q_S_A;
+        //        (double, int, Dictionary<int, double>) Q_S_A;
                 
-                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-                {
-                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-                }
+        //        if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+        //        {
+        //            Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+        //        }
 
-                //first prediction
-                double maxQ_nS_nA = 0;
-                int maxQ_nS_nA_duration = 0;
-                Dictionary<int, double> maxQ_nS_nA_satValus = null;
-                ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
+        //        //first prediction
+        //        double maxQ_nS_nA = 0;
+        //        int maxQ_nS_nA_duration = 0;
+        //        Dictionary<int, double> maxQ_nS_nA_satValus = null;
+        //        ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
                 
-                if (max_qTable.TryGetValue(newState, out Q_newState_actions))
-                {
+        //        if (max_qTable.TryGetValue(newState, out Q_newState_actions))
+        //        {
                    
-                    var action = Q_newState_actions.First();
-                    maxQ_nS_nA = action.Value.Item1;
-                    maxQ_nS_nA_duration = action.Value.Item2;
-                    maxQ_nS_nA_satValus = action.Value.Item3;
+        //            var action = Q_newState_actions.First();
+        //            maxQ_nS_nA = action.Value.Item1;
+        //            maxQ_nS_nA_duration = action.Value.Item2;
+        //            maxQ_nS_nA_satValus = action.Value.Item3;
 
-                    sarsa_next_affordance_candi = action.Key;
-                }
-                else
-                {
-                    next_affordance_name = "";
-                }
+        //            sarsa_next_affordance_candi = action.Key;
+        //        }
+        //        else
+        //        {
+        //            next_affordance_name = "";
+        //        }
 
-                //second prediction
-                double maxQ_nnS_nnA = 0;
+        //        //second prediction
+        //        double maxQ_nnS_nnA = 0;
 
-                // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                qTable[currentState][affordance.Name] = QSA_Info;
+        //        // Update the Q value for the current state and action
+        //        double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma  + maxQ_nnS_nnA * gamma * gamma);
+        //        var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
+        //        qTable[currentState][affordance.Name] = QSA_Info;
 
-                if(new_Q_S_A > bestQ_S_A)
-                {
-                    bestQ_S_A = new_Q_S_A;
-                    bestAffordance = affordance;
-                    //this.currentState = newState;
-                    next_affordance_name = sarsa_next_affordance_candi;
-                    best_affordance_name = affordance.Name;
-                    bestQSA_inCurrentState = QSA_Info;
+        //        if(new_Q_S_A > bestQ_S_A)
+        //        {
+        //            bestQ_S_A = new_Q_S_A;
+        //            bestAffordance = affordance;
+        //            //this.currentState = newState;
+        //            next_affordance_name = sarsa_next_affordance_candi;
+        //            best_affordance_name = affordance.Name;
+        //            bestQSA_inCurrentState = QSA_Info;
                     
-                }
+        //        }
 
-                //V1 if sleep in the wait list, then direct run it
-                if (weightSum >= 1000)
-                {                
-                    sleep = affordance;
-                }
+        //        //V1 if sleep in the wait list, then direct run it
+        //        if (weightSum >= 1000)
+        //        {                
+        //            sleep = affordance;
+        //        }
 
-                if(affordance.Name == readed_next_affordance_name)
-                {
-                    sarsa_affordacne = affordance;
-                }
+        //        if(affordance.Name == readed_next_affordance_name)
+        //        {
+        //            sarsa_affordacne = affordance;
+        //        }
 
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+        //        {
+        //            if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+        //            {
+        //                throw new LPGException("Logfile was null.");
+        //            }
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
                              
-            }
-            max_qTable.AddOrUpdate(
-                currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                {
-                    [best_affordance_name] = bestQSA_inCurrentState
-                },
-                (key, existingVal) =>
-                {
-                    var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                    newDict.TryAdd(best_affordance_name, bestQSA_inCurrentState);
-                    return newDict; 
-                }
-            );
+        //    }
+        //    max_qTable.AddOrUpdate(
+        //        currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+        //        {
+        //            [best_affordance_name] = bestQSA_inCurrentState
+        //        },
+        //        (key, existingVal) =>
+        //        {
+        //            var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //            newDict.TryAdd(best_affordance_name, bestQSA_inCurrentState);
+        //            return newDict; 
+        //        }
+        //    );
 
-            if (sleep != null)
-            {
-                return sleep;
-            }
-
-
-            //if (random1)
-            //{
-            //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
-            //}
-
-            return bestAffordance;
-
-        }
-
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Post_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
-                                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            if (qTable.Count == 0)
-            {
-                LoadQTableFromFile();
-            }
-
-            double epsilon1 = 0.1;
-            Random rnd1 = new Random(time.InternalStep);
-            bool random1 = (rnd1.NextDouble() < epsilon1);
-
-            var bestQ_S_A = double.MinValue;
-            var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
-            ICalcAffordanceBase sarsa_affordacne = null;
-
-            Dictionary<string, int> desire_level_before = null;
-
-            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+        //    if (sleep != null)
+        //    {
+        //        return sleep;
+        //    }
 
 
-            foreach (var affordance in allAvailableAffordances)
-            {
-                if (affordance.Name.Contains("Replacement Activity"))
-                {
-                    continue;
-                }
+        //    //if (random1)
+        //    //{
+        //    //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+        //    //}
 
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                var duration = calcTotalDeviationResult.realDuration;
+        //    return bestAffordance;
 
-                string sarsa_next_affordance_candi = null;
+        //}
 
-                string nowTimeState = makeTimeSpan(now, 0);
-                string newTimeState = makeTimeSpan(now, duration);
-                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+        //private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Post_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        //{
+        //    if (qTable.Count == 0)
+        //    {
+        //        LoadQTableFromFile();
+        //    }
 
-                double alpha = 0.2;
-                double gamma = 0.8;
+        //    double epsilon1 = 0.1;
+        //    Random rnd1 = new Random(time.InternalStep);
+        //    bool random1 = (rnd1.NextDouble() < epsilon1);
 
-                if (desire_level_before == null)
-                {
-                    desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                    this.currentState = new(desire_level_before, nowTimeState);
-                }
+        //    var bestQ_S_A = double.MinValue;
+        //    var bestAffordance = allAvailableAffordances[0];
+        //    ICalcAffordanceBase sleep = null;
+        //    ICalcAffordanceBase sarsa_affordacne = null;
 
-                //V1 if sleep in the wait list, then direct run it
-                if (weightSum >= 1000)
-                {
-                    sleep = affordance;
-                }
+        //    Dictionary<string, int> desire_level_before = null;
 
-                (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
-
-                var R_S_A = -desireDiff + 1000000;
-
-                if (!qTable.TryGetValue(currentState, out var Q_S))
-                {
-                    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                    qTable[currentState] = Q_S;
-                }
-
-                (double, int, Dictionary<int, double>) Q_S_A;
-
-                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-                {
-                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-                }
-
-                //first prediction
-                double maxQ_nS_nA = 0;
-                int maxQ_nS_nA_duration = 0;
-                Dictionary<int, double> maxQ_nS_nA_satValus = null;
-                ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
-
-                if (qTable.TryGetValue(newState, out Q_newState_actions))
-                {
-                    var action = Q_newState_actions.OrderByDescending(a => a.Value.Item1).FirstOrDefault();
-
-                    maxQ_nS_nA = action.Value.Item1;
-                    maxQ_nS_nA_duration = action.Value.Item2;
-                    maxQ_nS_nA_satValus = action.Value.Item3;
-                }
-                //second prediction
-                double maxQ_nnS_nnA = 0;
-
-                // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma + maxQ_nnS_nnA * gamma * gamma);
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                //qTable[currentState][affordance.Name] = QSA_Info;
-
-                if (Q_S_A.Item1 > bestQ_S_A)
-                {
-                    bestQ_S_A = Q_S_A.Item1;
-                    bestAffordance = affordance;
-                    bestQSA_inCurrentState= QSA_Info;
-                    //this.currentState = newState;
-                }
-
-                if(weightSum >= 1000)
-                {
-                    bestQ_S_A = Q_S_A.Item1;
-                    bestAffordance = affordance;
-                    bestQSA_inCurrentState = QSA_Info;
-                    break;
-                }
+        //    (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
 
 
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
+        //    foreach (var affordance in allAvailableAffordances)
+        //    {
+        //        if (affordance.Name.Contains("Replacement Activity"))
+        //        {
+        //            continue;
+        //        }
 
-            }
+        //        var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+        //        var desireDiff = calcTotalDeviationResult.totalDeviation;
+        //        var weightSum = calcTotalDeviationResult.WeightSum;
+        //        var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+        //        var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+        //        var duration = calcTotalDeviationResult.realDuration;
 
-            qTable.AddOrUpdate(
-                               currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                               {
-                                   [bestAffordance.Name] = bestQSA_inCurrentState
-                },
-                                              (key, existingVal) =>
-                                              {
-                    var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                    newDict.TryAdd(bestAffordance.Name, bestQSA_inCurrentState);
-                    return newDict;
-                }
-                                                         );
+        //        string sarsa_next_affordance_candi = null;
 
-            if (sleep != null)
-            {
-                return sleep;
-            }
+        //        string nowTimeState = makeTimeSpan(now, 0);
+        //        string newTimeState = makeTimeSpan(now, duration);
+        //        Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+
+        //        double alpha = 0.2;
+        //        double gamma = 0.8;
+
+        //        if (desire_level_before == null)
+        //        {
+        //            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+        //            this.currentState = new(desire_level_before, nowTimeState);
+        //        }
+
+        //        //V1 if sleep in the wait list, then direct run it
+        //        if (weightSum >= 1000)
+        //        {
+        //            sleep = affordance;
+        //        }
+
+        //        (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
+
+        //        var R_S_A = -desireDiff + 1000000;
+
+        //        if (!qTable.TryGetValue(currentState, out var Q_S))
+        //        {
+        //            Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //            qTable[currentState] = Q_S;
+        //        }
+
+        //        (double, int, Dictionary<int, double>) Q_S_A;
+
+        //        if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+        //        {
+        //            Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+        //        }
+
+        //        //first prediction
+        //        double maxQ_nS_nA = 0;
+        //        int maxQ_nS_nA_duration = 0;
+        //        Dictionary<int, double> maxQ_nS_nA_satValus = null;
+        //        ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
+
+        //        if (qTable.TryGetValue(newState, out Q_newState_actions))
+        //        {
+        //            var action = Q_newState_actions.OrderByDescending(a => a.Value.Item1).FirstOrDefault();
+
+        //            maxQ_nS_nA = action.Value.Item1;
+        //            maxQ_nS_nA_duration = action.Value.Item2;
+        //            maxQ_nS_nA_satValus = action.Value.Item3;
+        //        }
+        //        //second prediction
+        //        double maxQ_nnS_nnA = 0;
+
+        //        // Update the Q value for the current state and action
+        //        double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma + maxQ_nnS_nnA * gamma * gamma);
+        //        var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
+        //        //qTable[currentState][affordance.Name] = QSA_Info;
+
+        //        if (Q_S_A.Item1 > bestQ_S_A)
+        //        {
+        //            bestQ_S_A = Q_S_A.Item1;
+        //            bestAffordance = affordance;
+        //            bestQSA_inCurrentState= QSA_Info;
+        //            //this.currentState = newState;
+        //        }
+
+        //        if(weightSum >= 1000)
+        //        {
+        //            bestQ_S_A = Q_S_A.Item1;
+        //            bestAffordance = affordance;
+        //            bestQSA_inCurrentState = QSA_Info;
+        //            break;
+        //        }
 
 
-            //if (random1)
-            //{
-            //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
-            //}
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+        //        {
+        //            if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+        //            {
+        //                throw new LPGException("Logfile was null.");
+        //            }
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
 
-            return bestAffordance;
+        //    }
 
-        }
+        //    qTable.AddOrUpdate(
+        //                       currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+        //                       {
+        //                           [bestAffordance.Name] = bestQSA_inCurrentState
+        //        },
+        //                                      (key, existingVal) =>
+        //                                      {
+        //            var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //            newDict.TryAdd(bestAffordance.Name, bestQSA_inCurrentState);
+        //            return newDict;
+        //        }
+        //                                                 );
+
+        //    if (sleep != null)
+        //    {
+        //        return sleep;
+        //    }
+
+
+        //    //if (random1)
+        //    //{
+        //    //    return allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+        //    //}
+
+        //    return bestAffordance;
+
+        //}
 
         private ICalcAffordanceBase GetBestAffordanceFromList_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
@@ -2597,340 +2608,341 @@ namespace CalculationEngine.HouseholdElements {
             //return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Double_Q_Learning(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_n_step_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            this.RetrainBestActionsFromRandomStates(2);
+            return GetBestAffordanceFromListNewRL_n_step_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
             
         }
 
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
-                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            if (qTable.Count == 0)
-            {
-                LoadQTableFromFile();
-            }
-            string readed_next_affordance_name = next_affordance_name;
-            next_affordance_name = "";
-            //string best_affordance_name = "";
-            //(double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
+        //private ICalcAffordanceBase GetBestAffordanceFromListNewRL_2_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        //{
+        //    if (qTable.Count == 0)
+        //    {
+        //        LoadQTableFromFile();
+        //    }
+        //    string readed_next_affordance_name = next_affordance_name;
+        //    next_affordance_name = "";
+        //    //string best_affordance_name = "";
+        //    //(double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>());
             
-            int currentSearchCounter = allAvailableAffordances.Count;
-            int currentFoundCounter = 0;
+        //    int currentSearchCounter = allAvailableAffordances.Count;
+        //    int currentFoundCounter = 0;
 
-            //double epsilon1 = 0.05;
-            //Random rnd1 = new Random(time.InternalStep);
-            //Random rnd2 = new Random(time.InternalStep + 1);
-            //bool random1 = (rnd1.NextDouble() < epsilon1);
-            //bool random2 = (rnd2.NextDouble() < epsilon1);
-            //bool random1= false;
-            //bool random2 = false;
+        //    //double epsilon1 = 0.05;
+        //    //Random rnd1 = new Random(time.InternalStep);
+        //    //Random rnd2 = new Random(time.InternalStep + 1);
+        //    //bool random1 = (rnd1.NextDouble() < epsilon1);
+        //    //bool random2 = (rnd2.NextDouble() < epsilon1);
+        //    //bool random1= false;
+        //    //bool random2 = false;
 
-            var bestQ_S_A = double.MinValue;
-            var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
-            ICalcAffordanceBase sarsa_affordacne = null;
+        //    var bestQ_S_A = double.MinValue;
+        //    var bestAffordance = allAvailableAffordances[0];
+        //    ICalcAffordanceBase sleep = null;
+        //    ICalcAffordanceBase sarsa_affordacne = null;
             
 
-            //ConcurrentDictionary<int,(double,ICalcAffordanceBase)> bestAffordanceInfo = new ConcurrentDictionary<int, (double, ICalcAffordanceBase)>();
+        //    //ConcurrentDictionary<int,(double,ICalcAffordanceBase)> bestAffordanceInfo = new ConcurrentDictionary<int, (double, ICalcAffordanceBase)>();
 
-            //bestAffordanceInfo.TryAdd(0, (double.MinValue, allAvailableAffordances[0]));
+        //    //bestAffordanceInfo.TryAdd(0, (double.MinValue, allAvailableAffordances[0]));
 
-            var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
-            var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-            this.currentState = new(desire_level_before, makeTimeSpan(now, 0));
-
-
-            object locker = new object();
+        //    var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
+        //    var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+        //    this.currentState = new(desire_level_before, makeTimeSpan(now, 0));
 
 
-            //first prediction
-            //foreach (var affordance in allAvailableAffordances)
-            Parallel.ForEach(allAvailableAffordances, affordance =>
-            {
-                bool existsInPastThreeHoursCurrent = false;
-                DateTime threeHoursAgo = now.AddHours(-3);
+        //    object locker = new object();
 
-                if (isHumanInterventionInvolved)
-                {
-                    existsInPastThreeHoursCurrent = executedAffordance
-                       .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == affordance.AffCategory)
-                       .Any();
-                }
 
-                if (affordance.Name.Contains("Replacement Activity"))
-                {
-                    //continue;
-                    //lock (locker)
-                    //{
-                    //    currentFoundCounter++;
-                    //}
-                    Interlocked.Increment(ref currentFoundCounter);
-                    return;
-                }
+        //    //first prediction
+        //    //foreach (var affordance in allAvailableAffordances)
+        //    Parallel.ForEach(allAvailableAffordances, affordance =>
+        //    {
+        //        bool existsInPastThreeHoursCurrent = false;
+        //        DateTime threeHoursAgo = now.AddHours(-3);
 
-                int affordanceSearchCounter = 0;
-                int affordanceFoundCounter = 0;
-                //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
+        //        if (isHumanInterventionInvolved)
+        //        {
+        //            existsInPastThreeHoursCurrent = executedAffordance
+        //               .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == affordance.AffCategory)
+        //               .Any();
+        //        }
 
-                int duration = affordance.GetRealDuration(time);
-                bool isInterruptable = affordance.IsInterruptable;
-                var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstring, now, satValue: satisfactionvalues, newDuration: duration, interruptable: isInterruptable);
+        //        if (affordance.Name.Contains("Replacement Activity"))
+        //        {
+        //            //continue;
+        //            //lock (locker)
+        //            //{
+        //            //    currentFoundCounter++;
+        //            //}
+        //            Interlocked.Increment(ref currentFoundCounter);
+        //            return;
+        //        }
 
-                //var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                //var duration = calcTotalDeviationResult.realDuration;
+        //        int affordanceSearchCounter = 0;
+        //        int affordanceFoundCounter = 0;
+        //        //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
 
-                string sarsa_next_affordance_candi = "";
+        //        int duration = affordance.GetRealDuration(time);
+        //        bool isInterruptable = affordance.IsInterruptable;
+        //        var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
+        //        var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstring, now, satValue: satisfactionvalues, newDuration: duration, interruptable: isInterruptable);
 
-                string nowTimeState = makeTimeSpan(now, 0);
-                string newTimeState = makeTimeSpan(now, duration);
+        //        //var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+        //        var desireDiff = calcTotalDeviationResult.totalDeviation;
+        //        var weightSum = calcTotalDeviationResult.WeightSum;
+        //        var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+        //        var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+        //        //var duration = calcTotalDeviationResult.realDuration;
 
-                TimeStep currentTimeStep = time;
-                TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
-                HashSet<string> nextAllAffordanceNames = new HashSet<string>();
+        //        string sarsa_next_affordance_candi = "";
+
+        //        string nowTimeState = makeTimeSpan(now, 0);
+        //        string newTimeState = makeTimeSpan(now, duration);
+
+        //        TimeStep currentTimeStep = time;
+        //        TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+        //        HashSet<string> nextAllAffordanceNames = new HashSet<string>();
                 
-                var srcList = _normalPotentialAffs.PotentialAffordances;
-                foreach (var calcAffordanceBase in srcList)
-                {
-                    var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
-                    //
-                    //Debug.WriteLine(busynessResult);
-                    if (busynessResult == 1 && !calcAffordanceBase.Name.Contains("Replacement Activity"))
-                    {
-                        //resultingAff.Add(calcAffordanceBase);
-                        nextAllAffordanceNames.Add(calcAffordanceBase.Name);
-                    }
-                }
+        //        var srcList = _normalPotentialAffs.PotentialAffordances;
+        //        foreach (var calcAffordanceBase in srcList)
+        //        {
+        //            var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
+        //            //
+        //            //Debug.WriteLine(busynessResult);
+        //            if (busynessResult == 1 && !calcAffordanceBase.Name.Contains("Replacement Activity"))
+        //            {
+        //                //resultingAff.Add(calcAffordanceBase);
+        //                nextAllAffordanceNames.Add(calcAffordanceBase.Name);
+        //            }
+        //        }
 
-                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+        //        Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
-                double alpha = 0.2;
-                double gamma = 0.8; //0.8
-
-
-                (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
-
-                var R_S_A = -desireDiff + 1000000;
-
-                //if (!qTable.TryGetValue(currentState, out var Q_S))
-                //{
-                //    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
-                //    //qTable[currentState] = Q_S;
-                //    qTable.AddOrUpdate(currentState, Q_S, (key, existingVal) => Q_S);
-
-                //}
-                //else
-                //{
-                //    affordanceFoundCounter++;
-                //}
-
-                var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
-
-                if (Q_S.Count > 0)
-                {
-                    affordanceFoundCounter++;
-                }
-
-                (double, int, Dictionary<int, double>) Q_S_A;
-
-                affordanceSearchCounter++;
-                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-                {
-                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-                }else
-                {
-                    affordanceFoundCounter++;
-                }
-
-                //second prediction
-                double max_prediction = 0;
-                ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
-
-               affordanceSearchCounter+=nextAllAffordanceNames.Count;
-                if (qTable.TryGetValue(newState, out Q_newState_actions))
-                {
-                    //affordanceSearchCounter += Q_newState_actions.Count;
-                    foreach (var action in Q_newState_actions)
-                    {
-
-                        bool existsInPastThreeHours = false;
-
-                        if (isHumanInterventionInvolved)
-                        {
-                            if (action.Key == affordance.Name)
-                            {
-                                continue;
-                            }
-
-                            string category = _normalPotentialAffs.PotentialAffordances.FirstOrDefault(aff => aff.Name == action.Key)?.AffCategory;
-                            if(category!=null)
-                            {
-                                existsInPastThreeHours = executedAffordance
-                               .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == category)
-                               .Any();
-                            }
-                        }
-
-                        //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
-                        //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
-                        //double Q_nS_nA = action.Value.Item1;
-
-                        affordanceFoundCounter++;
-                        double Q_nS_nA = action.Value.Item1;
-                        int Q_nS_nA_duration = action.Value.Item2;
-                        Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
-
-                        var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
-                        //List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstrin_new, now, desire_ValueAfter, Q_nS_nA_satValus, Q_nS_nA_duration);
-
-                        var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
-                        var R_S_A_nS = -next_desireDiff + 1000000;
+        //        double alpha = 0.2;
+        //        double gamma = 0.8; //0.8
 
 
+        //        (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
+
+        //        var R_S_A = -desireDiff + 1000000;
+
+        //        //if (!qTable.TryGetValue(currentState, out var Q_S))
+        //        //{
+        //        //    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>();
+        //        //    //qTable[currentState] = Q_S;
+        //        //    qTable.AddOrUpdate(currentState, Q_S, (key, existingVal) => Q_S);
+
+        //        //}
+        //        //else
+        //        //{
+        //        //    affordanceFoundCounter++;
+        //        //}
+
+        //        var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+
+        //        if (Q_S.Count > 0)
+        //        {
+        //            affordanceFoundCounter++;
+        //        }
+
+        //        (double, int, Dictionary<int, double>) Q_S_A;
+
+        //        affordanceSearchCounter++;
+        //        if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+        //        {
+        //            Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+        //        }else
+        //        {
+        //            affordanceFoundCounter++;
+        //        }
+
+        //        //second prediction
+        //        double max_prediction = 0;
+        //        ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
+
+        //       affordanceSearchCounter+=nextAllAffordanceNames.Count;
+        //        if (qTable.TryGetValue(newState, out Q_newState_actions))
+        //        {
+        //            //affordanceSearchCounter += Q_newState_actions.Count;
+        //            foreach (var action in Q_newState_actions)
+        //            {
+
+        //                bool existsInPastThreeHours = false;
+
+        //                if (isHumanInterventionInvolved)
+        //                {
+        //                    if (action.Key == affordance.Name)
+        //                    {
+        //                        continue;
+        //                    }
+
+        //                    string category = _normalPotentialAffs.PotentialAffordances.FirstOrDefault(aff => aff.Name == action.Key)?.AffCategory;
+        //                    if(category!=null)
+        //                    {
+        //                        existsInPastThreeHours = executedAffordance
+        //                       .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == category)
+        //                       .Any();
+        //                    }
+        //                }
+
+        //                //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
+        //                //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
+        //                //double Q_nS_nA = action.Value.Item1;
+
+        //                affordanceFoundCounter++;
+        //                double Q_nS_nA = action.Value.Item1;
+        //                int Q_nS_nA_duration = action.Value.Item2;
+        //                Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
+
+        //                var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
+        //                //List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+        //                var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstrin_new, now, desire_ValueAfter, Q_nS_nA_satValus, Q_nS_nA_duration);
+
+        //                var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
+        //                var R_S_A_nS = -next_desireDiff + 1000000;
 
 
-                        //third prediction (arg max)
-                        var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                        (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
-                        double max_Q_nnS_nnA = 0;
-
-                        affordanceSearchCounter++;
-                        if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                        {
-                            max_Q_nnS_nnA = Q_newState_actions_nS.Select(action => action.Value.Item1).DefaultIfEmpty(0).Max();
-                            //max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
-                            affordanceFoundCounter++;
-                        }
-
-                        //double prediction = R_S_A_nS * gamma + max_Q_nnS_nnA * gamma * gamma;
-                        double prediction = (max_Q_nnS_nnA>0)? R_S_A_nS * gamma + max_Q_nnS_nnA * gamma * gamma : Q_nS_nA * gamma;
-                        if (prediction > max_prediction)
-                        {
-                            max_prediction = prediction;
-
-                            if(!existsInPastThreeHours)
-                            {
-                                sarsa_next_affordance_candi = action.Key;
-                            }
-                            //sarsa_next_affordance_candi = action.Key;
-                        }
-
-                        //if (random2)
-                        //{
-                        //    break;
-                        //}
-                    }
-                }
 
 
-                // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                //qTable[currentState][affordance.Name] = QSA_Info;
-                //qTable[currentState].AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
-                var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
-                currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
+        //                //third prediction (arg max)
+        //                var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+        //                (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+        //                double max_Q_nnS_nnA = 0;
 
-                if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
-                {
-                    lock (locker)
-                    {
-                        if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
-                        {
-                            bestQ_S_A = new_Q_S_A;
-                            bestAffordance = affordance;
-                            //best_affordance_name = affordance.Name;
-                            if (affordance.Name == readed_next_affordance_name)
-                            {
-                                next_affordance_name = sarsa_next_affordance_candi;
-                            }
+        //                affordanceSearchCounter++;
+        //                if (qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+        //                {
+        //                    max_Q_nnS_nnA = Q_newState_actions_nS.Select(action => action.Value.Item1).DefaultIfEmpty(0).Max();
+        //                    //max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
+        //                    affordanceFoundCounter++;
+        //                }
 
-                            //bestQSA_inCurrentState = QSA_Info;
-                        }
-                    }
-                }
+        //                //double prediction = R_S_A_nS * gamma + max_Q_nnS_nnA * gamma * gamma;
+        //                double prediction = (max_Q_nnS_nnA>0)? R_S_A_nS * gamma + max_Q_nnS_nnA * gamma * gamma : Q_nS_nA * gamma;
+        //                if (prediction > max_prediction)
+        //                {
+        //                    max_prediction = prediction;
 
-                //lock (locker)
-                //{
-                //    currentSearchCounter += affordanceSearchCounter;
-                //    currentFoundCounter += affordanceFoundCounter;
-                //}
-                Interlocked.Add(ref currentSearchCounter, affordanceSearchCounter);
-                Interlocked.Add(ref currentFoundCounter, affordanceFoundCounter);
+        //                    if(!existsInPastThreeHours)
+        //                    {
+        //                        sarsa_next_affordance_candi = action.Key;
+        //                    }
+        //                    //sarsa_next_affordance_candi = action.Key;
+        //                }
+
+        //                //if (random2)
+        //                //{
+        //                //    break;
+        //                //}
+        //            }
+        //        }
 
 
-                //V1 if sleep in the wait list, then direct run it
-                if (weightSum >= 1000)
-                {
-                    sleep = affordance;
-                }
+        //        // Update the Q value for the current state and action
+        //        double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
+        //        var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
+        //        //qTable[currentState][affordance.Name] = QSA_Info;
+        //        //qTable[currentState].AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
+        //        var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+        //        currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
-                if (affordance.Name == readed_next_affordance_name)
-                {
-                    sarsa_affordacne = affordance;
-                }
+        //        if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+        //        {
+        //            lock (locker)
+        //            {
+        //                if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
+        //                {
+        //                    bestQ_S_A = new_Q_S_A;
+        //                    bestAffordance = affordance;
+        //                    //best_affordance_name = affordance.Name;
+        //                    if (affordance.Name == readed_next_affordance_name)
+        //                    {
+        //                        next_affordance_name = sarsa_next_affordance_candi;
+        //                    }
 
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
+        //                    //bestQSA_inCurrentState = QSA_Info;
+        //                }
+        //            }
+        //        }
 
-                //if(random1)
-                //{
-                //    bestAffordance = affordance;
-                //    break;
-                //}
-            });
+        //        //lock (locker)
+        //        //{
+        //        //    currentSearchCounter += affordanceSearchCounter;
+        //        //    currentFoundCounter += affordanceFoundCounter;
+        //        //}
+        //        Interlocked.Add(ref currentSearchCounter, affordanceSearchCounter);
+        //        Interlocked.Add(ref currentFoundCounter, affordanceFoundCounter);
 
-            //max_qTable.AddOrUpdate(
-            //    currentState, 
-            //    new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-            //    {
-            //        [best_affordance_name] = bestQSA_inCurrentState
-            //    },                
-            //    (key, existingVal) =>
-            //    {
-            //        var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-            //        {
-            //            [best_affordance_name] = bestQSA_inCurrentState
-            //        };
-            //        return newDict; // 返回新的字典作为该键的值
-            //    }
-            //);
 
-            searchCounter += currentSearchCounter;
-            foundCounter += currentFoundCounter;
+        //        //V1 if sleep in the wait list, then direct run it
+        //        if (weightSum >= 1000)
+        //        {
+        //            sleep = affordance;
+        //        }
+
+        //        if (affordance.Name == readed_next_affordance_name)
+        //        {
+        //            sarsa_affordacne = affordance;
+        //        }
+
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+        //        {
+        //            if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+        //            {
+        //                throw new LPGException("Logfile was null.");
+        //            }
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
+
+        //        //if(random1)
+        //        //{
+        //        //    bestAffordance = affordance;
+        //        //    break;
+        //        //}
+        //    });
+
+        //    //max_qTable.AddOrUpdate(
+        //    //    currentState, 
+        //    //    new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+        //    //    {
+        //    //        [best_affordance_name] = bestQSA_inCurrentState
+        //    //    },                
+        //    //    (key, existingVal) =>
+        //    //    {
+        //    //        var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+        //    //        {
+        //    //            [best_affordance_name] = bestQSA_inCurrentState
+        //    //        };
+        //    //        return newDict; // 返回新的字典作为该键的值
+        //    //    }
+        //    //);
+
+        //    searchCounter += currentSearchCounter;
+        //    foundCounter += currentFoundCounter;
             
 
-            if (sleep != null)
-            {
-                return sleep;
-                next_affordance_name = "";
-            }
+        //    if (sleep != null)
+        //    {
+        //        return sleep;
+        //        next_affordance_name = "";
+        //    }
 
-            if (sarsa_affordacne != null)
-            {
-                return sarsa_affordacne;
-            }
+        //    if (sarsa_affordacne != null)
+        //    {
+        //        return sarsa_affordacne;
+        //    }
 
-            return bestAffordance;
+        //    return bestAffordance;
 
-        }
-
+        //}
+         
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_n_step_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
-                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now, int predictionStep)
         {
             //If the QTable is empty, then load it from the file
             if (qTable.Count == 0)
@@ -2938,8 +2950,8 @@ namespace CalculationEngine.HouseholdElements {
                 LoadQTableFromFile();
             }
 
-            int predictionStep = 4; //>=2
-            n_step_backUpdate(size: predictionStep);
+            //int predictionStep = predictionSteps; //>=2
+            //n_step_backUpdate(size: predictionStep);
 
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
@@ -3007,7 +3019,7 @@ namespace CalculationEngine.HouseholdElements {
                 int restDuration = 0;
                 DateTime nextTime = TimeAfter;
                 Dictionary<string, (int, double)> AffNameDesireValue = desire_ValueAfter;
-                TimeStep nextStep = time.AddSteps(duration);
+                TimeStep nextStep = time==null? null : time.AddSteps(duration);
                 int n = predictionStep-2;
 
                 affordanceSearchCounter += n+1;// Update Counter
@@ -3015,7 +3027,7 @@ namespace CalculationEngine.HouseholdElements {
                 //Get n-step prediction Infomation 
                 for (int i = n; i >= 0; i--)
                 {
-                    var prediction_info = getNewStateAndRewardFromState(nextState, i, nextTime, nextStep,AffNameDesireValue);
+                    var prediction_info = Q_Learning_Stage2(nextState, i, nextTime, nextStep,AffNameDesireValue);
                     prediction += Math.Pow(gamma, n-i+1) * prediction_info.Q_or_R_Value;
                     nextState = prediction_info.newState;
                     restDuration += prediction_info.Duration;
@@ -3028,8 +3040,8 @@ namespace CalculationEngine.HouseholdElements {
 
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value), R_S_A, firstStageQ_Learning_Info.newState);
+                var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
                 //Get Best Affordance
@@ -3066,14 +3078,74 @@ namespace CalculationEngine.HouseholdElements {
             //return affordance
             if (sleep != null)
             {
-                n_step_backUpdate((currentState, sleep.Name, Q_R_Value_Sleep.Item1, Q_R_Value_Sleep.Item2));
+                //n_step_backUpdate((currentState, sleep.Name, Q_R_Value_Sleep.Item1, Q_R_Value_Sleep.Item2));
                 return sleep;
 
             }
 
-            n_step_backUpdate((currentState, bestAffordance.Name, Q_R_Value.Item1, Q_R_Value.Item2));
+            //n_step_backUpdate((currentState, bestAffordance.Name, Q_R_Value.Item1, Q_R_Value.Item2));
             return bestAffordance;
 
+        }
+
+        private void RetrainBestActionsFromRandomStates(int deep)
+        {
+            if (qTable.Count == 0)
+            {
+                return;
+            }
+            int m = qTable.Count / 10;
+
+            // Hyperparameters
+            double alpha = 0.2;
+            //double gamma = 0.9;
+            Random rand = new Random();
+
+            // Get all states from Q-Table
+            var allStates = qTable.Keys.ToList();
+
+            // Randomly select m states
+            var randomStates = allStates.OrderBy(x => rand.Next()).Take(m).ToList();
+
+            // Parallel loop to update Q-values for best actions in selected states
+            Parallel.ForEach(randomStates, state =>
+            {
+                if (qTable.TryGetValue(state, out var current_State))
+                {
+                    int numer_of_update_action = Math.Max(1, current_State.Count/4);
+                    var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
+
+                    foreach (var bestActionEntry in topActions)
+                    {
+                        // 如果bestActionEntry为空，则跳过
+                        if (bestActionEntry.Key == null)
+                        {
+                            continue;
+                        }
+
+                        var bestAction = bestActionEntry.Key;
+                        var newStateInfo = bestActionEntry.Value.Item5;
+                        var R_S_A = bestActionEntry.Value.Item4;
+                        var Q_S_A = bestActionEntry.Value.Item1;
+
+                        double prediction = R_S_A;
+                        var newState = newStateInfo;
+
+                        if (qTable.TryGetValue(newState, out var next_State))
+                        {
+                            var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
+
+                            prediction += Math.Pow(gamma, 1) * (next_Action_Entry.Key != null ? next_Action_Entry.Value.Item1 : 0);
+
+                            // Update the Q-value using the Bellman equation
+                            double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
+                            var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4, bestActionEntry.Value.Item5);
+
+                            current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
+                        }
+                    }
+                }
+            });
         }
 
         public void n_step_backUpdate(((Dictionary<string, int>, string), string, double, double)? updateInfo = null, int? size = null)
@@ -3095,7 +3167,7 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     var firstElement = n_step_update_info.ElementAt(0);
                     var firstState = firstElement.Item1;
-                    var firstStateData = qTable.GetOrAdd(firstState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+                    var firstStateData = qTable.GetOrAdd(firstState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>());
                     var oldQ_Info = firstStateData[firstElement.Item2];
 
                     double result = 0.0;
@@ -3105,22 +3177,23 @@ namespace CalculationEngine.HouseholdElements {
                     }
 
                     var lastElement = n_step_update_info.ElementAt(temp_Size - 1);
-                    var lastQ_Value = qTable.GetOrAdd(lastElement.Item1, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>())[lastElement.Item2].Item1;
+                    var lastQ_Value = qTable.GetOrAdd(lastElement.Item1, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>())[lastElement.Item2].Item1;
 
                     //result += n_step_update_info.ElementAt(temp_Size-1).Item3 * Math.Pow(gamma, temp_Size);
                     result += lastQ_Value * Math.Pow(gamma, temp_Size);
                     var alpha = 0.2;
                     var newQ_Value = (1-alpha) * oldQ_Info.Item1 + alpha * result;
 
-                    var newQ_Info = (newQ_Value, oldQ_Info.Item2,oldQ_Info.Item3);
+                    var newQ_Info = (newQ_Value, oldQ_Info.Item2,oldQ_Info.Item3,oldQ_Info.Item4, oldQ_Info.Item5);
                     firstStateData.AddOrUpdate(firstElement.Item2, newQ_Info, (key, oldValue) => newQ_Info);
                 }
             }
         }
 
-        public ((double, int, Dictionary<int, double>) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, Dictionary<string, (int, double)> desire_ValueAfter, double weightSum, DateTime TimeAfter, int duration) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
+        public ((double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, Dictionary<string, (int, double)> desire_ValueAfter, double weightSum, DateTime TimeAfter, int duration) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
         {
-            int duration = affordance.GetRealDuration(time);
+            int duration = time==null? affordance.GetDuration() : affordance.GetRealDuration(time);
+            //int duration = affordance.GetRealDuration(time);
             bool isInterruptable = affordance.IsInterruptable;
             var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
             var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstring, now, satValue: satisfactionvalues, newDuration: duration, interruptable: isInterruptable);
@@ -3131,16 +3204,16 @@ namespace CalculationEngine.HouseholdElements {
 
             string newTimeState = makeTimeSpan(now, duration);
 
-            TimeStep currentTimeStep = time;
-            TimeStep nextTimeStep = currentTimeStep.AddSteps(duration);
+            //TimeStep currentTimeStep = time;
+            TimeStep nextTimeStep = time == null ? null : time.AddSteps(duration);
 
             Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
             (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
             var R_S_A = -desireDiff + 1000000;
-            var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+            var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string))>());
 
-            (double, int, Dictionary<int, double>) Q_S_A;
+            (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string)) Q_S_A;
 
             if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
             {
@@ -3153,7 +3226,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        public ((Dictionary<string, int>, string time) newState, double Q_or_R_Value, DateTime TimeAfter_nS, int Duration, Dictionary<string, (int, double)> desireName_ValueAfter, TimeStep nextStep, bool alreadyVisited) getNewStateAndRewardFromState((Dictionary<string, int>, string) currentState, int iteration, DateTime time, TimeStep step,Dictionary<string, (int, double)> desireName_ValueBefore)
+        public ((Dictionary<string, int>, string time) newState, double Q_or_R_Value, DateTime TimeAfter_nS, int Duration, Dictionary<string, (int, double)> desireName_ValueAfter, TimeStep nextStep, bool alreadyVisited) Q_Learning_Stage2((Dictionary<string, int>, string) currentState, int iteration, DateTime time, TimeStep step,Dictionary<string, (int, double)> desireName_ValueBefore)
         {
             if (desireName_ValueBefore == null)
             {
@@ -3185,7 +3258,7 @@ namespace CalculationEngine.HouseholdElements {
                 
             }
 
-            TimeStep nextStep = step.AddSteps(duration);
+            TimeStep nextStep = step == null? null : step.AddSteps(duration);
 
             if (maxQ_Value == 0)
             {
@@ -3227,323 +3300,323 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_3_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
-                                              [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            if (qTable == null)
-            {
-                LoadQTableFromFile();
-            }
-            string readed_next_affordance_name = next_affordance_name;
-            next_affordance_name = ""; //reset the next affordance name
-            string best_affordance_name = ""; //initialize the best affordance name
-            (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>()); //initialize the best QSA information in current state
+        //private ICalcAffordanceBase GetBestAffordanceFromListNewRL_3_step_SARSA([JetBrains.Annotations.NotNull] TimeStep time,
+        //                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
+        //{
+        //    if (qTable == null)
+        //    {
+        //        LoadQTableFromFile();
+        //    }
+        //    string readed_next_affordance_name = next_affordance_name;
+        //    next_affordance_name = ""; //reset the next affordance name
+        //    string best_affordance_name = ""; //initialize the best affordance name
+        //    (double, int, Dictionary<int, double>) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>()); //initialize the best QSA information in current state
 
-            //initialize the search and found counter, im order to track the learning process
-            int currentSearchCounter = allAvailableAffordances.Count; 
-            int currentFoundCounter = 0;
+        //    //initialize the search and found counter, im order to track the learning process
+        //    int currentSearchCounter = allAvailableAffordances.Count; 
+        //    int currentFoundCounter = 0;
 
-            //double epsilon1 = 0.05;  // for the random part
-            //Random rnd1 = new Random(time.InternalStep);
-            //Random rnd2 = new Random(time.InternalStep + 1);
-            //bool random1 = (rnd1.NextDouble() < epsilon1);
-            //bool random2 = (rnd2.NextDouble() < epsilon1);
-            //bool random1= false;
-            //bool random2 = false;
+        //    //double epsilon1 = 0.05;  // for the random part
+        //    //Random rnd1 = new Random(time.InternalStep);
+        //    //Random rnd2 = new Random(time.InternalStep + 1);
+        //    //bool random1 = (rnd1.NextDouble() < epsilon1);
+        //    //bool random2 = (rnd2.NextDouble() < epsilon1);
+        //    //bool random1= false;
+        //    //bool random2 = false;
 
-            var bestQ_S_A = double.MinValue;
-            var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null; //save slot for the sleep affordance
-            ICalcAffordanceBase sarsa_affordacne = null; //save slot for the sarsa affordance, which is the best next affordance
-            Dictionary<string, int> desire_level_before = null;
+        //    var bestQ_S_A = double.MinValue;
+        //    var bestAffordance = allAvailableAffordances[0];
+        //    ICalcAffordanceBase sleep = null; //save slot for the sleep affordance
+        //    ICalcAffordanceBase sarsa_affordacne = null; //save slot for the sarsa affordance, which is the best next affordance
+        //    Dictionary<string, int> desire_level_before = null;
 
-            object locker = new object();
+        //    object locker = new object();
 
-            //first prediction
-            //foreach (var affordance in allAvailableAffordances)
-            Parallel.ForEach(allAvailableAffordances, affordance =>
-            {
-                if (affordance.Name.Contains("Replacement Activity"))
-                {
-                    //continue;
-                    lock (locker)
-                    {
-                        currentFoundCounter++;
-                    }
-                    return;
-                }
-                int affordanceSearchCounter = 0;
-                int affordanceFoundCounter = 0;
-                //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
+        //    //first prediction
+        //    //foreach (var affordance in allAvailableAffordances)
+        //    Parallel.ForEach(allAvailableAffordances, affordance =>
+        //    {
+        //        if (affordance.Name.Contains("Replacement Activity"))
+        //        {
+        //            //continue;
+        //            lock (locker)
+        //            {
+        //                currentFoundCounter++;
+        //            }
+        //            return;
+        //        }
+        //        int affordanceSearchCounter = 0;
+        //        int affordanceFoundCounter = 0;
+        //        //ICalcAffordanceBase affordance = random1 ? allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)] : affordance1;
 
-                int duration = affordance.GetRealDuration(time);
-                bool isInterruptable = affordance.IsInterruptable;
-                var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstring, now, satValue: satisfactionvalues,newDuration: duration, interruptable:isInterruptable);
+        //        int duration = affordance.GetRealDuration(time);
+        //        bool isInterruptable = affordance.IsInterruptable;
+        //        var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
+        //        var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstring, now, satValue: satisfactionvalues,newDuration: duration, interruptable:isInterruptable);
                 
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                //var duration = calcTotalDeviationResult.realDuration;
+        //        var desireDiff = calcTotalDeviationResult.totalDeviation;
+        //        var weightSum = calcTotalDeviationResult.WeightSum;
+        //        var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+        //        var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+        //        //var duration = calcTotalDeviationResult.realDuration;
 
-                string sarsa_next_affordance_candi = ""; //candidate of sarsa next affordance
+        //        string sarsa_next_affordance_candi = ""; //candidate of sarsa next affordance
 
-                string nowTimeState = makeTimeSpan(now, 0); //current time state
-                string newTimeState = makeTimeSpan(now, duration); //next time state, which after the execution of the affordance
+        //        string nowTimeState = makeTimeSpan(now, 0); //current time state
+        //        string newTimeState = makeTimeSpan(now, duration); //next time state, which after the execution of the affordance
 
-                TimeStep currentTimeStep = time; //current time step
-                TimeStep nextTimeStep = currentTimeStep.AddSteps(duration); //next time step, which after the execution of the affordance
-                HashSet<string> nextAllAffordanceNames = new HashSet<string>();
-                var srcList = _normalPotentialAffs.PotentialAffordances;
-                foreach (var calcAffordanceBase in srcList)
-                {
-                    var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
-                    //
-                    //Debug.WriteLine(busynessResult);
-                    if (busynessResult == 1 && !calcAffordanceBase.Name.Contains("Replacement Activity"))
-                    {
-                        //resultingAff.Add(calcAffordanceBase);
-                        nextAllAffordanceNames.Add(calcAffordanceBase.Name);
-                    }
-                }
+        //        TimeStep currentTimeStep = time; //current time step
+        //        TimeStep nextTimeStep = currentTimeStep.AddSteps(duration); //next time step, which after the execution of the affordance
+        //        HashSet<string> nextAllAffordanceNames = new HashSet<string>();
+        //        var srcList = _normalPotentialAffs.PotentialAffordances;
+        //        foreach (var calcAffordanceBase in srcList)
+        //        {
+        //            var busynessResult = calcAffordanceBase.GetRestTimeWindows(nextTimeStep);
+        //            //
+        //            //Debug.WriteLine(busynessResult);
+        //            if (busynessResult == 1 && !calcAffordanceBase.Name.Contains("Replacement Activity"))
+        //            {
+        //                //resultingAff.Add(calcAffordanceBase);
+        //                nextAllAffordanceNames.Add(calcAffordanceBase.Name);
+        //            }
+        //        }
 
-                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+        //        Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
-                double alpha = 0.2;
-                double gamma = 0.8;
+        //        double alpha = 0.2;
+        //        double gamma = 0.8;
 
-                if (desire_level_before == null)
-                {
-                    lock (locker)
-                    {
-                        if (desire_level_before == null)
-                        {
-                            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                            this.currentState = new(desire_level_before, nowTimeState);
-                        }
-                    }
-                }
+        //        if (desire_level_before == null)
+        //        {
+        //            lock (locker)
+        //            {
+        //                if (desire_level_before == null)
+        //                {
+        //                    desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+        //                    this.currentState = new(desire_level_before, nowTimeState);
+        //                }
+        //            }
+        //        }
 
-                (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
+        //        (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
 
-                var R_S_A = -desireDiff + 1000000;
+        //        var R_S_A = -desireDiff + 1000000;
 
-                var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+        //        var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
 
-                if (Q_S.Count > 0)
-                {
-                    affordanceFoundCounter++;
-                }
+        //        if (Q_S.Count > 0)
+        //        {
+        //            affordanceFoundCounter++;
+        //        }
 
-                (double, int, Dictionary<int, double>) Q_S_A;
+        //        (double, int, Dictionary<int, double>) Q_S_A;
 
-                affordanceSearchCounter++;
+        //        affordanceSearchCounter++;
 
-                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-                {
-                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-                }
-                else
-                {
-                    affordanceFoundCounter++;
-                }
+        //        if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+        //        {
+        //            Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+        //        }
+        //        else
+        //        {
+        //            affordanceFoundCounter++;
+        //        }
 
-                //second prediction
-                double max_prediction = 0;
-                ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
+        //        //second prediction
+        //        double max_prediction = 0;
+        //        ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_newState_actions;
 
-                affordanceSearchCounter += nextAllAffordanceNames.Count;
-                if (qTable.TryGetValue(newState, out Q_newState_actions))
-                {
-                    //affordanceSearchCounter += Q_newState_actions.Count;
-                    foreach (var action in Q_newState_actions)
-                    {
-                        //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
-                        //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
-                        //double Q_nS_nA = action.Value.Item1;
+        //        affordanceSearchCounter += nextAllAffordanceNames.Count;
+        //        if (qTable.TryGetValue(newState, out Q_newState_actions))
+        //        {
+        //            //affordanceSearchCounter += Q_newState_actions.Count;
+        //            foreach (var action in Q_newState_actions)
+        //            {
+        //                //KeyValuePair<string, (double, int, Dictionary<int, double>)> action = new KeyValuePair<string, (double, int, Dictionary<int, double>)>();                        
+        //                //action = random2 ? Q_newState_actions.ElementAt(rnd2.Next(Q_newState_actions.Count)) : action1;
+        //                //double Q_nS_nA = action.Value.Item1;
 
-                        affordanceFoundCounter++;
-                        double Q_nS_nA = action.Value.Item1;
-                        int Q_nS_nA_duration = action.Value.Item2;
-                        Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
+        //                affordanceFoundCounter++;
+        //                double Q_nS_nA = action.Value.Item1;
+        //                int Q_nS_nA_duration = action.Value.Item2;
+        //                Dictionary<int, double> Q_nS_nA_satValus = action.Value.Item3;
 
-                        var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
-                        //List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
-                        var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, desire_ValueAfter, Q_nS_nA_satValus, Q_nS_nA_duration);
+        //                var TimeAfter_nS = now.AddMinutes(duration).AddMinutes(Q_nS_nA_duration);
+        //                //List<double> DesireValueAfter_nS = desire_ValueAfter.Values.Select(value => value.Item2).ToList();
+        //                var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new, now, desire_ValueAfter, Q_nS_nA_satValus, Q_nS_nA_duration);
 
-                        var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
-                        var R_S_A_nS = -next_desireDiff + 1000000;
+        //                var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
+        //                var R_S_A_nS = -next_desireDiff + 1000000;
 
-                        //third prediction
-                        var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                        (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
+        //                //third prediction
+        //                var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
+        //                (Dictionary<string, int>, string time) new_newState = (MergeDictAndLevels(desire_ValueAfter_nS), makeTimeSpan(TimeAfter_nS, 0));
                         
-                        ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_new_nextState_actions;
-                        if (qTable.TryGetValue(new_newState, out Q_new_nextState_actions) && affordance.Name==readed_next_affordance_name)
-                        {
-                            foreach (var action2 in Q_new_nextState_actions)
-                            {
-                                double Q_nnS_nnA = action2.Value.Item1;
-                                int Q_nnS_nnA_duration = action2.Value.Item2;
-                                Dictionary<int, double> Q_nnS_nnA_satValus = action2.Value.Item3;
+        //                ConcurrentDictionary<string, (double, int, Dictionary<int, double>)> Q_new_nextState_actions;
+        //                if (qTable.TryGetValue(new_newState, out Q_new_nextState_actions) && affordance.Name==readed_next_affordance_name)
+        //                {
+        //                    foreach (var action2 in Q_new_nextState_actions)
+        //                    {
+        //                        double Q_nnS_nnA = action2.Value.Item1;
+        //                        int Q_nnS_nnA_duration = action2.Value.Item2;
+        //                        Dictionary<int, double> Q_nnS_nnA_satValus = action2.Value.Item3;
 
-                                var TimeAfter_nnS = TimeAfter_nS.AddMinutes(Q_nS_nA_duration);
-                                //List<double> DesireValueAfter_nnS = desire_ValueAfter_nS.Values.Select(value => value.Item2).ToList();
-                                var calcTotalDeviationResultAfter_nnS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new_nnS, now, desire_ValueAfter_nS, Q_nnS_nnA_satValus, Q_nnS_nnA_duration);
+        //                        var TimeAfter_nnS = TimeAfter_nS.AddMinutes(Q_nS_nA_duration);
+        //                        //List<double> DesireValueAfter_nnS = desire_ValueAfter_nS.Values.Select(value => value.Item2).ToList();
+        //                        var calcTotalDeviationResultAfter_nnS = PersonDesires.CalcEffectPartlyRL_New(null, time, careForAll, out var thoughtstrin_new_nnS, now, desire_ValueAfter_nS, Q_nnS_nnA_satValus, Q_nnS_nnA_duration);
 
-                                var next_desireDiff_nnS = calcTotalDeviationResultAfter_nnS.totalDeviation;
-                                var R_S_A_nnS = -next_desireDiff_nnS + 1000000;
+        //                        var next_desireDiff_nnS = calcTotalDeviationResultAfter_nnS.totalDeviation;
+        //                        var R_S_A_nnS = -next_desireDiff_nnS + 1000000;
 
-                                var desire_ValueAfter_nnS = calcTotalDeviationResultAfter_nnS.desireName_ValueAfterApply_Dict;
-                                (Dictionary<string, int>, string time) new_new_newState = (MergeDictAndLevels(desire_ValueAfter_nnS), makeTimeSpan(TimeAfter_nnS, 0));
-                                double max_Q_nnnS_nnnA = 0;
+        //                        var desire_ValueAfter_nnS = calcTotalDeviationResultAfter_nnS.desireName_ValueAfterApply_Dict;
+        //                        (Dictionary<string, int>, string time) new_new_newState = (MergeDictAndLevels(desire_ValueAfter_nnS), makeTimeSpan(TimeAfter_nnS, 0));
+        //                        double max_Q_nnnS_nnnA = 0;
 
-                                //fourth prediction (arg max)
-                                affordanceSearchCounter++;
-                                if (max_qTable.TryGetValue(new_new_newState, out var Q_newState_actions_nS))
-                                {
-                                    //max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
-                                    max_Q_nnnS_nnnA = Q_newState_actions_nS.First().Value.Item1;
-                                    affordanceFoundCounter++;
-                                }
+        //                        //fourth prediction (arg max)
+        //                        affordanceSearchCounter++;
+        //                        if (max_qTable.TryGetValue(new_new_newState, out var Q_newState_actions_nS))
+        //                        {
+        //                            //max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
+        //                            max_Q_nnnS_nnnA = Q_newState_actions_nS.First().Value.Item1;
+        //                            affordanceFoundCounter++;
+        //                        }
 
-                                //double prediction = R_S_A_nS * gamma + R_S_A_nnS * gamma * gamma + max_Q_nnnS_nnnA * gamma * gamma * gamma;
-                                double prediction = 0;
+        //                        //double prediction = R_S_A_nS * gamma + R_S_A_nnS * gamma * gamma + max_Q_nnnS_nnnA * gamma * gamma * gamma;
+        //                        double prediction = 0;
                                 
-                                prediction = (max_Q_nnnS_nnnA > 0) ? R_S_A_nS * gamma + R_S_A_nnS * Math.Pow(gamma, 2) + max_Q_nnnS_nnnA * Math.Pow(gamma, 3) : R_S_A_nS * gamma + Q_nnS_nnA * Math.Pow(gamma, 2);
+        //                        prediction = (max_Q_nnnS_nnnA > 0) ? R_S_A_nS * gamma + R_S_A_nnS * Math.Pow(gamma, 2) + max_Q_nnnS_nnnA * Math.Pow(gamma, 3) : R_S_A_nS * gamma + Q_nnS_nnA * Math.Pow(gamma, 2);
                                 
-                                if (prediction > max_prediction)
-                                {
-                                    max_prediction = prediction;
-                                    sarsa_next_affordance_candi = action.Key;
-                                }
+        //                        if (prediction > max_prediction)
+        //                        {
+        //                            max_prediction = prediction;
+        //                            sarsa_next_affordance_candi = action.Key;
+        //                        }
 
-                            }
-                        }
-                        else
-                        {
-                            //third prediction (arg max)
-                            double max_Q_nnS_nnA = 0;
-                            if (max_qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
-                            {
-                                //max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
-                                max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
-                            }
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    //third prediction (arg max)
+        //                    double max_Q_nnS_nnA = 0;
+        //                    if (max_qTable.TryGetValue(new_newState, out var Q_newState_actions_nS))
+        //                    {
+        //                        //max_Q_nnS_nnA = Q_newState_actions_nS.Max(action2 => action2.Value.Item1);
+        //                        max_Q_nnS_nnA = Q_newState_actions_nS.First().Value.Item1;
+        //                    }
 
-                            //double prediction = Q_nS_nA * gamma;
-                            double prediction =(max_Q_nnS_nnA > 0)? R_S_A_nS * gamma + max_Q_nnS_nnA * Math.Pow(gamma, 2) : Q_nS_nA * gamma;
-                            if (prediction > max_prediction)
-                            {
-                                max_prediction = prediction;
-                                sarsa_next_affordance_candi = action.Key;
-                            }
+        //                    //double prediction = Q_nS_nA * gamma;
+        //                    double prediction =(max_Q_nnS_nnA > 0)? R_S_A_nS * gamma + max_Q_nnS_nnA * Math.Pow(gamma, 2) : Q_nS_nA * gamma;
+        //                    if (prediction > max_prediction)
+        //                    {
+        //                        max_prediction = prediction;
+        //                        sarsa_next_affordance_candi = action.Key;
+        //                    }
 
-                        }
+        //                }
 
-                        //if (random2)
-                        //{
-                        //    break;
-                        //}
-                    }
-                }
-
-
-                // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
-                //qTable[currentState][affordance.Name] = QSA_Info;
-                //qTable[currentState].AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
-                var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
-                currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
-
-                if (new_Q_S_A > bestQ_S_A)
-                {
-                    lock (locker)
-                    {
-                        if (new_Q_S_A > bestQ_S_A)
-                        {
-                            bestQ_S_A = new_Q_S_A;
-                            bestAffordance = affordance;
-                            best_affordance_name = affordance.Name;
-                            if (affordance.Name == readed_next_affordance_name)
-                            {
-                                next_affordance_name = sarsa_next_affordance_candi;
-                            }
-
-                            bestQSA_inCurrentState = QSA_Info;
-                        }
-                    }
-                }
-
-                   lock (locker)
-                {
-                    currentSearchCounter += affordanceSearchCounter;
-                    currentFoundCounter += affordanceFoundCounter;
-                }
-
-                //V1 if sleep in the wait list, then direct run it
-                if (weightSum >= 1000)
-                {
-                    sleep = affordance;
-                }
-
-                if (affordance.Name == readed_next_affordance_name)
-                {
-                    sarsa_affordacne = affordance;
-                }
-
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
-            });
-
-            if (best_affordance_name != "")
-            {
-                max_qTable.AddOrUpdate(
-                    currentState,
-                    new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                    {
-                        [best_affordance_name] = bestQSA_inCurrentState
-                    },
-                    (key, existingVal) =>
-                    {
-                        var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
-                        {
-                            [best_affordance_name] = bestQSA_inCurrentState
-                        };
-                        return newDict; // 返回新的字典作为该键的值
-                    }
-                );
-            }
-
-            searchCounter += currentSearchCounter;
-            foundCounter += currentFoundCounter;
+        //                //if (random2)
+        //                //{
+        //                //    break;
+        //                //}
+        //            }
+        //        }
 
 
-            if (sleep != null)
-            {
-                return sleep;
-                next_affordance_name = "";
-            }
+        //        // Update the Q value for the current state and action
+        //        double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + max_prediction);
+        //        var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value));
+        //        //qTable[currentState][affordance.Name] = QSA_Info;
+        //        //qTable[currentState].AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
+        //        var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>());
+        //        currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
-            if (sarsa_affordacne != null)
-            {
-                return sarsa_affordacne;
-            }
+        //        if (new_Q_S_A > bestQ_S_A)
+        //        {
+        //            lock (locker)
+        //            {
+        //                if (new_Q_S_A > bestQ_S_A)
+        //                {
+        //                    bestQ_S_A = new_Q_S_A;
+        //                    bestAffordance = affordance;
+        //                    best_affordance_name = affordance.Name;
+        //                    if (affordance.Name == readed_next_affordance_name)
+        //                    {
+        //                        next_affordance_name = sarsa_next_affordance_candi;
+        //                    }
 
-            return bestAffordance;
+        //                    bestQSA_inCurrentState = QSA_Info;
+        //                }
+        //            }
+        //        }
 
-        }
+        //           lock (locker)
+        //        {
+        //            currentSearchCounter += affordanceSearchCounter;
+        //            currentFoundCounter += affordanceFoundCounter;
+        //        }
+
+        //        //V1 if sleep in the wait list, then direct run it
+        //        if (weightSum >= 1000)
+        //        {
+        //            sleep = affordance;
+        //        }
+
+        //        if (affordance.Name == readed_next_affordance_name)
+        //        {
+        //            sarsa_affordacne = affordance;
+        //        }
+
+        //        if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+        //        {
+        //            if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
+        //            {
+        //                throw new LPGException("Logfile was null.");
+        //            }
+        //            _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+        //                new ThoughtEntry(this, time,
+        //                    "Desirediff for " + affordance.Name + " is :" +
+        //                    desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+        //                _calcPerson.HouseholdKey);
+        //        }
+        //    });
+
+        //    if (best_affordance_name != "")
+        //    {
+        //        max_qTable.AddOrUpdate(
+        //            currentState,
+        //            new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+        //            {
+        //                [best_affordance_name] = bestQSA_inCurrentState
+        //            },
+        //            (key, existingVal) =>
+        //            {
+        //                var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>)>
+        //                {
+        //                    [best_affordance_name] = bestQSA_inCurrentState
+        //                };
+        //                return newDict; // 返回新的字典作为该键的值
+        //            }
+        //        );
+        //    }
+
+        //    searchCounter += currentSearchCounter;
+        //    foundCounter += currentFoundCounter;
+
+
+        //    if (sleep != null)
+        //    {
+        //        return sleep;
+        //        next_affordance_name = "";
+        //    }
+
+        //    if (sarsa_affordacne != null)
+        //    {
+        //        return sarsa_affordacne;
+        //    }
+
+        //    return bestAffordance;
+
+        //}
 
         public void setNewWeight(string aff, decimal ratio)
         {

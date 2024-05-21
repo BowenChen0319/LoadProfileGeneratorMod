@@ -419,7 +419,7 @@ namespace CalculationEngine.HouseholdElements {
                 Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
                 if(person.qTable2.Count > 0)
                 {
-                    person.SaveTwoQTableToFile();
+                    //person.SaveTwoQTableToFile();
                 }
                 else
                 {
