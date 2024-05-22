@@ -2608,7 +2608,7 @@ namespace CalculationEngine.HouseholdElements {
             //return GetBestAffordanceFromListNewRL_3_step_SARSA(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Double_Q_Learning(time, allAvailableAffordances, careForAll, now);
-            this.RetrainBestActionsFromRandomStates(2);
+            this.RetrainBestActionsFromRandomStates(2,time.InternalStep);
             return GetBestAffordanceFromListNewRL_n_step_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
             
         }
@@ -3040,6 +3040,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 // Update the Q value for the current state and action
                 double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
+                double new_R_S_A = Q_S_A.Item1 == 0? R_S_A :  (1 - alpha) * Q_S_A.Item4 + alpha * R_S_A;
                 var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value), R_S_A, firstStageQ_Learning_Info.newState);
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
@@ -3088,18 +3089,18 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        private void RetrainBestActionsFromRandomStates(int deep)
+        private void RetrainBestActionsFromRandomStates(int deep, int seed)
         {
             if (qTable.Count == 0)
             {
                 return;
             }
-            int m = qTable.Count / 10;
+            int m = Math.Min(100,qTable.Count);
 
             // Hyperparameters
             double alpha = 0.2;
             //double gamma = 0.9;
-            Random rand = new Random();
+            Random rand = new Random(seed);
 
             // Get all states from Q-Table
             var allStates = qTable.Keys.ToList();
@@ -3112,7 +3113,8 @@ namespace CalculationEngine.HouseholdElements {
             {
                 if (qTable.TryGetValue(state, out var current_State))
                 {
-                    int numer_of_update_action = Math.Max(1, current_State.Count/4);
+                    //int numer_of_update_action = Math.Max(1, current_State.Count/4);
+                    int numer_of_update_action = current_State.Count;
                     var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
 
                     foreach (var bestActionEntry in topActions)
@@ -3135,10 +3137,16 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
 
-                            prediction += Math.Pow(gamma, 1) * (next_Action_Entry.Key != null ? next_Action_Entry.Value.Item1 : 0);
+                            if(next_Action_Entry.Key == null || next_Action_Entry.Value.Item1 == 0)
+                            {
+                                continue;
+                            }
+
+                            prediction += Math.Pow(gamma, 1) * next_Action_Entry.Value.Item1;
 
                             // Update the Q-value using the Bellman equation
                             double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
+                            
                             var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4, bestActionEntry.Value.Item5);
 
                             current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
