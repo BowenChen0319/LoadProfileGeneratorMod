@@ -3039,8 +3039,9 @@ namespace CalculationEngine.HouseholdElements {
 
 
                 // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
-                double new_R_S_A = Q_S_A.Item1 == 0? R_S_A :  (1 - alpha) * Q_S_A.Item4 + alpha * R_S_A;
+
+                double new_Q_S_A = Q_S_A.Item1 == 0 ? R_S_A : (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
+                double new_R_S_A = Q_S_A.Item1 == 0 ? R_S_A :  (1 - alpha) * Q_S_A.Item4 + alpha * R_S_A;
                 var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value), R_S_A, firstStageQ_Learning_Info.newState);
                 var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>());
                 currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
@@ -3144,13 +3145,15 @@ namespace CalculationEngine.HouseholdElements {
 
                             prediction += Math.Pow(gamma, 1) * next_Action_Entry.Value.Item1;
 
-                            // Update the Q-value using the Bellman equation
-                            double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
-                            
-                            var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4, bestActionEntry.Value.Item5);
-
-                            current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
+                           
                         }
+
+                        // Update the Q-value using the Bellman equation
+                        double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
+
+                        var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4, bestActionEntry.Value.Item5);
+
+                        current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
                     }
                 }
             });
