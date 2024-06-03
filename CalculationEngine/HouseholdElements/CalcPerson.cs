@@ -2090,14 +2090,15 @@ namespace CalculationEngine.HouseholdElements {
             foreach (var affordance_i in allAvailableAffordances)
             {
                 var affordance = affordance_i;
-                if (affordance.Name.Contains("Replacement Activity"))
-                {
-                    continue;
-                }
 
                 if (random1)
                 {
                     affordance = allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+                }
+
+                if (affordance.Name.Contains("Replacement Activity"))
+                {
+                    continue;
                 }
 
                 var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
@@ -2200,18 +2201,21 @@ namespace CalculationEngine.HouseholdElements {
 
             }
 
-            qTable.AddOrUpdate(
-                               currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>
-                               {
-                                   [bestAffordance.Name] = bestQSA_inCurrentState
-                               },
-                                              (key, existingVal) =>
-                                              {
-                                                  var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>();
-                                                  newDict.TryAdd(bestAffordance.Name, bestQSA_inCurrentState);
-                                                  return newDict;
-                                              }
-                                                         );
+            var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>());
+            currentStateData.AddOrUpdate(bestAffordance.Name, bestQSA_inCurrentState, (key, oldValue) => bestQSA_inCurrentState);
+
+            //qTable.AddOrUpdate(
+            //                   currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>
+            //                   {
+            //                       [bestAffordance.Name] = bestQSA_inCurrentState
+            //                   },
+            //                                  (key, existingVal) =>
+            //                                  {
+            //                                      var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>();
+            //                                      newDict.TryAdd(bestAffordance.Name, bestQSA_inCurrentState);
+            //                                      return newDict;
+            //                                  }
+            //                                             );
 
 
 
@@ -2235,12 +2239,13 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromList_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
-            
 
-            //return GetBestAffordanceFromListNewRL_DYNA_Q_Learning(time, allAvailableAffordances, careForAll, now);
+
             //return GetBestAffordanceFromListNewRL_Trad_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_DYNA_Q_Learning(time, allAvailableAffordances, careForAll, now);
+
             //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
+            //return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
             
         }
 

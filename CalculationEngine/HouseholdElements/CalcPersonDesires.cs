@@ -662,7 +662,7 @@ namespace CalculationEngine.HouseholdElements {
             }
             else
             {
-                //duration = affordance.GetDuration();
+                //duration = affordance.GetDuration(); //use this maybe quicker
                 duration = affordance.GetRealDuration(currentTime);
             }
 
