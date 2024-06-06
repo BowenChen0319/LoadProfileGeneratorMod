@@ -2080,149 +2080,114 @@ namespace CalculationEngine.HouseholdElements {
 
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
+            ICalcAffordanceBase sleep = allAvailableAffordances.FirstOrDefault(a => a.Name.Contains("sleep bed"));
+            ICalcAffordanceBase bestAffExist = null;
             
             Dictionary<string, int> desire_level_before = null;
 
             (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string)) bestQSA_inCurrentState = (0, 0, new Dictionary<int, double>(),0, (new Dictionary<string, int>(),""));
 
+            string bestAffordanceName = "";
 
-            foreach (var affordance_i in allAvailableAffordances)
+            var affordance = allAvailableAffordances[0];
+
+            if (random1)
             {
-                var affordance = affordance_i;
+                affordance = allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+            }
 
-                if (random1)
+            var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
+            var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+
+
+            string nowTimeState = makeTimeSpan(now, 0);
+
+
+            double alpha = 0.2;
+            double gamma = 0.8;
+
+            desire_level_before = MergeDictAndLevels(desire_ValueBefore);
+            this.currentState = new(desire_level_before, nowTimeState);
+
+            if (!qTable.TryGetValue(currentState, out var Q_S))
+            {
+                Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>();
+                qTable[currentState] = Q_S;
+                bestAffExist = allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+            }
+            else
+            {
+                bestAffordanceName = Q_S.OrderByDescending(a => a.Value.Item1).FirstOrDefault().Key;
+                bestAffExist = allAvailableAffordances.FirstOrDefault(a => a.Name == bestAffordanceName);
+                if (bestAffExist == null)
                 {
-                    affordance = allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
+                    bestAffExist = allAvailableAffordances[rnd1.Next(allAvailableAffordances.Count)];
                 }
-
-                if (affordance.Name.Contains("Replacement Activity"))
+                if (sleep != null)
                 {
-                    continue;
+                    bestAffExist = sleep;
                 }
+            }
 
-                var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out var thoughtstring, now);
-                var desireDiff = calcTotalDeviationResult.totalDeviation;
-                var weightSum = calcTotalDeviationResult.WeightSum;
-                var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-                var desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
-                var duration = calcTotalDeviationResult.realDuration;
+            if(!random1)
+            {
+                affordance = bestAffExist;
+                bestAffordance = affordance;
+            }
 
-                string nowTimeState = makeTimeSpan(now, 0);
-                string newTimeState = makeTimeSpan(now, duration);
-                Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+            calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(affordance, time, careForAll, out thoughtstring, now);
+            var desireDiff = calcTotalDeviationResult.totalDeviation;
+            var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
+            desire_ValueBefore = calcTotalDeviationResult.desireName_ValueBeforeApply_Dict;
+            var duration = calcTotalDeviationResult.realDuration;
+            var R_S_A = -desireDiff + 1000000;
 
-                double alpha = 0.2;
-                double gamma = 0.8;
+            var newTimeState = makeTimeSpan(now, duration);
+            Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+            (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
 
-                if (desire_level_before == null)
+           
+            (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string)) Q_S_A;
+
+            if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
+            {
+                Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
+            }
+
+            //first prediction
+            double maxQ_nS_nA = 0;
+            ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))> Q_newState_actions;
+
+            if (qTable.TryGetValue(newState, out Q_newState_actions))
+            {
+                var action = Q_newState_actions.OrderByDescending(a => a.Value.Item1).FirstOrDefault();
+                maxQ_nS_nA = action.Value.Item1;
+            }
+
+            // Update the Q value for the current state and action
+            double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma);
+            var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value), R_S_A, newState);
+            //qTable[currentState][affordance.Name] = QSA_Info;
+
+            bestQ_S_A = Q_S_A.Item1;
+            bestAffordance = affordance;
+            bestQSA_inCurrentState = QSA_Info;
+
+            if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
+            {
+                if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
                 {
-                    desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-                    this.currentState = new(desire_level_before, nowTimeState);
+                    throw new LPGException("Logfile was null.");
                 }
-
-                //V1 if sleep in the wait list, then direct run it
-                if (weightSum >= 1000)
-                {
-                    sleep = affordance;
-                }
-
-                (Dictionary<string, int>, string time) newState = (desire_level_after, newTimeState);
-
-                var R_S_A = -desireDiff + 1000000;
-
-                if (!qTable.TryGetValue(currentState, out var Q_S))
-                {
-                    Q_S = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double,(Dictionary<string, int>,string))>();
-                    qTable[currentState] = Q_S;
-                }
-
-                (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string)) Q_S_A;
-
-                if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-                {
-                    Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-                }
-
-                //first prediction
-                double maxQ_nS_nA = 0;
-                int maxQ_nS_nA_duration = 0;
-                Dictionary<int, double> maxQ_nS_nA_satValus = null;
-                ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))> Q_newState_actions;
-
-                if (qTable.TryGetValue(newState, out Q_newState_actions))
-                {
-                    var action = Q_newState_actions.OrderByDescending(a => a.Value.Item1).FirstOrDefault();
-
-                    maxQ_nS_nA = action.Value.Item1;
-                    maxQ_nS_nA_duration = action.Value.Item2;
-                    maxQ_nS_nA_satValus = action.Value.Item3;
-                }
-
-                // Update the Q value for the current state and action
-                double new_Q_S_A = (1 - alpha) * Q_S_A.Item1 + alpha * (R_S_A + maxQ_nS_nA * gamma );
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value),R_S_A,newState);
-                //qTable[currentState][affordance.Name] = QSA_Info;
-
-                if (Q_S_A.Item1 > bestQ_S_A)
-                {
-                    bestQ_S_A = Q_S_A.Item1;
-                    bestAffordance = affordance;
-                    bestQSA_inCurrentState = QSA_Info;
-                    //this.currentState = newState;
-                }
-
-                if (weightSum >= 1000)
-                {
-                    bestQ_S_A = Q_S_A.Item1;
-                    bestAffordance = affordance;
-                    bestQSA_inCurrentState = QSA_Info;
-                    break;
-                }
-
-
-                if (_calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile))
-                {
-                    if (_calcRepo.Logfile.ThoughtsLogFile1 == null)
-                    {
-                        throw new LPGException("Logfile was null.");
-                    }
-                    _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
-                        new ThoughtEntry(this, time,
-                            "Desirediff for " + affordance.Name + " is :" +
-                            desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
-                        _calcPerson.HouseholdKey);
-                }
-
-                if (random1)
-                {
-                    break;
-                }
-
+                _calcRepo.Logfile.ThoughtsLogFile1.WriteEntry(
+                    new ThoughtEntry(this, time,
+                        "Desirediff for " + affordance.Name + " is :" +
+                        desireDiff.ToString("#,##0.0", Config.CultureInfo) + " In detail: " + thoughtstring),
+                    _calcPerson.HouseholdKey);
             }
 
             var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>());
             currentStateData.AddOrUpdate(bestAffordance.Name, bestQSA_inCurrentState, (key, oldValue) => bestQSA_inCurrentState);
-
-            //qTable.AddOrUpdate(
-            //                   currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>
-            //                   {
-            //                       [bestAffordance.Name] = bestQSA_inCurrentState
-            //                   },
-            //                                  (key, existingVal) =>
-            //                                  {
-            //                                      var newDict = new ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>();
-            //                                      newDict.TryAdd(bestAffordance.Name, bestQSA_inCurrentState);
-            //                                      return newDict;
-            //                                  }
-            //                                             );
-
-
-
-            if (sleep != null)
-            {
-                return sleep;
-            }
 
 
             return bestAffordance;
@@ -2241,8 +2206,8 @@ namespace CalculationEngine.HouseholdElements {
         {
 
 
-            //return GetBestAffordanceFromListNewRL_Trad_Q_Learning(time, allAvailableAffordances, careForAll, now);
-            return GetBestAffordanceFromListNewRL_DYNA_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            return GetBestAffordanceFromListNewRL_Trad_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_DYNA_Q_Learning(time, allAvailableAffordances, careForAll, now);
 
             //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
@@ -2811,7 +2776,7 @@ namespace CalculationEngine.HouseholdElements {
 
             // Get all actions from Q-Table with their corresponding states
             var allStateActionPairs = qTable.SelectMany(state => state.Value.Select(action => (state.Key, action.Key, action.Value))).ToList();
-            int m = Math.Min(100, allStateActionPairs.Count); // Total number of actions
+            int m = Math.Min(2000, allStateActionPairs.Count); // Total number of actions
 
             // Randomly select m actions
             var randomActions = allStateActionPairs.OrderBy(x => rand.Next()).Take(m).ToList();
