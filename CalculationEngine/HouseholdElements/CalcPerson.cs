@@ -2206,11 +2206,11 @@ namespace CalculationEngine.HouseholdElements {
         {
 
 
-            return GetBestAffordanceFromListNewRL_Trad_Q_Learning(time, allAvailableAffordances, careForAll, now);
+            //return GetBestAffordanceFromListNewRL_Trad_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_DYNA_Q_Learning(time, allAvailableAffordances, careForAll, now);
 
             //return GetBestAffordanceFromListNewRL_2_step_SARSA(time, allAvailableAffordances, careForAll, now);
-            //return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
+            return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
             
         }
 
@@ -2560,8 +2560,8 @@ namespace CalculationEngine.HouseholdElements {
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
-            (double, double) Q_R_Value = (0,0);
-            (double, double) Q_R_Value_Sleep = (0, 0);
+            //(double, double) Q_R_Value = (0,0);
+            //(double, double) Q_R_Value_Sleep = (0, 0);
 
             var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
             var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
@@ -2628,17 +2628,14 @@ namespace CalculationEngine.HouseholdElements {
                 affordanceSearchCounter += n+1;// Update Counter
 
                 //Get n-step prediction Infomation 
-                for (int i = n; i >= 0; i--)
-                {
-                    var prediction_info = Q_Learning_Stage2(nextState, i, nextTime, nextStep,AffNameDesireValue);
-                    prediction += Math.Pow(gamma, n-i+1) * prediction_info.Q_or_R_Value;
-                    nextState = prediction_info.newState;
-                    restDuration += prediction_info.Duration;
-                    nextTime = prediction_info.TimeAfter_nS;
-                    AffNameDesireValue = prediction_info.desireName_ValueAfter;
-                    nextStep = prediction_info.nextStep;
-                    affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
-                }
+                var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
+                prediction += Math.Pow(gamma, 1) * prediction_info.Q_or_R_Value;
+                //nextState = prediction_info.newState;
+                //restDuration += prediction_info.Duration;
+                //nextTime = prediction_info.TimeAfter_nS;
+                //AffNameDesireValue = prediction_info.desireName_ValueAfter;
+                //nextStep = prediction_info.nextStep;
+                affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
 
 
                 // Update the Q value for the current state and action
@@ -2658,7 +2655,7 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             bestQ_S_A = new_Q_S_A;
                             bestAffordance = affordance;
-                            Q_R_Value = (new_Q_S_A, R_S_A);
+                            //Q_R_Value = (new_Q_S_A, R_S_A);
                         }
                     }
                 }
@@ -2671,7 +2668,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (weightSum >= 1000)
                 {
                     sleep = affordance;
-                    Q_R_Value_Sleep = (new_Q_S_A, R_S_A);
+                    //Q_R_Value_Sleep = (new_Q_S_A, R_S_A);
                 }
 
             });
