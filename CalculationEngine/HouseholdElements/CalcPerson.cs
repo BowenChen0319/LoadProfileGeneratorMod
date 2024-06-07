@@ -2551,7 +2551,7 @@ namespace CalculationEngine.HouseholdElements {
                 LoadQTableFromFile();
             }
 
-            this.RetrainBestActionsFromRandomStates(2, time.InternalStep);
+            this.RetrainBestActionsFromRandomStates(time.InternalStep);
 
             //int predictionStep = predictionSteps; //>=2
             //n_step_backUpdate(size: predictionStep);
@@ -2690,7 +2690,7 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        private void RetrainBestActionsFromRandomStates(int deep, int seed)
+        private void RetrainBestActionsFromRandomStates(int seed)
         {
             if (qTable.Count == 0)
             {
