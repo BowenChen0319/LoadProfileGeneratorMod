@@ -2631,7 +2631,7 @@ namespace CalculationEngine.HouseholdElements {
                 //Get n-step prediction Infomation 
                 DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
                 bool state_after_pass_day = TimeAfter > endOfDay;
-                if (!state_after_pass_day || weightSum>=1000)
+                if (!state_after_pass_day)
                 {
                     var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
                     prediction += gamma * prediction_info.Q_or_R_Value;
@@ -2686,12 +2686,12 @@ namespace CalculationEngine.HouseholdElements {
             foundCounter += currentFoundCounter;
 
             //return affordance
-            if (sleep != null)
-            {
-                //n_step_backUpdate((currentState, sleep.Name, Q_R_Value_Sleep.Item1, Q_R_Value_Sleep.Item2));
-                return sleep;
+            //if (sleep != null)
+            //{
+            //    //n_step_backUpdate((currentState, sleep.Name, Q_R_Value_Sleep.Item1, Q_R_Value_Sleep.Item2));
+            //    return sleep;
 
-            }
+            //}
 
             //n_step_backUpdate((currentState, bestAffordance.Name, Q_R_Value.Item1, Q_R_Value.Item2));
             return bestAffordance;
@@ -2746,7 +2746,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         if (qTable.TryGetValue(newState, out var next_State))
                         {
-                            if(time_newState >= time_state || bestAction.Contains("sleep bed"))
+                            if(time_newState >= time_state)
                             {
                                 var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
 
