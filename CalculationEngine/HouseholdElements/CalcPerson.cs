@@ -2885,6 +2885,10 @@ namespace CalculationEngine.HouseholdElements {
 
             (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
             var R_S_A = -desireDiff + 1000000;
+            if (weightSum >= 1000)
+            {
+                R_S_A = 20000000;
+            }
             var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string))>());
 
             (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string)) Q_S_A;
