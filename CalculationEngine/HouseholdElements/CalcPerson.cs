@@ -2621,6 +2621,7 @@ namespace CalculationEngine.HouseholdElements {
                 (Dictionary<string, int>, string) nextState = newState; //new state
                 int restDuration = 0;
                 DateTime nextTime = TimeAfter;
+                
                 Dictionary<string, (int, double)> AffNameDesireValue = desire_ValueAfter;
                 TimeStep nextStep = time==null? null : time.AddSteps(duration);
                 int n = predictionStep-2;
@@ -2628,14 +2629,21 @@ namespace CalculationEngine.HouseholdElements {
                 affordanceSearchCounter += n+1;// Update Counter
 
                 //Get n-step prediction Infomation 
-                var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
-                prediction += Math.Pow(gamma, 1) * prediction_info.Q_or_R_Value;
+                DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
+                bool state_after_pass_day = TimeAfter > endOfDay;
+                if (!state_after_pass_day || weightSum>=1000)
+                {
+                    var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
+                    prediction += gamma * prediction_info.Q_or_R_Value;
+                    affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
+                }
+                
                 //nextState = prediction_info.newState;
                 //restDuration += prediction_info.Duration;
                 //nextTime = prediction_info.TimeAfter_nS;
                 //AffNameDesireValue = prediction_info.desireName_ValueAfter;
                 //nextStep = prediction_info.nextStep;
-                affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
+                
 
 
                 // Update the Q value for the current state and action
@@ -2715,6 +2723,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (qTable.TryGetValue(state, out var current_State))
                 {
                     //int numer_of_update_action = Math.Max(1, current_State.Count/4);
+                    TimeSpan time_state = TimeSpan.Parse(state.Item2.Substring(2));
                     int numer_of_update_action = current_State.Count;
                     var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
 
@@ -2728,6 +2737,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         var bestAction = bestActionEntry.Key;
                         var newStateInfo = bestActionEntry.Value.Item5;
+                        TimeSpan time_newState = TimeSpan.Parse(newStateInfo.Item2.Substring(2));
                         var R_S_A = bestActionEntry.Value.Item4;
                         var Q_S_A = bestActionEntry.Value.Item1;
 
@@ -2736,14 +2746,17 @@ namespace CalculationEngine.HouseholdElements {
 
                         if (qTable.TryGetValue(newState, out var next_State))
                         {
-                            var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
-
-                            if(next_Action_Entry.Key == null || next_Action_Entry.Value.Item1 == 0)
+                            if(time_newState >= time_state || bestAction.Contains("sleep bed"))
                             {
-                                continue;
-                            }
+                                var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
 
-                            prediction += Math.Pow(gamma, 1) * next_Action_Entry.Value.Item1;
+                                if (next_Action_Entry.Key == null || next_Action_Entry.Value.Item1 == 0)
+                                {
+                                    continue;
+                                }
+                                prediction += gamma * next_Action_Entry.Value.Item1;
+                            }
+                            
 
                            
                         }
@@ -2889,6 +2902,7 @@ namespace CalculationEngine.HouseholdElements {
             {
                 R_S_A = 20000000;
             }
+
             var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string))>());
 
             (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string)) Q_S_A;
