@@ -2205,7 +2205,7 @@ namespace CalculationEngine.HouseholdElements {
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
 
-
+            //return GetBestAffordanceFromListNew(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_Trad_Q_Learning(time, allAvailableAffordances, careForAll, now);
             //return GetBestAffordanceFromListNewRL_DYNA_Q_Learning(time, allAvailableAffordances, careForAll, now);
 
