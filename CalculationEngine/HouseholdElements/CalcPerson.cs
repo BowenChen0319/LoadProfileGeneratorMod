@@ -57,6 +57,7 @@ using System.Runtime.CompilerServices;
 using static System.Collections.Specialized.BitVector32;
 using System.Threading;
 using System.Timers;
+using System.Data.SqlTypes;
 
 #endregion
 
@@ -2559,7 +2560,7 @@ namespace CalculationEngine.HouseholdElements {
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = null;
+            ICalcAffordanceBase sleep = allAvailableAffordances.FirstOrDefault(a => a.Name.Contains("sleep bed"));
             //(double, double) Q_R_Value = (0,0);
             //(double, double) Q_R_Value_Sleep = (0, 0);
 
@@ -2629,8 +2630,10 @@ namespace CalculationEngine.HouseholdElements {
                 affordanceSearchCounter += n+1;// Update Counter
 
                 //Get n-step prediction Infomation 
-                DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
-                bool state_after_pass_day = TimeAfter > endOfDay;
+
+                //DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
+                //bool state_after_pass_day = TimeAfter > endOfDay;
+                bool state_after_pass_day = sleep != null; // means sleep exist in the wait list
                 if (!state_after_pass_day)
                 {
                     var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
@@ -2726,6 +2729,7 @@ namespace CalculationEngine.HouseholdElements {
                     TimeSpan time_state = TimeSpan.Parse(state.Item2.Substring(2));
                     int numer_of_update_action = current_State.Count;
                     var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
+                    bool inTheSameDay = !current_State.Keys.Any(key => key.Contains("sleep bed"));
 
                     foreach (var bestActionEntry in topActions)
                     {
@@ -2740,13 +2744,14 @@ namespace CalculationEngine.HouseholdElements {
                         TimeSpan time_newState = TimeSpan.Parse(newStateInfo.Item2.Substring(2));
                         var R_S_A = bestActionEntry.Value.Item4;
                         var Q_S_A = bestActionEntry.Value.Item1;
-
+                        //bool inTheSameDay = time_newState>=time_state;
+                        
                         double prediction = R_S_A;
                         var newState = newStateInfo;
 
                         if (qTable.TryGetValue(newState, out var next_State))
                         {
-                            if(time_newState >= time_state)
+                            if(inTheSameDay)
                             {
                                 var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
 
