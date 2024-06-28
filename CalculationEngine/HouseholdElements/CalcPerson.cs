@@ -2061,6 +2061,7 @@ namespace CalculationEngine.HouseholdElements {
             newTime = newTime.AddMinutes(-rounded_minutes_new);
             //TimeSpan newTimeState = new TimeSpan(newTime.Hour, newTime.Minute, 0);
             string prefix = newTime.DayOfWeek == DayOfWeek.Saturday || newTime.DayOfWeek == DayOfWeek.Sunday ? "R:" : "W:";
+            //string prefix = newTime.DayOfWeek.ToString()+":";
             string newTimeState = prefix + newTime.ToString("HH:mm");
             //Debug.WriteLine("Time: "+ "  " + newTimeState);
             return newTimeState;
@@ -2560,7 +2561,8 @@ namespace CalculationEngine.HouseholdElements {
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
-            ICalcAffordanceBase sleep = allAvailableAffordances.FirstOrDefault(a => a.Name.Contains("sleep bed"));
+            //ICalcAffordanceBase sleep = allAvailableAffordances.FirstOrDefault(a => a.Name.Contains("sleep bed"));
+            ICalcAffordanceBase sleep = null;
             //(double, double) Q_R_Value = (0,0);
             //(double, double) Q_R_Value_Sleep = (0, 0);
 
@@ -2631,9 +2633,10 @@ namespace CalculationEngine.HouseholdElements {
 
                 //Get n-step prediction Infomation 
 
-                //DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
-                //bool state_after_pass_day = TimeAfter > endOfDay;
-                bool state_after_pass_day = sleep != null; // means sleep exist in the wait list
+                DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
+                bool state_after_pass_day = TimeAfter > endOfDay;
+                //bool state_after_pass_day = sleep != null; // means sleep exist in the wait list
+                //state_after_pass_day = false;
                 if (!state_after_pass_day)
                 {
                     var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
@@ -2729,7 +2732,7 @@ namespace CalculationEngine.HouseholdElements {
                     TimeSpan time_state = TimeSpan.Parse(state.Item2.Substring(2));
                     int numer_of_update_action = current_State.Count;
                     var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
-                    bool inTheSameDay = !current_State.Keys.Any(key => key.Contains("sleep bed"));
+                    //bool inTheSameDay = !current_State.Keys.Any(key => key.Contains("sleep bed"));
 
                     foreach (var bestActionEntry in topActions)
                     {
@@ -2744,7 +2747,7 @@ namespace CalculationEngine.HouseholdElements {
                         TimeSpan time_newState = TimeSpan.Parse(newStateInfo.Item2.Substring(2));
                         var R_S_A = bestActionEntry.Value.Item4;
                         var Q_S_A = bestActionEntry.Value.Item1;
-                        //bool inTheSameDay = time_newState>=time_state;
+                        bool inTheSameDay = time_newState>=time_state;
                         
                         double prediction = R_S_A;
                         var newState = newStateInfo;
