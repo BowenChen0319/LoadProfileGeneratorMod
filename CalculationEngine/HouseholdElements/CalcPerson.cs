@@ -2771,7 +2771,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         // Update the Q-value using the Bellman equation
                         double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
-
+                        //
                         var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4, bestActionEntry.Value.Item5);
 
                         current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
