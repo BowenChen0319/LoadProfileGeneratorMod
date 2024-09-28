@@ -194,7 +194,7 @@ namespace CalculationEngine {
                     }
                     
                     sw.Stop();
-                    Debug.WriteLine("Time elapsed: {0} seconds", sw.Elapsed.TotalSeconds);
+                    Logger.Info("Time used in seconds:"+ sw.Elapsed.TotalSeconds);
                     Debug.WriteLine("Endtime: " + DateTime.Now);
                     
                     Logger.Info("Finished the simulation");
