@@ -246,3 +246,4 @@ ModelManifest.xml
 
 /.sonarqube
 /WpfApplication1/profilegenerator-latest.db3
+/WpfApplication1/profilegenerator.db3
