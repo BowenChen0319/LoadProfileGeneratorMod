@@ -689,7 +689,7 @@ namespace CalculationEngine.HouseholdElements {
 
             var satisfactionvalueRAW = satisfactionvalues;
             // calc decay
-
+            //
             foreach (var calcDesire in Desires.Values)
             {
                 calcDesire.TempValue = calcDesire.Value;
