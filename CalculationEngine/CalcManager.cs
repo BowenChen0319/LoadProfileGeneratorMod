@@ -180,7 +180,7 @@ namespace CalculationEngine {
 
                     sw.Start();
 
-                    CalcObject.BuildTwdDic();
+                    //CalcObject.BuildTwdDic();
 
                     while (now < CalcRepo.CalcParameters.InternalEndTime && ContinueRunning) {
                         // ReSharper disable once PossibleNullReferenceException
@@ -195,6 +195,7 @@ namespace CalculationEngine {
                     
                     sw.Stop();
                     Logger.Info("Time used in seconds:"+ sw.Elapsed.TotalSeconds);
+                    Debug.WriteLine("Time used in seconds:" + sw.Elapsed.TotalSeconds);
                     Debug.WriteLine("Endtime: " + DateTime.Now);
                     
                     Logger.Info("Finished the simulation");

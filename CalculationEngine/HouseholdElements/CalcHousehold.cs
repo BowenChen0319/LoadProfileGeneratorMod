@@ -84,19 +84,7 @@ namespace CalculationEngine.HouseholdElements {
         [NotNull] private readonly string _description;
         private readonly CalcRepo _calcRepo;
 
-        public decimal totalWeightedDeviation = 0;
 
-        //public Dictionary<string, DateTime, decimal> totalWeightedDeviationByDate = new Dictionary<DateTime, decimal>();
-
-        //public Dictionary<DateTime, decimal> highTWDExceptions = new Dictionary<DateTime, decimal>();
-
-        public Dictionary<string, Dictionary<DateTime, decimal>> totalWeightedDeviationByDate = new Dictionary<string, Dictionary<DateTime, decimal>>();
-        
-        public Dictionary<string, Dictionary<DateTime, decimal>> allHighTWDExceptions = new Dictionary<string, Dictionary<DateTime, decimal>>();
-        
-        public Dictionary<string, DateTime?> allLastHighTWD = new Dictionary<string, DateTime?>();
-
-        public bool saveDesiresTWD = false;
 
         public Dictionary<string,ICalcAffordanceBase> currentAff = new Dictionary<string, ICalcAffordanceBase>();
 
@@ -342,58 +330,10 @@ namespace CalculationEngine.HouseholdElements {
         public void FinishCalculation()
         {
 
-
-
-
-            //if(saveDesiresTWD)
-            //{
-            //    Debug.WriteLine("TWD: " + totalWeightedDeviation);
-            //    string fileName = DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".csv";
-            //    string filePath = Path.Combine(@"C:\Work", fileName);
-            //    //get OutputDirectory from JsonCalcSpecification 
-
-
-            //    try
-            //    {
-            //        // 创建或覆盖文件
-            //        using (StreamWriter file = new StreamWriter(filePath))
-            //        {
-            //            // 写入文件头
-            //            file.WriteLine("Date,Deviation,");
-
-            //            // 遍历字典并写入文件
-            //            foreach (var item in totalWeightedDeviationByDate)
-            //            {
-            //                string line = $"{item.Key.ToString("yyyy-MM-dd")},{item.Value.ToString(CultureInfo.InvariantCulture)},";
-            //                file.WriteLine(line);
-            //            }
-            //        }
-
-            //        Debug.WriteLine($"saved in: {filePath}");
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        Debug.WriteLine($"can not save: {ex.Message}");
-            //    }
-            //}
-
-            //var innerDict = p.AffordanceSequence[previousDay];
-            //        foreach (var kvp in innerDict)
-            //        {
-            //            // 假设ICalcAffordanceBase有一个ToString()方法或其他想要打印的属性
-            //            Debug.WriteLine($"Inner Key: {kvp.Key}, Value: {kvp.Value}");
-            //        }
-
             foreach (var person in _persons)
             {
                 var person_name = person.Name;
-                if (allHighTWDExceptions[person_name].Count > 0)
-                {
-                    foreach (var kvp in allHighTWDExceptions[person_name])
-                    {
-                        Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}, TWD: {kvp.Value}");
-                    }
-                }
+
                 if(person.TrainingAffordanceSequence.Count > 0)
                 {
                     foreach (var kvp in person.TrainingAffordanceSequence)
@@ -406,14 +346,6 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
 
-                //Debug.WriteLine($"Name: {person_name}, Count: {person.updatedWeight.Count}");
-                //if (person.updatedWeight.Count > 0)
-                //{
-                //    foreach (var kvp in person.updatedWeight)
-                //    {
-                //        Debug.WriteLine($"Person: {person.Name}, Desire: {kvp.Key}, Weight: {kvp.Value}");
-                //    }
-                //}
 
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                 Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
@@ -496,348 +428,10 @@ namespace CalculationEngine.HouseholdElements {
             }
             _startSimulation = DateTime.Now;
 
-            //if (!totalWeightedDeviationByDate.ContainsKey(person_name))
-            //{
-            //    totalWeightedDeviationByDate[person_name] = new Dictionary<DateTime, decimal>();
-            //    allHighTWDExceptions[person_name] = new Dictionary<DateTime, decimal>();
-            //    allLastHighTWD[person_name] = null;
-            //}
         }
 
-        /*
-        public void WriteInformation()
-        {
-            throw new NotImplementedException();
-        }
-        */
 
-        public void BuildTwdDic()
-        {
-            foreach (var p in _persons)
-            {
-                var calcParameters = _calcRepo.CalcParameters;
-
-
-                if (calcParameters.UseNewAlgo)
-                {
-                    //totalWeightedDeviation += p.getCurrent_TotalWeightedDeviation();
-
-                    string person_name = p.Name;
-
-                    
-                    if (!totalWeightedDeviationByDate.ContainsKey(person_name))
-                    {
-                        totalWeightedDeviationByDate[person_name] = new Dictionary<DateTime, decimal>();
-                        allHighTWDExceptions[person_name] = new Dictionary<DateTime, decimal>();
-                        allLastHighTWD[person_name] = null;
-                    }
-                }
-            }
-        }
-
-        public (bool,bool) CheckAndUpdateTwdDic(CalcPerson p, DateTime now)
-        {
-            bool NeedToCheck = false;
-
-            bool NeedToRecord = false;
-
-            string person_name = p.Name;
-
-            if (!allHighTWDExceptions.TryGetValue(person_name, out var highTWDExceptions))
-            {
-                highTWDExceptions = new Dictionary<DateTime, decimal>();
-                allHighTWDExceptions[person_name] = highTWDExceptions;
-            }
-
-            //DateTime? lastHighTWD;
-            if (!allLastHighTWD.TryGetValue(person_name, out var lastHighTWD))
-            {
-                lastHighTWD = null; // 明确指定为null，即使这是默认行为
-            }
-
-            var totalWeightedDeviationByDateP = totalWeightedDeviationByDate[person_name];
-
-            if (totalWeightedDeviationByDateP.Count > 7)
-            {
-                var average = totalWeightedDeviationByDateP.Where(kvp => kvp.Key != now.Date).Select(kvp => (double)kvp.Value).Average();
-
-                //double standardDeviation = Math.Sqrt(variance);
-                //double standardDeviation = 0.1 * average;
-
-                //var standardDeviation1 = Math.Sqrt(totalWeightedDeviationByDateP
-                //    .Where(kvp => kvp.Key != now.Date)
-                //    .Select(kvp => Math.Pow((double)kvp.Value - average, 2))
-                //    .Average());
-
-                //Debug.WriteLine(person_name+" Date: "+now.Date+"  Mean: " + average +" Std: "+standardDeviation1);
-
-                //var standardDeviation = 0.4 * 1000000;
-
-                var standardDeviation = 0.1557 * average + 900;
-
-                
-
-                if ((double)totalWeightedDeviationByDateP[now.Date] > average + standardDeviation)
-                {
-                    NeedToRecord = true;
-
-                    DateTime yesterday = now.Date.AddDays(-1);
-
-                    if (p.AffordanceSequence.TryGetValue(yesterday, out var yesterdayActivities))
-                    {
-                        
-                        var lastActivity = yesterdayActivities.Last().Value;
-                        //Debug.WriteLine("last on:  " + lastActivity.Name);
-                        if (lastActivity.Name.Contains("sleep bed"))
-                        {
-                            return (false, false);
-                        }
-                        
-                    }
-
-                    DateTime previousDay = now.Date.AddDays(-1);
-
-                    if (!highTWDExceptions.ContainsKey(previousDay) && previousDay != lastHighTWD)
-                    {
-                        allHighTWDExceptions[person_name][now.Date] = totalWeightedDeviationByDateP[now.Date];
-                        Debug.WriteLine(person_name+" have HIGH TWD: " + now.Date.ToString("yyyy-MM-dd"));
-                        NeedToCheck = true;
-                        //CheckAndBiuldTraningSet(p, now);
-                    }
-
-
-                }
-                //else
-                //{
-                    
-                //    if(p.AffordanceSequence.TryGetValue(now.Date, out var todayActivities))
-                //    {
-                //        foreach (var activity in todayActivities)
-                //        {
-                //            p.setNewWeight(activity.Value.Name, -0.01m);
-                //        }
-                //    }
-                //}
-
-            }
-            return (NeedToCheck, NeedToRecord);
-
-        }
-
-        public void CheckAndBuildTraningSet(CalcPerson p, DateTime now)
-        {
-            if (p.AffordanceSequence != null)
-            {
-                DateTime previousDay = now.Date.AddDays(-1);
-
-                var uniqueActivities = new Dictionary<string, ICalcAffordanceBase>();
-
-                if (p.AffordanceSequence.TryGetValue(previousDay, out var previousDayActivities))
-                {
-                    foreach (var activity in previousDayActivities)
-                    {
-                        //p.setNewWeight(activity.Value.Name, 0.1m);
-
-                        uniqueActivities[activity.Value.Name] = activity.Value;
-                    }
-                }
-
-                for (int i = 1; i <= 2; i++)
-                {
-                    DateTime dayToCheck = previousDay.AddDays(-i);
-                    if (p.AffordanceSequence.TryGetValue(dayToCheck, out var activities))
-                    {
-                        foreach (var activity in activities)
-                        {
-                            if (uniqueActivities.ContainsKey(activity.Value.Name))
-                            {
-                                uniqueActivities.Remove(activity.Value.Name);
-                            }
-                        }
-                    }
-                }
-
-                if (uniqueActivities.Count > 1)
-                {
-                    var activityWithMaxDuration = uniqueActivities.Values
-                        .OrderByDescending(a => a.GetDuration())
-                        .First();
-
-                    uniqueActivities.Clear();
-                    uniqueActivities[activityWithMaxDuration.Name] = activityWithMaxDuration;
-                }
-
-
-                if (uniqueActivities.Count > 0 && p.AffordanceSequence.TryGetValue(previousDay, out var allActivitiesForTheDay))
-                {
-                    //var lastActivity = allActivitiesForTheDay.Values.LastOrDefault();
-                    var latestActivityTime = allActivitiesForTheDay.Keys.Max();
-                    if (allActivitiesForTheDay.Count>10 && latestActivityTime.TimeOfDay > new TimeSpan(18, 0, 0))
-                    {
-                        //foreach (var kvp in uniqueActivities)
-                        //{
-                        //    Debug.WriteLine($"Unique Activity on {previousDay:yyyy-MM-dd}: {kvp.Key}, Cate: {kvp.Value.AffCategory}");
-                        //}
-                        //bool firstTime = p.TrainingAffordanceSequence.Count == 0;
-                        bool firstTime = p.firstTimeRecorded;
-
-                        var trainingActivitiesForTheDay = new Dictionary<string, (string, int)>();
-
-                        foreach (var activity in allActivitiesForTheDay)
-                        {
-                            if(!activity.Value.Name.Contains("Replacement Activity"))
-                            {
-                                int isUnique = uniqueActivities.ContainsKey(activity.Value.Name) ? 1 : 0;
-
-                                if (isUnique == 1)
-                                {
-                                    p.setNewWeight(activity.Value.Name, 0.2m);
-                                }
-
-                                //var rounded_down_time = activity.Key;
-                                //var rounded_minutes = rounded_down_time.Minute -((rounded_down_time.Minute % 15) * 15);
-                                //rounded_down_time = rounded_down_time.AddMinutes(-rounded_minutes);
-
-                                trainingActivitiesForTheDay[activity.Key.ToString("HH:mm")] = (activity.Value.Name, isUnique);
-                                //trainingActivitiesForTheDay[rounded_down_time.ToString("HH:mm")] = (activity.Value.Name, isUnique);
-                            }
-                            
-                        }
-
-                        
-
-                        p.TrainingAffordanceSequence[previousDay] = trainingActivitiesForTheDay;
-
-                        if(p.trainingCounter <= 12)
-                        {
-                            UpdateAndSaveTrainingCSV(p.Name.Replace("/", "_"), trainingActivitiesForTheDay, firstTime);
-
-                            p.trainingCounter++;
-
-                        }
-
-                        p.firstTimeRecorded = false;
-                    }
-
-
-
-                }
-
-
-
-            }
-        }
         
-
-        public void UpdateAndSaveTrainingCSV(string personName, Dictionary<string, (string, int)> trainingActivitiesForTheDay, bool firstTime)
-        {
-            string baseDir = @"C:\Work\ML\Data";
-            string baseDir2 = @"C:\Work\ML\Models";
-
-            if (!Directory.Exists(baseDir))
-            {
-                // 创建目录
-                Directory.CreateDirectory(baseDir);
-            }
-            if (!Directory.Exists(baseDir2))
-            {
-                // 创建目录
-                Directory.CreateDirectory(baseDir2);
-
-            }
-
-            string personalFilePath = Path.Combine(baseDir, $"ml-training-{personName}.csv");
-            string defaultFilePath = Path.Combine(baseDir, "ml-training-data.csv");
-
-            // 确保目录存在
-            
-
-            try
-            {
-                // 确定使用哪个文件路径
-                string filePathToUse = !firstTime ? personalFilePath : defaultFilePath;
-                //Debug.WriteLine($"Using file: {filePathToUse}");
-                // 如果是个人文件路径不存在，则初始化CSV内容
-
-                //if (firstTime && File.Exists(personalFilePath))
-                //{
-                //    Debug.WriteLine($"File already exist: {personalFilePath}");
-                //    File.Delete(personalFilePath);
-                //}
-
-                List<string> csvLines = new List<string>();
-                if (File.Exists(filePathToUse))
-                {
-                    csvLines.AddRange(File.ReadAllLines(filePathToUse)); // 读取现有文件内容
-                }
-
-                // 添加新的活动数据
-                foreach (var activity in trainingActivitiesForTheDay)
-                {
-                    //if (!activity.Value.Item1.Contains("Replacement Activity"))
-                    //{
-                    //    csvLines.Add($"{activity.Key};{activity.Value.Item1};{activity.Value.Item2}");
-                    //}
-                    csvLines.Add($"{activity.Key};{activity.Value.Item1};{activity.Value.Item2}");
-                }
-
-                string directoryPath = Path.GetDirectoryName(personalFilePath);
-
-                
-                // 使用StreamWriter写入文件
-                using (StreamWriter file = new StreamWriter(personalFilePath, false)) // false表示覆盖文件
-                {
-                    foreach (string line in csvLines)
-                    {
-                        file.WriteLine(line);
-                    }
-                }
-
-                Debug.WriteLine($"File saved: {personalFilePath}");
-                
-                //ML Training
-                Stopwatch stopwatch = Stopwatch.StartNew();
-                ML_Time_Aff_Bool_Model.Train(personName,personalFilePath);
-                ML_Time_Aff_Bool_Model.ReloadModel(personName);
-                stopwatch.Stop();
-
-                Debug.WriteLine($"Training time: {stopwatch.Elapsed.TotalSeconds} s");
-
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"File not saved: {ex.Message}");
-            }
-        }
-
-
-        public void UpdateTotalWeightedDeviation(CalcPerson p, DateTime now)
-        {
-            string personName = p.Name; // 获取人员名称
-            var nowDate = now.Date; // 获取当前日期
-            decimal currentTWD = p.GetCurrent_TotalWeightedDeviation(); // 获取当前人员的TWD值，避免多次调用
-
-            if (totalWeightedDeviationByDate.TryGetValue(personName, out var twdByDate))
-            {
-                if (twdByDate.TryGetValue(nowDate, out var existingTWD))
-                {
-                    twdByDate[nowDate] = existingTWD + currentTWD;
-                }
-                else
-                {
-                    twdByDate.Add(nowDate, currentTWD);
-                }
-            }
-            else
-            {
-                var newTwdByDate = new Dictionary<DateTime, decimal> { { nowDate, currentTWD } };
-                totalWeightedDeviationByDate.Add(personName, newTwdByDate);
-            }
-
-            totalWeightedDeviation += currentTWD;
-        }
-
-
 
         public void RunOneStep(TimeStep timestep, DateTime now, bool runProcessing)
         {
@@ -878,13 +472,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (calcParameters.UseNewAlgo)
                 {
 
-                    //check and load q-table
-                    //if (!p.firstTimeRecorded)
-                    //{
-                    //    p.LoadQTableFromFile();
-                    //    p.firstTimeRecorded = false;
 
-                    //}
                     var remainTimeFromAllPerson = _persons?.ToDictionary(person => person.Name, person => person._remainingExecutionSteps) ?? new Dictionary<string, int>();
 
                     p.remainTimeOtherPerson = remainTimeFromAllPerson;
@@ -918,36 +506,16 @@ namespace CalculationEngine.HouseholdElements {
                         p.foundCounter = 0;
 
                         int DeltaTableNumber = 0;
-                        //if(p.TableNumberEachDay.Count > 3)
-                        //{
-                            
-                        //    int TableNumberToday = p.qTable.Count + p.qTable2.Count;
-                        //    int TableNumberLastWeek = TableNumberToday;
-                        //    if(p.TableNumberEachDay.TryGetValue(now.Date.AddDays(-3), out var lastWeekTableNumber))
-                        //    {
-                        //        TableNumberLastWeek = lastWeekTableNumber;
-                        //    }
-                        //    DeltaTableNumber = TableNumberToday - TableNumberLastWeek;
-                        //}
+
                         Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {p.qTable2.Count}, {p.qTable.Count+ p.qTable2.Count},{result}, {foundResultSum},  {DeltaTableNumber}");
                         Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {p.qTable2.Count}, {result}, {foundResultSum}, {DeltaTableNumber}");
-                        //(bool NeedCheck,bool NeedRecored) = CheckAndUpdateTwdDic(p, now);
-                        //if (NeedCheck)
-                        //{
-                        //    //CheckAndBuildTraningSet(p, now);
-                            
-                        //}
-                        //if (NeedRecored)
-                        //{
-                        //    allLastHighTWD[p.Name] = now.Date;
-                        //}
+
                         
                     }
 
                     p.NextStepNew(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
 
-                    //UpdateTotalWeightedDeviation(p, now);
 
 
                 }
