@@ -85,12 +85,6 @@ namespace CalculationEngine.HouseholdElements {
         private readonly CalcRepo _calcRepo;
 
 
-
-        public Dictionary<string,ICalcAffordanceBase> currentAff = new Dictionary<string, ICalcAffordanceBase>();
-
-        //public DateTime lastHighTWD;
-
-
         //[CanBeNull] private VariableLogfile _variableLogfile;
 
         public CalcHousehold([NotNull] string pName, [NotNull] string locationname,
@@ -334,19 +328,6 @@ namespace CalculationEngine.HouseholdElements {
             {
                 var person_name = person.Name;
 
-                if(person.TrainingAffordanceSequence.Count > 0)
-                {
-                    foreach (var kvp in person.TrainingAffordanceSequence)
-                    {
-                        Debug.WriteLine($"Person: {person_name}, Date: {kvp.Key.ToString("yyyy-MM-dd")}");
-                        foreach (var kvp2 in kvp.Value)
-                        {
-                            Debug.WriteLine($"Inner Key: {kvp2.Key}, Value: {kvp2.Value.Item1}, Unique: {kvp2.Value.Item2}");
-                        }
-                    }
-                }
-
-
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                 Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);                
                 person.SaveQTableToFile();
@@ -497,10 +478,8 @@ namespace CalculationEngine.HouseholdElements {
                         p.searchCounter = 0;
                         p.foundCounter = 0;
 
-                        int DeltaTableNumber = 0;
-
-                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum},  {DeltaTableNumber}");
-                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}, {DeltaTableNumber}");
+                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum}");
+                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}");
 
                         
                     }

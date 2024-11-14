@@ -379,35 +379,8 @@ namespace CalculationEngine.HouseholdElements {
                 return BusynessType.BeyondTimeLimit;
             }
 
-            //Debug.WriteLine(time.InternalStep);
-            //if (IsBusyArray[time.InternalStep] == false)
-            //{
-            //    // 在给定的time.InternalStep之后的多少step之后的IsBusyArray才变为true
-            //    int stepsUntilTrue = -1; // 默认值为-1，表示在给定的startIndex之后未找到true值
-            //    for (int i = time.InternalStep + 1; i < IsBusyArray.Count; i++)
-            //    {
-            //        if (IsBusyArray[i])
-            //        {
-            //            stepsUntilTrue = i - time.InternalStep;
-            //            break;
-            //        }
-            //    }
-
-            //    Debug.WriteLine($"          IsBusyAfter  {stepsUntilTrue}   steps ");
-            //    // 这里可以添加逻辑来返回其他的BusynessType，例如:
-            //    // return BusynessType.Free;
-            //}
             if (IsBusyArray[time.InternalStep])
             {
-                //Debug.WriteLine(IsBusyArray);
-                //string output = "IsBusy: ";
-                //for (int i = 0; i < IsBusyArray.Count; i++)
-                //{
-                //    output += IsBusyArray[i] ? '1' : '0';
-                //}
-                //Debug.WriteLine(output);
-                
-
                 return BusynessType.Occupied;
             }
 

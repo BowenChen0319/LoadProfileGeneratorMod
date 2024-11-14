@@ -148,28 +148,12 @@ namespace CalculationEngine.HouseholdElements {
 
         public bool _debug_print = false;
 
-        public bool _lookback = false;
-
-        public decimal totalWeightedDeviation = 0;
-
-        public ICalcAffordanceBase _executingAffordance = null;
-
-        public Dictionary<DateTime,Dictionary<DateTime,ICalcAffordanceBase>> AffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<DateTime, ICalcAffordanceBase>>();
-
-        public Dictionary<DateTime,Dictionary<string, (string,int)>> TrainingAffordanceSequence { get; set; } = new Dictionary<DateTime, Dictionary<string, (string,int)>>();
-
         
-        public bool firstTimeRecorded = true;
-
-        public int trainingCounter = 0;
-
+        public ICalcAffordanceBase _executingAffordance = null;
 
         public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,Dictionary<int,double>,double, (Dictionary<string, int>, string))>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
 
-        public ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>> max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-
-       
-
+        
         public (Dictionary<string, int>, string) currentState = (null, null);
 
         
@@ -1183,14 +1167,6 @@ namespace CalculationEngine.HouseholdElements {
 
             _currentAffordance = bestaff;
 
-            if (!AffordanceSequence.TryGetValue(now.Date, out var innerDict))
-            {
-                innerDict = new Dictionary<DateTime, ICalcAffordanceBase>();
-                AffordanceSequence[now.Date] = innerDict;
-            }
-
-            innerDict[now] = bestaff;
-
         }
 
         public void LogPersonStatus([JetBrains.Annotations.NotNull] TimeStep timestep)
@@ -1279,26 +1255,14 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         
+
         public void SaveQTableToFile()
         {
-            SaveQTableToFile(false);
-            if (this.max_qTable.Count > 0)
-            {
-                SaveQTableToFile(true);
-            }
-            
-        }
-
-        public void SaveQTableToFile(Boolean ismax)
-        {
             string baseDir2 = @"C:\Work\ML\Models";
-            //var qtable_toSave = qTable;
 
             var convertedQTable = new Dictionary<string, string>();
 
-            var qTable_tosave = ismax ? max_qTable : qTable;
-
-            foreach (var outerEntry in qTable_tosave)
+            foreach (var outerEntry in qTable)
             {
                 var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
                 var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
@@ -1317,7 +1281,7 @@ namespace CalculationEngine.HouseholdElements {
             }
             string personName = _calcPerson.Name.Replace("/", "_");
             //string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
-            string filePath = ismax ? Path.Combine(baseDir2, $"qTable-{personName}-max.json") : Path.Combine(baseDir2, $"qTable-{personName}.json");
+            string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
             try
             {
                 var options = new JsonSerializerOptions { WriteIndented = true };
@@ -1331,29 +1295,10 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
+ 
         public void LoadQTableFromFile()
         {
-            LoadQTableFromFile(false);
-            //LoadQTableFromFile(true);
-            if(this.qTable.Count == 0 && this.max_qTable.Count == 0)
-            {
-                Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
-                Logger.Info("After the Loading, No saved QTable found. Initializing a new QTable.");
-                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-                this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-            }
-        }
-
-        public void LoadQTableFromFile(Boolean isMax)
-        {
-            if(isMax)
-            {
-                Debug.WriteLine("Now Loading Max QTable from file...");
-            }
-            else
-            {
-                Debug.WriteLine("Now Loading QTable from file...");
-            }
+            Debug.WriteLine("Now Loading QTable from file...");
             string baseDir = @"C:\Work\ML\Models";
             // 确保目录存在
             if (!Directory.Exists(baseDir))
@@ -1364,10 +1309,6 @@ namespace CalculationEngine.HouseholdElements {
             // 处理文件名以避免路径问题
             string personName = _calcPerson.Name.Replace("/", "_");
             string filePath = Path.Combine(baseDir, $"qTable-{personName}.json");
-            if (isMax)
-            {
-                filePath = Path.Combine(baseDir, $"qTable-{personName}-max.json");
-            }
 
             // 检查文件是否存在
             if (File.Exists(filePath))
@@ -1410,14 +1351,7 @@ namespace CalculationEngine.HouseholdElements {
 
                         readed_QTable[outerKey] = innerDict;
                     }
-                    if(isMax)
-                    {
-                        this.max_qTable = readed_QTable;
-                    }
-                    else
-                    {
-                        this.qTable = readed_QTable;
-                    }
+                    this.qTable = readed_QTable;
 
                     Debug.WriteLine("QTable has been successfully loaded from " + filePath);
                     Logger.Info("QTable has been successfully loaded from " + filePath);
@@ -1428,16 +1362,9 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     Debug.WriteLine("Error loading QTable: " + ex.Message);
                     Logger.Info("Error loading QTable: " + ex.Message);
-                    if (!isMax)
-                    {
-                        this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>> (new CustomKeyComparer());
-                    }
-                    else
-                    {
-                        this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-                    }
-                    
-                    
+                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
+
+
                 }
             }
             else
@@ -1445,14 +1372,7 @@ namespace CalculationEngine.HouseholdElements {
                 // 文件不存在，初始化为新的字典
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
-                if (!isMax)
-                {
-                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-                }
-                else
-                {
-                    this.max_qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-                }
+                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
             }
         }
 
