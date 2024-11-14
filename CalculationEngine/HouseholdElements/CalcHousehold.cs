@@ -348,16 +348,8 @@ namespace CalculationEngine.HouseholdElements {
 
 
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
-                Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
-                if(person.qTable2.Count > 0)
-                {
-                    //person.SaveTwoQTableToFile();
-                }
-                else
-                {
-                    person.SaveQTableToFile();
-                }
-
+                Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);                
+                person.SaveQTableToFile();
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
                 
             }
@@ -507,8 +499,8 @@ namespace CalculationEngine.HouseholdElements {
 
                         int DeltaTableNumber = 0;
 
-                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},  {p.qTable2.Count}, {p.qTable.Count+ p.qTable2.Count},{result}, {foundResultSum},  {DeltaTableNumber}");
-                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {p.qTable2.Count}, {result}, {foundResultSum}, {DeltaTableNumber}");
+                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum},  {DeltaTableNumber}");
+                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}, {DeltaTableNumber}");
 
                         
                     }

@@ -180,7 +180,7 @@ namespace CalculationEngine {
 
                     sw.Start();
 
-                    //CalcObject.BuildTwdDic();
+                   
 
                     while (now < CalcRepo.CalcParameters.InternalEndTime && ContinueRunning) {
                         // ReSharper disable once PossibleNullReferenceException
