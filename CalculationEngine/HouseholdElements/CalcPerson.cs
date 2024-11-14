@@ -913,9 +913,9 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubsNew(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromList_RL(time, availableInterruptingAffordances, true, now);
+                    var bestAffordance = GetBestAffordanceFromListNew_RL_Adapted_Q_Learning(time, availableInterruptingAffordances, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
-                    if(_debug_print)
+                    if (_debug_print)
                     {
                         Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name + "  !!! Interrupt  !!!   " + _currentAffordance.Name);
                     }
@@ -1247,7 +1247,7 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromList_RL(time,  allAffordances, true, now);
+            return GetBestAffordanceFromListNew_RL_Adapted_Q_Learning(time, allAffordances, now);
         }
 
         
@@ -1418,15 +1418,9 @@ namespace CalculationEngine.HouseholdElements {
             //return "";
         }
 
-        private ICalcAffordanceBase GetBestAffordanceFromList_RL([JetBrains.Annotations.NotNull] TimeStep time,
-                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
-        {
-            return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, now);
-            
-        }
 
          
-        private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Adapted_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase GetBestAffordanceFromListNew_RL_Adapted_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now)
         {
             //If the QTable is empty, then load it from the file
@@ -1495,9 +1489,9 @@ namespace CalculationEngine.HouseholdElements {
                 //Start prediction, variable initialization
                 double prediction = R_S_A;
                 (Dictionary<string, int>, string) nextState = newState; //new state
-                DateTime nextTime = TimeAfter;                
+                DateTime nextTime = TimeAfter;
 
-                affordanceSearchCounter += 1;// Update Counter
+                affordanceSearchCounter++;// Update Counter
 
                 //Get n-step prediction Infomation 
 
@@ -1506,9 +1500,9 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (!state_after_pass_day)
                 {
-                    var prediction_info = Q_Learning_Stage2(nextState);
-                    prediction += gamma * prediction_info.Q_or_R_Value;
-                    affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
+                    var max_Q_ns = Q_Learning_Stage2(nextState);
+                    prediction += gamma * max_Q_ns;
+                    affordanceFoundCounter += max_Q_ns > 0 ? 1 : 0;
                 }
                 
                 // Update the Q value for the current state and action
@@ -1663,7 +1657,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        public (double Q_or_R_Value, bool alreadyVisited) Q_Learning_Stage2((Dictionary<string, int>, string) currentState)
+        public double Q_Learning_Stage2((Dictionary<string, int>, string) currentState)
         {
             double maxQ_Value = 0;
 
@@ -1684,15 +1678,12 @@ namespace CalculationEngine.HouseholdElements {
 
             if (maxQ_Value == 0)
             {
-                return (0, false);
+                return 0;
             }
             else
             {
-                return (maxQ_Value, true);               
+                return maxQ_Value;               
             }
-
-            
-
 
         }
 
