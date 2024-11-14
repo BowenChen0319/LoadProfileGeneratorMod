@@ -290,7 +290,7 @@ namespace CalculationEngine.HouseholdElements {
         //[NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
         
 
-        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0, bool? interruptable = false)
+        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0, bool? interruptable = false)
         {
 
             //List<CalcDesire> satisfactionvalues;
@@ -361,11 +361,10 @@ namespace CalculationEngine.HouseholdElements {
             return desireName_ValueBeforeApply_Dict;
         }
 
-        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, Dictionary<string, (int, double)> desireName_ValueBeforeApply, int realDuration) CalcTotalDeviationAllasAreaNewRL_New(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
+        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, int realDuration) CalcTotalDeviationAllasAreaNewRL_New(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
         {
             Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (int, double)>();
-            Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (int, double)>();
-
+            
             double totalDeviation = 0;
             StringBuilder? sb = null;
             var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
@@ -374,48 +373,31 @@ namespace CalculationEngine.HouseholdElements {
                 sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
             }
 
-            //var satisfactionValueDictionary = satisfactionvalues.ToDictionary(s => s.DesireID, s => s.Value);
             var satisfactionValueDictionary = satisfactionvaluesDict;
 
             double weight_sum = 0;
-
-            int index = 0;
-
 
             foreach (var calcDesire in Desires.Values)
             {
                 var desireID = calcDesire.DesireID;
                 var DesireName = calcDesire.Name;
                 satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueDBL);
-
-                
+         
                 var decayrate = calcDesire.GetDecayRateDoulbe();
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
 
-
-
                 if (optionalList != null && optionalList.Count == Desires.Values.Count)
                 {
-                    // 从optionalList获取对应位置的值作为currentValueDBL的值
                     currentValueDBL = optionalList[DesireName].Item2;
                 }
-
-                index++;
-
-                desireName_ValueBeforeApply_Dict[calcDesire.Name] = (((int)calcDesire.Weight), currentValueDBL);
-
-                //var short_duration = 30;
-                //var short_duration = int.MaxValue;
 
                 if (satisfactionvalueDBL > 0)
                 {
                     weight_sum += weightDBL;
                 }
 
-                //double Deviration = 1 - currentValueDBL;
                 double deviration = 0;
-                //double profitValue = 0;
                 double updateValue = currentValueDBL;
                 if (satisfactionvalueDBL > 0)
                 {
@@ -438,7 +420,6 @@ namespace CalculationEngine.HouseholdElements {
 
                 desireName_ValueAfterApply_Dict[calcDesire.Name] = (((int)calcDesire.Weight), updateValue);
 
-                //profitValue = profitValue * weightDBL / duration;
                 var weightedDeviration = deviration * weightDBL;
 
                 totalDeviation += weightedDeviration;
@@ -463,9 +444,8 @@ namespace CalculationEngine.HouseholdElements {
 
             thoughtstring = sb?.ToString() ?? null;
 
-            return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict, desireName_ValueBeforeApply_Dict, duration);
+            return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict, duration);
         }
-
 
 
         private decimal CalcTotalDeviation(out string? thoughtstring) {

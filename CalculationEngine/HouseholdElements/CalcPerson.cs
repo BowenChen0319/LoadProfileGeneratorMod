@@ -163,10 +163,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public int sumSearchCounter = 0;
 
-        public int sumFoundCounter = 0;
-
-        
-        
+        public int sumFoundCounter = 0;        
         
         public Dictionary<string, int> remainTimeOtherPerson = new Dictionary<string, int>();
 
@@ -201,7 +198,6 @@ namespace CalculationEngine.HouseholdElements {
 
                 return false;
             }
-            // affordanzen l鰏chen, die nicht mindestens ein bed黵fnis der Person befriedigen
 
             CalcPersonDesires desires;
             if (sickness) {
@@ -1369,7 +1365,6 @@ namespace CalculationEngine.HouseholdElements {
             }
             else
             {
-                // 文件不存在，初始化为新的字典
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
                 this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, Dictionary<int, double>, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
@@ -1379,7 +1374,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public Dictionary<string, int> MergeDictAndLevels(Dictionary<string, (int, double)> desireName_Value_Dict)
         {
-            var mergedDict = new Dictionary<string, int>(); // 创建新的字典以存储结果
+            var mergedDict = new Dictionary<string, int>(); 
 
             foreach (var kvp in desireName_Value_Dict)
             {
@@ -1400,12 +1395,12 @@ namespace CalculationEngine.HouseholdElements {
 
                 if(desire_weight >= 20)//20
                 {
-                    mergedDict[key] = desire_level; // 将键和计算出的等级值直接合并到新字典中
+                    mergedDict[key] = desire_level; 
                 }
                 
             }
 
-            return mergedDict; // 返回合并后的字典
+            return mergedDict; 
         }
 
         public string makeTimeSpan(DateTime time, int offset)
@@ -1426,13 +1421,13 @@ namespace CalculationEngine.HouseholdElements {
         private ICalcAffordanceBase GetBestAffordanceFromList_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now)
         {
-            return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, careForAll, now, 2);
+            return GetBestAffordanceFromListNewRL_Adapted_Q_Learning(time, allAvailableAffordances, now);
             
         }
 
          
         private ICalcAffordanceBase GetBestAffordanceFromListNewRL_Adapted_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
-                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, Boolean careForAll, DateTime now, int predictionStep)
+                                                      [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now)
         {
             //If the QTable is empty, then load it from the file
             if (qTable.Count == 0)
@@ -1442,16 +1437,10 @@ namespace CalculationEngine.HouseholdElements {
 
             this.RetrainBestActionsFromRandomStates(time.InternalStep);
 
-            //int predictionStep = predictionSteps; //>=2
-            //n_step_backUpdate(size: predictionStep);
-
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
-            //ICalcAffordanceBase sleep = allAvailableAffordances.FirstOrDefault(a => a.Name.Contains("sleep bed"));
             ICalcAffordanceBase sleep = null;
-            //(double, double) Q_R_Value = (0,0);
-            //(double, double) Q_R_Value_Sleep = (0, 0);
 
             var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
             var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
@@ -1476,7 +1465,6 @@ namespace CalculationEngine.HouseholdElements {
                 //Hyperparameters
                 double alpha = 0.2;
                 
-
                 bool existsInPastThreeHoursCurrent = false;
                 DateTime threeHoursAgo = now.AddHours(-3);
 
@@ -1498,47 +1486,31 @@ namespace CalculationEngine.HouseholdElements {
                 var R_S_A = firstStageQ_Learning_Info.R_S_A;
                 var Q_S_A = firstStageQ_Learning_Info.Q_S_A;
                 var newState = firstStageQ_Learning_Info.newState;
-                var desire_ValueAfter = firstStageQ_Learning_Info.desire_ValueAfter;
                 var weightSum = firstStageQ_Learning_Info.weightSum;
                 var TimeAfter = firstStageQ_Learning_Info.TimeAfter;
-                var duration = firstStageQ_Learning_Info.duration;
 
                 affordanceFoundCounter += Q_S_A.Item1 > 0 ? 1 : 0; //Update Counter, if this state is already visited, then increase the FoundCounter
 
 
-                //Start n-step prediction, variable initialization
+                //Start prediction, variable initialization
                 double prediction = R_S_A;
                 (Dictionary<string, int>, string) nextState = newState; //new state
-                int restDuration = 0;
-                DateTime nextTime = TimeAfter;
-                
-                Dictionary<string, (int, double)> AffNameDesireValue = desire_ValueAfter;
-                TimeStep nextStep = time==null? null : time.AddSteps(duration);
-                int n = predictionStep-2;
+                DateTime nextTime = TimeAfter;                
 
-                affordanceSearchCounter += n+1;// Update Counter
+                affordanceSearchCounter += 1;// Update Counter
 
                 //Get n-step prediction Infomation 
 
                 DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
                 bool state_after_pass_day = TimeAfter > endOfDay;
-                //bool state_after_pass_day = sleep != null; // means sleep exist in the wait list
-                //state_after_pass_day = false;
+
                 if (!state_after_pass_day)
                 {
-                    var prediction_info = Q_Learning_Stage2(nextState, 0, nextTime, nextStep, AffNameDesireValue);
+                    var prediction_info = Q_Learning_Stage2(nextState);
                     prediction += gamma * prediction_info.Q_or_R_Value;
                     affordanceFoundCounter += prediction_info.alreadyVisited ? 1 : 0;
                 }
                 
-                //nextState = prediction_info.newState;
-                //restDuration += prediction_info.Duration;
-                //nextTime = prediction_info.TimeAfter_nS;
-                //AffNameDesireValue = prediction_info.desireName_ValueAfter;
-                //nextStep = prediction_info.nextStep;
-                
-
-
                 // Update the Q value for the current state and action
 
                 double new_Q_S_A = Q_S_A.Item1 == 0 ? R_S_A : (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
@@ -1556,7 +1528,6 @@ namespace CalculationEngine.HouseholdElements {
                         {
                             bestQ_S_A = new_Q_S_A;
                             bestAffordance = affordance;
-                            //Q_R_Value = (new_Q_S_A, R_S_A);
                         }
                     }
                 }
@@ -1569,7 +1540,6 @@ namespace CalculationEngine.HouseholdElements {
                 if (weightSum >= 1000)
                 {
                     sleep = affordance;
-                    //Q_R_Value_Sleep = (new_Q_S_A, R_S_A);
                 }
 
             });
@@ -1579,15 +1549,7 @@ namespace CalculationEngine.HouseholdElements {
             foundCounter += currentFoundCounter;
 
             //return affordance
-            //if (sleep != null)
-            //{
-            //    //n_step_backUpdate((currentState, sleep.Name, Q_R_Value_Sleep.Item1, Q_R_Value_Sleep.Item2));
-            //    return sleep;
-
-            //}
-
-            //n_step_backUpdate((currentState, bestAffordance.Name, Q_R_Value.Item1, Q_R_Value.Item2));
-            return bestAffordance;
+             return bestAffordance;
 
         }
 
@@ -1619,11 +1581,10 @@ namespace CalculationEngine.HouseholdElements {
                     TimeSpan time_state = TimeSpan.Parse(state.Item2.Substring(2));
                     int numer_of_update_action = current_State.Count;
                     var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
-                    //bool inTheSameDay = !current_State.Keys.Any(key => key.Contains("sleep bed"));
 
                     foreach (var bestActionEntry in topActions)
                     {
-                        // 如果bestActionEntry为空，则跳过
+
                         if (bestActionEntry.Key == null)
                         {
                             continue;
@@ -1650,10 +1611,7 @@ namespace CalculationEngine.HouseholdElements {
                                     continue;
                                 }
                                 prediction += gamma * next_Action_Entry.Value.Item1;
-                            }
-                            
-
-                           
+                            }                                                       
                         }
 
                         // Update the Q-value using the Bellman equation
@@ -1667,7 +1625,7 @@ namespace CalculationEngine.HouseholdElements {
             });
         }
 
-        public ((double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, Dictionary<string, (int, double)> desire_ValueAfter, double weightSum, DateTime TimeAfter, int duration) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
+        public ((double, int, Dictionary<int, double>,double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
         {
             int duration = time==null? affordance.GetDuration() : affordance.GetRealDuration(time);
             //int duration = affordance.GetRealDuration(time);
@@ -1680,9 +1638,6 @@ namespace CalculationEngine.HouseholdElements {
             var weightSum = calcTotalDeviationResult.WeightSum;
 
             string newTimeState = makeTimeSpan(now, duration);
-
-            //TimeStep currentTimeStep = time;
-            TimeStep nextTimeStep = time == null ? null : time.AddSteps(duration);
 
             Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
 
@@ -1704,21 +1659,13 @@ namespace CalculationEngine.HouseholdElements {
 
             var TimeAfter = now.AddMinutes(duration);
 
-            return (Q_S_A, R_S_A, newState, desire_ValueAfter, weightSum,TimeAfter, duration);
+            return (Q_S_A, R_S_A, newState,weightSum,TimeAfter);
         }
 
 
-        public ((Dictionary<string, int>, string time) newState, double Q_or_R_Value, DateTime TimeAfter_nS, int Duration, Dictionary<string, (int, double)> desireName_ValueAfter, TimeStep nextStep, bool alreadyVisited) Q_Learning_Stage2((Dictionary<string, int>, string) currentState, int iteration, DateTime time, TimeStep step,Dictionary<string, (int, double)> desireName_ValueBefore)
+        public (double Q_or_R_Value, bool alreadyVisited) Q_Learning_Stage2((Dictionary<string, int>, string) currentState)
         {
-            if (desireName_ValueBefore == null)
-            {
-                return ((null, ""), 0, time, 0, null, null, false);
-            }
-            
-            string maxActionKey = "";
             double maxQ_Value = 0;
-            int duration = 0;
-            Dictionary<int, double> satValues = null;
 
             if (qTable.TryGetValue(currentState, out var Q_newState_actions_nS))
             {
@@ -1730,50 +1677,18 @@ namespace CalculationEngine.HouseholdElements {
                     if (maxAction.Key != null)
                     {
                         maxQ_Value = maxAction.Value.Item1; 
-                        maxActionKey = maxAction.Key; 
-                        duration = maxAction.Value.Item2; 
-                        satValues = maxAction.Value.Item3; 
-                        //duration = _normalPotentialAffs.PotentialAffordances.FirstOrDefault(aff => aff.Name == maxAction.Key) ?.GetRealDuration(step) ?? 0;
-                        //duration = duration == 0 ? maxAction.Value.Item2 : duration;
                     }
                 }
                 
             }
 
-            TimeStep nextStep = step == null? null : step.AddSteps(duration);
-
             if (maxQ_Value == 0)
             {
-                return ((null, ""), 0, time, 0, null, null, false);
+                return (0, false);
             }
             else
             {
-                if (iteration == 0)
-                {                    
-                    return ((null, ""), maxQ_Value, time.AddMinutes(duration), duration,null, null, true);
-                }
-                else
-                {
-                    var calcTotalDeviationResultAfter_nS = PersonDesires.CalcEffectPartlyRL_New(null, new TimeStep(), true, out var thoughtstrin_new, new DateTime(), desireName_ValueBefore, satValues, duration);
-                    var next_desireDiff = calcTotalDeviationResultAfter_nS.totalDeviation;
-                    var R_S_A_nS = -next_desireDiff + 1000000;
-                    var desire_ValueAfter_nS = calcTotalDeviationResultAfter_nS.desireName_ValueAfterApply_Dict;
-                    string newTimeState = makeTimeSpan(time, duration);
-                    Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter_nS);
-                    (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
-
-                    qTable.TryGetValue(currentState, out var Q_newState_actions_nS_next);
-                    if(Q_newState_actions_nS_next == null || !Q_newState_actions_nS_next.Any())//new state have't benn visited, so return Q Value
-                    {
-                        return ((null, ""), maxQ_Value, time.AddMinutes(duration), duration, null, null, true); ;
-                    }
-                    else // new state are visited, so return R value
-                    {
-                        return (newState, R_S_A_nS, time.AddMinutes(duration), duration, desire_ValueAfter_nS, nextStep, true);
-                    }
-
-                    
-                }
+                return (maxQ_Value, true);               
             }
 
             
