@@ -139,12 +139,6 @@ namespace CalculationEngine.HouseholdElements
                                     CalcLocation srcLocation, CalcPersonDto calcPerson,
                                     bool clearDictionaries = true);
 
-        public abstract BusynessType IsBusyNew(TimeStep time,
-                                    CalcLocation srcLocation, CalcPersonDto calcPerson,
-                                    bool clearDictionaries = true);
-
-        public abstract int GetRestTimeWindows(TimeStep time);
-
         public bool IsInterruptable { get; }
 
         public bool IsInterrupting { get; }

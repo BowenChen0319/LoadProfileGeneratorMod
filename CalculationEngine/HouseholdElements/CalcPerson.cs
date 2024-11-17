@@ -240,7 +240,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public void NextStepNew([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        public void NextStep_Linear([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                              [JetBrains.Annotations.NotNull] HouseholdKey householdKey,
                              [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
                              int simulationSeed,DateTime now)
@@ -265,9 +265,10 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //PersonDesires.ApplyDecay(time);
+            //NEW
             if (_executingAffordance != null)
             {
-                PersonDesires.ApplyDecayWithoutSomeNew(time, _executingAffordance.Satisfactionvalues);
+                PersonDesires.ApplyDecay_WithoutSome_Linear(time, _executingAffordance.Satisfactionvalues);
 
             }
             else
@@ -286,26 +287,20 @@ namespace CalculationEngine.HouseholdElements {
 
             // bereits besch鋐tigt
             if (_isBusy[time.InternalStep]) {
+                //NEW
                 if (_executingAffordance != null && _remainingExecutionSteps > 0)
                 {
-                    //Debug.WriteLine("Time " + time + " Current: " + _executingAffordance + " remain "+ _remainingExecutionSteps);
                     _remainingExecutionSteps--;
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
-                    PersonDesires.ApplyAffordanceEffectNew(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time, now);
+                    PersonDesires.ApplyAffordanceEffect_Linear(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time, now);
                 }
-                InterruptIfNeededNew(time, isDaylight, false,now);
-                //continue with current activity
-
-                //totalWeightedDeviation = PersonDesires.getcurrent_TotalWeightedDeviation();
-
+                InterruptIfNeeded_Linear(time, isDaylight, false,now);
                 return;
             }
 
             if (IsOnVacation[time.InternalStep])
             {
                 BeOnVacation(time);
-
-                //totalWeightedDeviation = PersonDesires.getcurrent_TotalWeightedDeviation();
 
                 return;
             }
@@ -322,26 +317,18 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             //activate new affordance
-            var bestaff = FindBestAffordanceNew(time,  persons,
+            //NEW
+            var bestaff = FindBestAffordance_RL(time,  persons,
                 simulationSeed, now);
-            //MessageWindowHandler.Mw.ShowInfoMessage(bestaff.ToString(), "Success");
-            //Logger.Info(bestaff.ToString());
-            //System.Console.WriteLine(bestaff.ToString());
-            //Debug.WriteLine(time);
             if (_debug_print)
             {
-                Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestaff.Name + "  restTime:  " + bestaff.GetRestTimeWindows(time));
+                Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestaff.Name);
 
             }
 
-            ActivateAffordanceNew(time, isDaylight,  bestaff, now);
+            ActivateAffordance_Linear(time, isDaylight,  bestaff, now);
             _isCurrentlyPriorityAffordanceRunning = false;
 
-            //totalWeightedDeviation = PersonDesires.getcurrent_TotalWeightedDeviation();
-
-            //Debug.WriteLine("Time:   " + now +  "  totalWeightedDeviation:  " + PersonDesires.getcurrent_TotalWeightedDeviation());
-
-            //PersonDesires.ApplyDecayNew();
         }
 
 
@@ -892,7 +879,7 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        private void InterruptIfNeededNew([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        private void InterruptIfNeeded_Linear([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                        bool ignoreAlreadyExecutedActivities, DateTime now)
         {
             bool otherPersonNotBusy = true; // other person's activity almost done
@@ -911,16 +898,16 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 var availableInterruptingAffordances =
-                    NewGetAllViableAffordancesAndSubsNew(time, null, true, aff, ignoreAlreadyExecutedActivities);
+                    NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
-                    var bestAffordance = GetBestAffordanceFromListNew_RL_Adapted_Q_Learning(time, availableInterruptingAffordances, now);
+                    var bestAffordance = GetBestAffordanceFromList_Adapted_Q_Learning_RL(time, availableInterruptingAffordances, now);
                     //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     if (_debug_print)
                     {
                         Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name + "  !!! Interrupt  !!!   " + _currentAffordance.Name);
                     }
                     //Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
-                    ActivateAffordanceNew(time, isDaylight,  bestAffordance, now);
+                    ActivateAffordance_Linear(time, isDaylight,  bestAffordance, now);
                     
                     
                     switch (bestAffordance.AfterInterruption) {
@@ -1096,7 +1083,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public override string ToString() => "Person:" + Name;
 
-        private void ActivateAffordanceNew([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
+        private void ActivateAffordance_Linear([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                          [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff, DateTime now)
         {
             if (_calcRepo.Logfile == null) {
@@ -1141,7 +1128,7 @@ namespace CalculationEngine.HouseholdElements {
             
             int durationInMinutes = personTimeProfile.StepValues.Count;
 
-            PersonDesires.ApplyAffordanceEffectNew(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
+            PersonDesires.ApplyAffordanceEffect_Linear(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
             _executingAffordance = bestaff;
             _remainingExecutionSteps = durationInMinutes - 1;
             _currentDuration = durationInMinutes;
@@ -1175,7 +1162,7 @@ namespace CalculationEngine.HouseholdElements {
         }
         
         [JetBrains.Annotations.NotNull]
-        private ICalcAffordanceBase FindBestAffordanceNew([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase FindBestAffordance_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                        [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed, DateTime now)
         {
             var allAffs = IsSick[time.InternalStep] ? _sicknessPotentialAffs : _normalPotentialAffs;
@@ -1185,18 +1172,18 @@ namespace CalculationEngine.HouseholdElements {
             }
 
             var allAffordances =
-                NewGetAllViableAffordancesAndSubsNew(time, null, false,  allAffs, false);
+                NewGetAllViableAffordancesAndSubs(time, null, false,  allAffs, false);
             if(allAffordances.Count == 0 && (time.ExternalStep < 0 || _calcRepo.CalcParameters.IgnorePreviousActivitesWhenNeeded))
             {
                 allAffordances =
-                    NewGetAllViableAffordancesAndSubsNew(time, null,  false, allAffs, true);
+                    NewGetAllViableAffordancesAndSubs(time, null,  false, allAffs, true);
             }
             allAffordances.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
             //no affordances, so search again for the error messages
             if (allAffordances.Count == 0) {
 
                 var status = new AffordanceStatusClass();
-                NewGetAllViableAffordancesAndSubsNew(time, status,  false,  allAffs, false);
+                NewGetAllViableAffordancesAndSubs(time, status,  false,  allAffs, false);
                 var ts = new TimeSpan(0, 0, 0,
                     (int)_calcRepo.CalcParameters.InternalStepsize.TotalSeconds * time.InternalStep);
                 var dt = _calcRepo.CalcParameters.InternalStartTime.Add(ts);
@@ -1236,7 +1223,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (_calcRepo.CalcParameters.EnableIdlemode)
                 {
                     var idleaff = CurrentLocation.IdleAffs[this];
-                    idleaff.IsBusyNew(time, CurrentLocation, _calcPerson);
+                    idleaff.IsBusy(time, CurrentLocation, _calcPerson);
                     //Logger.Info(s);
                     return idleaff;
                 }
@@ -1247,12 +1234,12 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
-            return GetBestAffordanceFromListNew_RL_Adapted_Q_Learning(time, allAffordances, now);
+            return GetBestAffordanceFromList_Adapted_Q_Learning_RL(time, allAffordances, now);
         }
 
         
 
-        public void SaveQTableToFile()
+        public void SaveQTableToFile_RL()
         {
             string baseDir2 = @"C:\Work\ML\Models";
 
@@ -1292,21 +1279,21 @@ namespace CalculationEngine.HouseholdElements {
         }
 
  
-        public void LoadQTableFromFile()
+        public void LoadQTableFromFile_RL()
         {
             Debug.WriteLine("Now Loading QTable from file...");
             string baseDir = @"C:\Work\ML\Models";
-            // 确保目录存在
+            
             if (!Directory.Exists(baseDir))
             {
                 Directory.CreateDirectory(baseDir);
             }
 
-            // 处理文件名以避免路径问题
+            
             string personName = _calcPerson.Name.Replace("/", "_");
             string filePath = Path.Combine(baseDir, $"qTable-{personName}.json");
 
-            // 检查文件是否存在
+            
             if (File.Exists(filePath))
             {
                 try
@@ -1331,8 +1318,6 @@ namespace CalculationEngine.HouseholdElements {
                             var valueParts = parts[1].Split('‖');
                             var decimalValue = double.Parse(valueParts[0]);
                             var intValue = int.Parse(valueParts[1]);
-                           // var dictParts = valueParts[2].Split(new string[] { "∥" }, StringSplitOptions.None);
-                            //var dict = dictParts.Select(p => p.Split('⨁')).ToDictionary(p => int.Parse(p[0]), p => double.Parse(p[1]));
                             var r_value = double.Parse(valueParts[2]);
                             var newStateParts = valueParts[3].Split('♯');
                             var newStateDictParts = newStateParts[0].Split('¥').Select(p => p.Split('○')).ToDictionary(p => p[0], p => int.Parse(p[1]));
@@ -1368,7 +1353,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        public Dictionary<string, int> MergeDictAndLevels(Dictionary<string, (int, double)> desireName_Value_Dict)
+        public Dictionary<string, int> MergeDictAndLevels_RL(Dictionary<string, (int, double)> desireName_Value_Dict)
         {
             var mergedDict = new Dictionary<string, int>(); 
 
@@ -1397,7 +1382,7 @@ namespace CalculationEngine.HouseholdElements {
             return mergedDict; 
         }
 
-        public string makeTimeSpan(DateTime time, int offset)
+        public string MakeTimeSpan_RL(DateTime time, int offset)
         {
             int unit = 15;
             var newTime = time.AddMinutes(offset);
@@ -1410,25 +1395,25 @@ namespace CalculationEngine.HouseholdElements {
 
 
          
-        private ICalcAffordanceBase GetBestAffordanceFromListNew_RL_Adapted_Q_Learning([JetBrains.Annotations.NotNull] TimeStep time,
+        private ICalcAffordanceBase GetBestAffordanceFromList_Adapted_Q_Learning_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now)
         {
             //If the QTable is empty, then load it from the file
             if (qTable.Count == 0)
             {
-                LoadQTableFromFile();
+                LoadQTableFromFile_RL();
             }
 
-            this.RetrainBestActionsFromRandomStates(time.InternalStep);
+            this.Q_Learning_Experience_Replay_RL(time.InternalStep);
 
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
             var bestAffordance = allAvailableAffordances[0];
             ICalcAffordanceBase sleep = null;
 
-            var desire_ValueBefore = PersonDesires.GetCurrentDesireValue();
-            var desire_level_before = MergeDictAndLevels(desire_ValueBefore);
-            this.currentState = new(desire_level_before, makeTimeSpan(now, 0));
+            var desire_ValueBefore = PersonDesires.GetCurrentDesireValue_Linear();
+            var desire_level_before = MergeDictAndLevels_RL(desire_ValueBefore);
+            this.currentState = new(desire_level_before, MakeTimeSpan_RL(now, 0));
 
             int currentSearchCounter = allAvailableAffordances.Count;
             int currentFoundCounter = 0;
@@ -1466,7 +1451,7 @@ namespace CalculationEngine.HouseholdElements {
 
 
                 //GetNextStateAndQ_R_Value(state, time,now)// input: State, time, now // output: Q, R, next state
-                var firstStageQ_Learning_Info = Q_Learning_Stage1(affordance, currentState, time, now);
+                var firstStageQ_Learning_Info = Q_Learning_Stage1_RL(affordance, currentState, time, now);
                 var R_S_A = firstStageQ_Learning_Info.R_S_A;
                 var Q_S_A = firstStageQ_Learning_Info.Q_S_A;
                 var newState = firstStageQ_Learning_Info.newState;
@@ -1490,7 +1475,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 if (!state_after_pass_day)
                 {
-                    var max_Q_ns = Q_Learning_Stage2(nextState);
+                    var max_Q_ns = Q_Learning_Stage2_RL(nextState);
                     prediction += gamma * max_Q_ns;
                     affordanceFoundCounter += max_Q_ns > 0 ? 1 : 0;
                 }
@@ -1537,7 +1522,7 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
-        private void RetrainBestActionsFromRandomStates(int seed)
+        private void Q_Learning_Experience_Replay_RL(int seed)
         {
             if (qTable.Count == 0)
             {
@@ -1609,21 +1594,21 @@ namespace CalculationEngine.HouseholdElements {
             });
         }
 
-        public ((double, int,double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
+        public ((double, int,double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1_RL(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
         {
             int duration = time==null? affordance.GetDuration() : affordance.GetRealDuration(time);
             //int duration = affordance.GetRealDuration(time);
             bool isInterruptable = affordance.IsInterruptable;
             var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
-            var calcTotalDeviationResult = PersonDesires.CalcEffectPartlyRL_New(null, time, true, out var thoughtstring, now, satValue: satisfactionvalues, newDuration: duration, interruptable: isInterruptable);
+            var calcTotalDeviationResult = PersonDesires.CalcEffect_Partly_Linear(duration, out var thoughtstring, satValue: satisfactionvalues, interruptable: isInterruptable);
 
             var desireDiff = calcTotalDeviationResult.totalDeviation;
             var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
             var weightSum = calcTotalDeviationResult.WeightSum;
 
-            string newTimeState = makeTimeSpan(now, duration);
+            string newTimeState = MakeTimeSpan_RL(now, duration);
 
-            Dictionary<string, int> desire_level_after = MergeDictAndLevels(desire_ValueAfter);
+            Dictionary<string, int> desire_level_after = MergeDictAndLevels_RL(desire_ValueAfter);
 
             (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
             var R_S_A = -desireDiff + 1000000;
@@ -1647,7 +1632,7 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        public double Q_Learning_Stage2((Dictionary<string, int>, string) currentState)
+        public double Q_Learning_Stage2_RL((Dictionary<string, int>, string) currentState)
         {
             double maxQ_Value = 0;
 
@@ -1722,115 +1707,8 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         [JetBrains.Annotations.NotNull]
-        [ItemNotNull]
-        private List<ICalcAffordanceBase> NewGetAllViableAffordancesAndSubsNew([JetBrains.Annotations.NotNull] TimeStep timeStep,
-                                                                            AffordanceStatusClass? errors,
-                                                                            bool getOnlyInterrupting,
-                                                                            [JetBrains.Annotations.NotNull] PotentialAffs potentialAffs, bool tryHarder)
-        {
-            
-            var getOnlyRelevantDesires = getOnlyInterrupting; // just for clarity
-            // normal affs
-            var resultingAff = new List<ICalcAffordanceBase>();
-            List<ICalcAffordanceBase> srcList;
-            if (getOnlyInterrupting) {
-                srcList = potentialAffs.PotentialInterruptingAffordances;
-            }
-            else {
-                srcList = potentialAffs.PotentialAffordances;
-            }
-            
+        [ItemNotNull]       
 
-            foreach (var calcAffordanceBase in srcList) {
-                if (NewIsAvailableAffordanceNew(timeStep, calcAffordanceBase, errors, getOnlyRelevantDesires,
-                    CurrentLocation.CalcSite, tryHarder)) {
-                    resultingAff.Add(calcAffordanceBase);
-                }
-            }
-
-
-            // subaffs
-
-            List<ICalcAffordanceBase> subSrcList;
-            if (getOnlyInterrupting) {
-                subSrcList = potentialAffs.PotentialAffordancesWithInterruptingSubAffordances;
-            }
-            else {
-                subSrcList = potentialAffs.PotentialAffordancesWithSubAffordances;
-            }
-
-            foreach (var affordance in subSrcList) {
-                var spezsubaffs =
-                    affordance.CollectSubAffordances(timeStep, getOnlyInterrupting,  CurrentLocation);
-                if (spezsubaffs.Count > 0) {
-                    foreach (var spezsubaff in spezsubaffs) {
-                        if (NewIsAvailableAffordanceNew(timeStep, spezsubaff, errors,
-                            getOnlyRelevantDesires, CurrentLocation.CalcSite,tryHarder)) {
-                            resultingAff.Add(spezsubaff);
-                        }
-                    }
-                }
-            }
-
-            if (getOnlyInterrupting) {
-                foreach (var affordance in resultingAff) {
-                    if (!PersonDesires.HasAtLeastOneDesireBelowThreshold(affordance)) {
-                        throw new LPGException("something went wrong while getting an interrupting affordance!");
-                    }
-                }
-            }
-
-            return resultingAff;
-        }
-
-        private bool NewIsAvailableAffordanceNew([JetBrains.Annotations.NotNull] TimeStep timeStep,
-                                              [JetBrains.Annotations.NotNull] ICalcAffordanceBase aff,
-                                              AffordanceStatusClass? errors, bool checkForRelevance,
-                                              CalcSite? srcSite, bool ignoreAlreadyExecutedActivities)
-        {
-            //Debug.WriteLine(aff.Name);
-            if (_calcRepo.CalcParameters.TransportationEnabled) {
-                if (aff.Site != srcSite && !(aff is AffordanceBaseTransportDecorator)) {
-                    //person is not at the right place and can't transport -> not available.
-                    //Debug.WriteLine("   Not at the right place");
-                    return false;
-                }
-            }
-
-            if (!ignoreAlreadyExecutedActivities && _previousAffordances.Contains(aff))
-            {
-                if (errors != null)
-                {
-                    errors.Reasons.Add(new AffordanceStatusTuple(aff, "Just did this."));
-                }
-
-                return false;
-            }
-
-            //Debug.WriteLine(aff.Name);
-
-            var busynessResult = aff.IsBusyNew(timeStep, CurrentLocation, _calcPerson);
-            //Debug.WriteLine(busynessResult);
-            if (busynessResult != BusynessType.NotBusy) {
-                if (errors != null) {
-                    errors.Reasons.Add(new AffordanceStatusTuple(aff, "Affordance is busy:" + busynessResult.ToString()));
-                }
-                //Debug.WriteLine("   Affordance is busy");
-                return false;
-                //here is a filter
-            }
-
-            if (checkForRelevance && !PersonDesires.HasAtLeastOneDesireBelowThreshold(aff)) {
-                if (errors != null) {
-                    errors.Reasons.Add(new AffordanceStatusTuple(aff,
-                        "Person has no desires below the threshold for this affordance, so it is not relevant right now."));
-                }
-                //Debug.WriteLine("   No desires below");
-                return false;
-            }
-
-            return true;
-        }
 
         private int SetBusy([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] ICalcProfile personCalcProfile, [JetBrains.Annotations.NotNull] CalcLocation loc, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                             bool needsLight)
@@ -1956,19 +1834,16 @@ public class CustomKeyComparer : IEqualityComparer<(Dictionary<string, int>, str
 {
     public bool Equals((Dictionary<string, int>, string) x, (Dictionary<string, int>, string) y)
     {
-        // 检查字符串部分是否相等
         if (!x.Item2.Equals(y.Item2))
         {
             return false;
         }
 
-        // 检查字典部分的键值对数量是否相等
         if (x.Item1.Count != y.Item1.Count)
         {
             return false;
         }
 
-        // 检查每个键是否存在于另一个字典中且对应的值相等
         foreach (var kvp in x.Item1)
         {
             if (!y.Item1.TryGetValue(kvp.Key, out var value) || kvp.Value != value)
@@ -1977,14 +1852,12 @@ public class CustomKeyComparer : IEqualityComparer<(Dictionary<string, int>, str
             }
         }
 
-        //Debug.WriteLine("Equal");
         return true;
         
     }
 
     public int GetHashCode((Dictionary<string, int>, string) obj)
     {
-        // 计算哈希码
         int hash = 17;
         hash = hash * 23 + obj.Item2.GetHashCode();
         foreach (var kvp in obj.Item1.OrderBy(kvp => kvp.Key))

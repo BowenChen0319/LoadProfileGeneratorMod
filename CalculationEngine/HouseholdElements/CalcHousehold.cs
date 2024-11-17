@@ -330,7 +330,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                 Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);                
-                person.SaveQTableToFile();
+                person.SaveQTableToFile_RL();
                 Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
                 
             }
@@ -484,7 +484,7 @@ namespace CalculationEngine.HouseholdElements {
                         
                     }
 
-                    p.NextStepNew(timestep, _locations, _daylightArray,
+                    p.NextStep_Linear(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed, now);
 
 

@@ -197,12 +197,6 @@ namespace CalculationEngine.Transportation {
             return result;
         }
 
-        public BusynessType IsBusyNew(TimeStep time, CalcLocation srcLocation, CalcPersonDto calcPerson,
-            bool clearDictionaries = true)
-        {
-            
-            return this.IsBusy(time,srcLocation,calcPerson, clearDictionaries);
-        }
 
         //public BitArray IsBusyArray => _sourceAffordance.IsBusyArray;
 
@@ -253,10 +247,6 @@ namespace CalculationEngine.Transportation {
             return _sourceAffordance.AreDeviceProfilesEmpty();
         }
 
-        public int GetRestTimeWindows(TimeStep time)
-        {
-            return _sourceAffordance.GetRestTimeWindows(time);
-        }
 
         public int Weight => _sourceAffordance.Weight;
     }

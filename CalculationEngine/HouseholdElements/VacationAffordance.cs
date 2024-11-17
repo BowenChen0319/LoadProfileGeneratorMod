@@ -76,32 +76,5 @@ namespace CalculationEngine.HouseholdElements {
                                     CalcLocation srcLocation, CalcPersonDto calcPerson,
                                     bool clearDictionaries = true) =>
             throw new LPGException("This function should never be called");
-
-        public override BusynessType IsBusyNew(TimeStep time,
-                                    CalcLocation srcLocation, CalcPersonDto calcPerson,
-                                    bool clearDictionaries = true) =>
-            throw new LPGException("This function should never be called");
-
-        public override int GetRestTimeWindows(TimeStep time)
-        {
-            if (IsBusyArray[time.InternalStep] == false)
-            {
-                int stepsUntilTrue = -1; // 默认值为-1，表示在给定的startIndex之后未找到true值
-                for (int i = time.InternalStep + 1; i < IsBusyArray.Count; i++)
-                {
-                    if (IsBusyArray[i])
-                    {
-                        stepsUntilTrue = i - time.InternalStep;
-                        break;
-                    }
-                }
-                return stepsUntilTrue;
-            }
-            else
-            {
-                return -100;
-            }
-
-        }
     }
 }

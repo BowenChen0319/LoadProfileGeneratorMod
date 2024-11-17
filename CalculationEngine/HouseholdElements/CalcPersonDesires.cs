@@ -83,46 +83,38 @@ namespace CalculationEngine.HouseholdElements {
 
         
 
-        public void ApplyAffordanceEffectNew([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
+        public void ApplyAffordanceEffect_Linear([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
             [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep, DateTime now) {
             if (firsttime)
             {
                 while (_lastAffordances.Count > 10)
                 {
                     _lastAffordances.RemoveAt(0);
-                    //_timeOfLastAffordance.RemoveAt(0);
-
                 }
 
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
-                //_timeOfLastAffordance.Add(currentTimeStep + durationAsTimestep);
-                //_timeOfLastAffordance.Add(currentTimeStep);
                 var words = affordance.Split(' ');
-                string affordanceKey = string.Join(" ", words.Take(3)); // 取 affordance 中的前三个单词
+                string affordanceKey = string.Join(" ", words.Take(3)); 
 
                 if (_lastAffordanceTime.ContainsKey(affordanceKey))
                 {
-                    _lastAffordanceTime[affordanceKey] = currentTimeStep; // 更新时间
+                    _lastAffordanceTime[affordanceKey] = currentTimeStep; 
                 }
                 else
                 {
-                    _lastAffordanceTime.Add(affordanceKey, currentTimeStep); // 添加新条目
+                    _lastAffordanceTime.Add(affordanceKey, currentTimeStep); 
                 }
 
 
                 if (_lastAffordanceDate.ContainsKey(affordanceKey))
                 {
-                    _lastAffordanceDate[affordanceKey] = now; // 更新时间
+                    _lastAffordanceDate[affordanceKey] = now; 
                 }
                 else
                 {
-                    _lastAffordanceDate.Add(affordanceKey, now); // 添加新条目
+                    _lastAffordanceDate.Add(affordanceKey, now); 
                 }
-
-
-                //Debug.WriteLine("                              duration" + durationAsTimestep);
-                //
             }
             
             foreach (var satisfactionvalue in satisfactionvalues) {
@@ -239,10 +231,8 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         
-        public void ApplyDecayWithoutSomeNew([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
+        public void ApplyDecay_WithoutSome_Linear([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
         {
-            //TODO: Consider apply decay to all desires
-            // Create a HashSet containing the DesireIDs from satisfactionvalues
             HashSet<int> satisfactionDesireIDs = new HashSet<int>(satisfactionvalues.Select(sv => sv.DesireID));
 
             // Apply decay to each desire that is not in the HashSet
@@ -286,70 +276,25 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-        //public decimal CalcEffectPartly([NotNull][ItemNotNull] IEnumerable<CalcDesire> satisfactionvalues, out string? thoughtstring,
-        //[NotNull] string affordanceName, Boolean interruptable, Boolean careForAll, int duration, TimeStep currentTime)
-        
-
-        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, int realDuration) CalcEffectPartlyRL_New(ICalcAffordanceBase affordance, TimeStep currentTime, Boolean careForAll, out string? thoughtstring, DateTime now, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, int? newDuration = 0, bool? interruptable = false)
+        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, int realDuration) CalcEffect_Partly_Linear(int duration, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, bool? interruptable = false)
         {
-
-            //List<CalcDesire> satisfactionvalues;
-            Dictionary<int, double> satisfactionvalues;
-            //var affordanceName = affordance.Name;
-            //var affordanceCategory = affordance.AffCategory;
-            //bool interruptable;
-            int duration;
-            if (newDuration != 0)
-            {
-                duration = (int)newDuration;
-            }
-            else
-            {
-                //duration = affordance.GetDuration(); //use this maybe quicker
-                duration = affordance.GetRealDuration(currentTime);
-            }
-
-            if (satValue != null)
-            {
-                satisfactionvalues = satValue;
-            }
-            else
-            {
-                satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value); ;
-            }
-
-            if (affordance != null)
-            {
-                interruptable = affordance.IsInterruptable;
-            }
-
-            //var restTime = 0;
-
-            if (_debug_print)
-            {
-                //Debug.WriteLine("     aff: " + affordanceName + "   restTime:  "+restTime);
-            }
-
-            var satisfactionvalueRAW = satisfactionvalues;
-            // calc decay
-            //
             foreach (var calcDesire in Desires.Values)
             {
                 calcDesire.TempValue = calcDesire.Value;
             }
-            //decimal modifier = 1;
+
             if (interruptable == true)
             {
-                return CalcTotalDeviationAllasAreaNewRL_New(1, satisfactionvalues, out thoughtstring, optionalList);
+                return CalcTotalDeviation_Linear(1, satValue, out thoughtstring, optionalList);
             }
             else
             {
-                return CalcTotalDeviationAllasAreaNewRL_New(duration, satisfactionvalues, out thoughtstring, optionalList);
+                return CalcTotalDeviation_Linear(duration, satValue, out thoughtstring, optionalList);
             }
 
         }
 
-        public Dictionary<string, (int, double)>  GetCurrentDesireValue()
+        public Dictionary<string, (int, double)>  GetCurrentDesireValue_Linear()
         {
             Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (int, double)>();
 
@@ -361,7 +306,7 @@ namespace CalculationEngine.HouseholdElements {
             return desireName_ValueBeforeApply_Dict;
         }
 
-        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, int realDuration) CalcTotalDeviationAllasAreaNewRL_New(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
+        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, int realDuration) CalcTotalDeviation_Linear(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
         {
             Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (int, double)>();
             

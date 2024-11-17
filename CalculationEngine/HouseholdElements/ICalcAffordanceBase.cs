@@ -73,9 +73,7 @@ namespace CalculationEngine.HouseholdElements
 
         int GetRealDuration(TimeStep now);
         string? AreDeviceProfilesEmpty();
-        int GetRestTimeWindows(TimeStep time);
-        BusynessType IsBusyNew([NotNull] TimeStep time, [NotNull] CalcLocation srcLocation, CalcPersonDto calcPerson, bool clearDictionaries = true);
-
+        
         CalcSite? Site { get; }
 
         BodilyActivityLevel BodilyActivityLevel { get; }
