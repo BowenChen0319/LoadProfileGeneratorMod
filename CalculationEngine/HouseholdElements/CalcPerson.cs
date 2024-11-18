@@ -142,20 +142,17 @@ namespace CalculationEngine.HouseholdElements {
 
         public int ID => _calcPerson.ID;
 
-        public int _remainingExecutionSteps = 0;
+        public int remainExecutionSteps = 0;
 
-        public int _currentDuration = 0;
+        public int currentDuration = 0;
+
+        public ICalcAffordanceBase executingAffordance = null;
 
         public bool _debug_print = false;
 
         
-        public ICalcAffordanceBase _executingAffordance = null;
-
-        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,double, (Dictionary<string, int>, string))>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int,double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-
         
-        public (Dictionary<string, int>, string) currentState = (null, null);
-
+        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,double, (Dictionary<string, int>, string))>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int,double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
         
         public int searchCounter = 0;
 
@@ -165,7 +162,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public int sumFoundCounter = 0;        
         
-        public Dictionary<string, int> remainTimeOtherPerson = new Dictionary<string, int>();
+        public Dictionary<string, int> remainStepsFromOtherPerson = new Dictionary<string, int>();
 
         public Dictionary<DateTime, (string, string)> executedAffordance = new Dictionary<DateTime, (string, string)>();
 
@@ -266,9 +263,9 @@ namespace CalculationEngine.HouseholdElements {
 
             //PersonDesires.ApplyDecay(time);
             //NEW
-            if (_executingAffordance != null)
+            if (executingAffordance != null)
             {
-                PersonDesires.ApplyDecay_WithoutSome_Linear(time, _executingAffordance.Satisfactionvalues);
+                PersonDesires.ApplyDecay_WithoutSome_Linear(time, executingAffordance.Satisfactionvalues);
 
             }
             else
@@ -288,11 +285,11 @@ namespace CalculationEngine.HouseholdElements {
             // bereits besch鋐tigt
             if (_isBusy[time.InternalStep]) {
                 //NEW
-                if (_executingAffordance != null && _remainingExecutionSteps > 0)
+                if (executingAffordance != null && remainExecutionSteps > 0)
                 {
-                    _remainingExecutionSteps--;
+                    remainExecutionSteps--;
                     //here use ApplyAffordanceEffectPartly to get the correct affordance effect
-                    PersonDesires.ApplyAffordanceEffect_Linear(_executingAffordance.Satisfactionvalues, _executingAffordance.RandomEffect, _executingAffordance.Name, _currentDuration, false, time, now);
+                    PersonDesires.ApplyAffordanceEffect_Linear(executingAffordance.Satisfactionvalues, executingAffordance.RandomEffect, executingAffordance.Name, currentDuration, false, time, now);
                 }
                 InterruptIfNeeded_Linear(time, isDaylight, false,now);
                 return;
@@ -885,7 +882,7 @@ namespace CalculationEngine.HouseholdElements {
             bool otherPersonNotBusy = true; // other person's activity almost done
             if (isHumanInterventionInvolved)
             {
-                otherPersonNotBusy = remainTimeOtherPerson.Values.Max() < 30;
+                otherPersonNotBusy = remainStepsFromOtherPerson.Values.Max() < 30;
             }
 
             if (_currentAffordance?.IsInterruptable == true && !_isCurrentlyPriorityAffordanceRunning && otherPersonNotBusy) {
@@ -1129,9 +1126,9 @@ namespace CalculationEngine.HouseholdElements {
             int durationInMinutes = personTimeProfile.StepValues.Count;
 
             PersonDesires.ApplyAffordanceEffect_Linear(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
-            _executingAffordance = bestaff;
-            _remainingExecutionSteps = durationInMinutes - 1;
-            _currentDuration = durationInMinutes;
+            executingAffordance = bestaff;
+            remainExecutionSteps = durationInMinutes - 1;
+            currentDuration = durationInMinutes;
             
             CurrentLocation = bestaff.ParentLocation;
             var duration = SetBusy(currentTimeStep, personTimeProfile, bestaff.ParentLocation, isDaylight,
@@ -1413,7 +1410,7 @@ namespace CalculationEngine.HouseholdElements {
 
             var desire_ValueBefore = PersonDesires.GetCurrentDesireValue_Linear();
             var desire_level_before = MergeDictAndLevels_RL(desire_ValueBefore);
-            this.currentState = new(desire_level_before, MakeTimeSpan_RL(now, 0));
+            (Dictionary<string, int>, string) currentState = (desire_level_before, MakeTimeSpan_RL(now, 0));
 
             int currentSearchCounter = allAvailableAffordances.Count;
             int currentFoundCounter = 0;

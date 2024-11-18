@@ -42,6 +42,7 @@ using Automation.ResultFiles;
 using CalculationEngine.Helper;
 using CalculationEngine.Transportation;
 using Common;
+using Common.JSON;
 using Database.Tables.BasicHouseholds;
 using JetBrains.Annotations;
 
@@ -78,12 +79,9 @@ namespace CalculationEngine.HouseholdElements {
         private DateTime _lastDisplay = DateTime.MinValue;
         private DateTime _startSimulation = DateTime.MinValue;
 
-
-
         private int _simulationSeed;
         [NotNull] private readonly string _description;
         private readonly CalcRepo _calcRepo;
-
 
         //[CanBeNull] private VariableLogfile _variableLogfile;
 
@@ -323,18 +321,18 @@ namespace CalculationEngine.HouseholdElements {
 
         public void FinishCalculation()
         {
-
-            foreach (var person in _persons)
+            if (_calcRepo.CalcParameters.UseNewAlgo)
             {
-                var person_name = person.Name;
+                foreach (var person in _persons)
+                {
+                    var person_name = person.Name;
+                    Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
+                    Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
+                    person.SaveQTableToFile_RL();
+                    Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
 
-                Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
-                Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);                
-                person.SaveQTableToFile_RL();
-                Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
-                
+                }
             }
-
 
             DumpTimeProfiles();
         }
@@ -403,8 +401,47 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
+        public void RunNextStep_Linear(TimeStep timestep, DateTime now, CalcPerson p)
+        {
+            var remainTimeFromAllPerson = _persons?.ToDictionary(person => person.Name, person => person.remainExecutionSteps) ?? new Dictionary<string, int>();
+            p.remainStepsFromOtherPerson = remainTimeFromAllPerson;
+            var personName = p.Name;
 
-        
+            DateTime EndOfDay = new(now.Year, now.Month, now.Day, 23, 59, 0);
+            bool isEndOfDay = now >= EndOfDay;
+
+            if (isEndOfDay)
+            {
+                p.executedAffordance = new Dictionary<DateTime, (string, string)>();
+
+                string result;
+                string foundResultSum;
+                if (p.searchCounter != 0)
+                {
+                    double percentage = (double)p.foundCounter / p.searchCounter * 100;
+                    result = percentage.ToString("F3") + "%";
+                    p.sumFoundCounter += p.foundCounter;
+                    p.sumSearchCounter += p.searchCounter;
+                    double sumPercentage = (double)p.sumFoundCounter / p.sumSearchCounter * 100;
+                    foundResultSum = sumPercentage.ToString("F3") + "%";
+                }
+                else
+                {
+                    result = "N/A";
+                    double sumPercentage = (double)p.sumFoundCounter / p.sumSearchCounter * 100;
+                    foundResultSum = sumPercentage.ToString("F3") + "%";
+                }
+                p.searchCounter = 0;
+                p.foundCounter = 0;
+
+                Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum}");
+                Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}");
+            }
+
+            p.NextStep_Linear(timestep, _locations, _daylightArray,
+            _householdKey, _persons, _simulationSeed, now);
+        }
+
 
         public void RunOneStep(TimeStep timestep, DateTime now, bool runProcessing)
         {
@@ -439,56 +476,10 @@ namespace CalculationEngine.HouseholdElements {
             
 
             foreach (var p in _persons) {
-                var calcParameters = _calcRepo.CalcParameters;
-                
-                
-                if (calcParameters.UseNewAlgo)
+                               
+                if (_calcRepo.CalcParameters.UseNewAlgo)
                 {
-
-
-                    var remainTimeFromAllPerson = _persons?.ToDictionary(person => person.Name, person => person._remainingExecutionSteps) ?? new Dictionary<string, int>();
-
-                    p.remainTimeOtherPerson = remainTimeFromAllPerson;
-
-                    DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
-
-                    bool isEndOfDay = now >= endOfDay;
-
-                    if (isEndOfDay)
-                    {
-                        p.executedAffordance = new Dictionary<DateTime, (string,string)>();
-                        
-                        string result;
-                        string foundResultSum;
-                        if (p.searchCounter != 0)
-                        {
-                            double percentage = (double)p.foundCounter / p.searchCounter * 100;
-                            result = percentage.ToString("F3") + "%";
-                            p.sumFoundCounter += p.foundCounter;
-                            p.sumSearchCounter += p.searchCounter;
-                            double sumPercentage = (double)p.sumFoundCounter / p.sumSearchCounter * 100;
-                            foundResultSum = sumPercentage.ToString("F3") + "%";
-                        }
-                        else
-                        {
-                            result = "N/A"; 
-                            double sumPercentage = (double)p.sumFoundCounter / p.sumSearchCounter * 100;
-                            foundResultSum = sumPercentage.ToString("F3") + "%";
-                        }
-                        p.searchCounter = 0;
-                        p.foundCounter = 0;
-
-                        Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum}");
-                        Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}");
-
-                        
-                    }
-
-                    p.NextStep_Linear(timestep, _locations, _daylightArray,
-                    _householdKey, _persons, _simulationSeed, now);
-
-
-
+                    RunNextStep_Linear(timestep, now, p);
                 }
                 else
                 {
