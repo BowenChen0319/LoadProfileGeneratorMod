@@ -321,8 +321,11 @@ namespace CalculationEngine.HouseholdElements {
 
         public void FinishCalculation()
         {
+            // Logs Q-Table counts for each person and saves their Q-Tables to a file if the new algorithm is enabled.
+            //NEW
             if (_calcRepo.CalcParameters.UseNewAlgo)
             {
+                
                 foreach (var person in _persons)
                 {
                     var person_name = person.Name;
@@ -331,8 +334,9 @@ namespace CalculationEngine.HouseholdElements {
                     person.SaveQTableToFile_RL();
                     Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
 
-                }
+                }                
             }
+            //NEW
 
             DumpTimeProfiles();
         }
@@ -401,8 +405,27 @@ namespace CalculationEngine.HouseholdElements {
 
         }
 
+        /// <summary>
+        /// Executes additional steps for the linear version of the RunOneStep method.
+        /// This method performs tasks specific to the linear execution model, including:
+        /// - Tracking the remaining execution steps for all persons in the simulation.
+        /// - Checking if the current time is the end of the day and resetting or logging daily counters.
+        /// - Delegating to <c>NextStep_Linear</c> for executing the main logic of the linear step.
+        ///
+        /// <b>Details:</b>
+        /// 1. Tracks remaining execution steps for all persons and updates the current person's view of others' progress.
+        /// 2. At the end of the day:
+        ///    - Resets the executed affordances.
+        ///    - Logs daily statistics for search and found counters, including cumulative percentages.
+        ///    - Resets daily counters for the next day's calculation.
+        /// 3. Calls <c>NextStep_Linear</c> to handle linear-specific step execution logic.
+        ///
+        /// <b>Usage:</b>
+        /// - Invoked by the original <c>RunOneStep</c> method to ensure compatibility with linear execution models.
+        /// </summary>
         public void RunNextStep_Linear(TimeStep timestep, DateTime now, CalcPerson p)
         {
+            //NEW
             var remainTimeFromAllPerson = _persons?.ToDictionary(person => person.Name, person => person.remainExecutionSteps) ?? new Dictionary<string, int>();
             p.remainStepsFromOtherPerson = remainTimeFromAllPerson;
             var personName = p.Name;
@@ -437,9 +460,10 @@ namespace CalculationEngine.HouseholdElements {
                 Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum}");
                 Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}");
             }
-
+            
             p.NextStep_Linear(timestep, _locations, _daylightArray,
             _householdKey, _persons, _simulationSeed, now);
+            //NEW
         }
 
 

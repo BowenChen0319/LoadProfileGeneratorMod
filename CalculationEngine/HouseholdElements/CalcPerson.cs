@@ -1172,6 +1172,8 @@ namespace CalculationEngine.HouseholdElements {
         }
         
         [JetBrains.Annotations.NotNull]
+
+
         /// <summary>
         /// A reinforcement learning (RL)-enhanced version of the original FindBestAffordance method.
         /// This method identifies the most suitable affordance for a person or household at a given time step,
