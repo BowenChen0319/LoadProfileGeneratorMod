@@ -237,6 +237,11 @@ namespace CalculationEngine.HouseholdElements {
         }
 
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        /// <summary>
+        /// A linear version of the original NextStep method.
+        /// Key differences from the original method are marked with "//NEW",
+        /// indicating changes related to linear affordance effects and decay application.
+        /// </summary>
         public void NextStep_Linear([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcLocation> locs, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                              [JetBrains.Annotations.NotNull] HouseholdKey householdKey,
                              [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
@@ -293,6 +298,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 InterruptIfNeeded_Linear(time, isDaylight, false,now);
                 return;
+                //NEW
             }
 
             if (IsOnVacation[time.InternalStep])
@@ -320,8 +326,8 @@ namespace CalculationEngine.HouseholdElements {
             if (_debug_print)
             {
                 Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestaff.Name);
-
             }
+            //NEW
 
             ActivateAffordance_Linear(time, isDaylight,  bestaff, now);
             _isCurrentlyPriorityAffordanceRunning = false;
@@ -876,6 +882,14 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
+        /// <summary>
+        /// A linear version of the InterruptIfNeeded method.
+        /// Handles interruptions during ongoing activities by evaluating viable alternatives,
+        /// based on current conditions like sickness, affordance interruptibility,
+        /// and human intervention. Differences from the original method are marked with "//NEW",
+        /// incorporating changes related to selecting the best affordance using 
+        /// Adapted Q-Learning and linear activation processes.
+        /// </summary>
         private void InterruptIfNeeded_Linear([JetBrains.Annotations.NotNull] TimeStep time, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                        bool ignoreAlreadyExecutedActivities, DateTime now)
         {
@@ -897,15 +911,14 @@ namespace CalculationEngine.HouseholdElements {
                 var availableInterruptingAffordances =
                     NewGetAllViableAffordancesAndSubs(time, null, true, aff, ignoreAlreadyExecutedActivities);
                 if (availableInterruptingAffordances.Count != 0) {
+                    //NEW
                     var bestAffordance = GetBestAffordanceFromList_Adapted_Q_Learning_RL(time, availableInterruptingAffordances, now);
-                    //Debug.WriteLine("Interrupting " + _currentAffordance + " with " + bestAffordance);
                     if (_debug_print)
                     {
                         Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name + "  !!! Interrupt  !!!   " + _currentAffordance.Name);
                     }
-                    //Debug.WriteLine("Time:   " + now + "  " + _calcPerson.Name + "    " + bestAffordance.Name+"  !!! Interrupt  !!!   "+_currentAffordance.Name);
                     ActivateAffordance_Linear(time, isDaylight,  bestAffordance, now);
-                    
+                    //NEW
                     
                     switch (bestAffordance.AfterInterruption) {
                         case ActionAfterInterruption.LookForNew:
@@ -1159,6 +1172,13 @@ namespace CalculationEngine.HouseholdElements {
         }
         
         [JetBrains.Annotations.NotNull]
+        /// <summary>
+        /// A reinforcement learning (RL)-enhanced version of the original FindBestAffordance method.
+        /// This method identifies the most suitable affordance for a person or household at a given time step,
+        /// considering factors like sickness, available affordances, and simulation constraints.
+        /// Key differences from the original version are marked with "//NEW", introducing the use of RL
+        /// (specifically Adapted Q-Learning) for selecting the best affordance from the list of viable options.
+        /// </summary>
         private ICalcAffordanceBase FindBestAffordance_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                        [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed, DateTime now)
         {
@@ -1231,11 +1251,19 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("Random number generator was not initialized");
             }
 
+            //NEW
             return GetBestAffordanceFromList_Adapted_Q_Learning_RL(time, allAffordances, now);
+            //NEW
         }
 
-        
 
+        /// <summary>
+        /// Saves the Q-Table used in the reinforcement learning (RL) process to a JSON file.
+        /// The method serializes the Q-Table into a structured format suitable for storage
+        /// and debugging, ensuring all necessary data for RL is preserved.
+        /// If the target directory does not exist, it is created.
+        /// Handles any exceptions that may occur during the file write process.
+        /// </summary>
         public void SaveQTableToFile_RL()
         {
             string baseDir2 = @"C:\Work\ML\Models";
@@ -1275,7 +1303,14 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
- 
+
+        /// <summary>
+        /// Loads the Q-Table for the reinforcement learning (RL) process from a JSON file.
+        /// The method deserializes the stored Q-Table into the required in-memory structure,
+        /// initializing a new Q-Table if the file does not exist or an error occurs during loading.
+        /// Ensures compatibility with the serialized format and handles exceptions gracefully
+        /// to prevent disruptions in the RL process.
+        /// </summary>
         public void LoadQTableFromFile_RL()
         {
             Debug.WriteLine("Now Loading QTable from file...");
@@ -1350,6 +1385,12 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
+        /// <summary>
+        /// Merges a dictionary of desires with their weights and values into a simplified dictionary for RL.
+        /// Each desire's level is calculated based on its weight and value, with higher weights increasing the granularity of levels.
+        /// Only desires with a weight of 20 or higher are included in the resulting dictionary.
+        /// This method is designed to support reinforcement learning by simplifying the representation of desire states.
+        /// </summary>
         public Dictionary<string, int> MergeDictAndLevels_RL(Dictionary<string, (int, double)> desireName_Value_Dict)
         {
             var mergedDict = new Dictionary<string, int>(); 
@@ -1379,6 +1420,11 @@ namespace CalculationEngine.HouseholdElements {
             return mergedDict; 
         }
 
+        /// <summary>
+        /// Generates a time span string for RL state representation, rounded to the nearest 15-minute interval.
+        /// Adjusts the time by a given offset and prefixes the result with "R:" for weekends or "W:" for weekdays.
+        /// This method standardizes time representation for use in reinforcement learning processes.
+        /// </summary>
         public string MakeTimeSpan_RL(DateTime time, int offset)
         {
             int unit = 15;
@@ -1391,17 +1437,65 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
-         
+        /// <summary>
+        /// Selects the optimal affordance from a list of available affordances using an adapted Q-Learning algorithm 
+        /// in a reinforcement learning (RL) framework. This method evaluates each affordance, calculates predicted rewards, 
+        /// and updates the Q-Table for the current state-action pairs.
+        ///
+        /// <b>Inputs:</b>
+        /// - <paramref name="time"/>: The current time step of the simulation.
+        /// - <paramref name="allAvailableAffordances"/>: A list of affordances that can be performed at the current state.
+        /// - <paramref name="now"/>: The current DateTime in the simulation.
+        ///
+        /// <b>Outputs:</b>
+        /// - Returns the affordance with the highest predicted Q-value (that is not recently executed, to ensure diversity).
+        ///
+        /// <b>Details:</b>
+        /// 1. <b>Initialization:</b>
+        ///    - Loads the Q-Table from the file if it is empty.
+        ///    - Performs experience replay to update Q-values based on past experiences.
+        ///    - Sets up variables to track the best affordance, current state, and counters for search and found actions.
+        ///
+        /// 2. <b>Parallel Evaluation:</b>
+        ///    - Processes each affordance in parallel to improve computational efficiency.
+        ///    - For each affordance:
+        ///       - Computes immediate rewards (R_S_A) and next state information (newState) using <c>Q_Learning_Stage1_RL</c>.
+        ///       - Predicts future rewards using n-step predictions from <c>Q_Learning_Stage2_RL</c>.
+        ///       - Updates the Q-value in the Q-Table using the Bellman equation.
+        ///       (Optional) - Considers constraints like avoiding recently executed affordances and prioritizes critical actions (e.g., sleep).
+        ///
+        /// 3. <b>Selection of Best Affordance:</b>
+        ///    - Maintains a thread-safe mechanism to select the affordance with the highest Q-value.
+        ///    - Skips affordances marked as "Replacement Activity" to focus on meaningful actions.
+        ///
+        /// 4. <b>Global Metrics Update:</b>
+        ///    - Updates global counters to track search and found actions for monitoring learning efficiency.
+        ///
+        /// <b>Usage:</b>
+        /// - Invoke this method during the RL process to determine the next action to take based on the learned policy.
+        /// - Ensure the Q-Table is populated and updated regularly for accurate predictions.
+        /// - Use the returned affordance to execute the next step in the simulation.
+        ///
+        /// <b>Key Parameters:</b>
+        /// - <c>alpha</c>: Learning rate, balances new information and existing knowledge.
+        /// - <c>gamma</c>: Discount factor, determines the weight of future rewards in decision-making.
+        /// - <c>currentState</c>: Represents the current state as a combination of desire levels and time information.
+        ///
+        /// This method is critical to the RL process, enabling dynamic and intelligent decision-making based on 
+        /// learned state-action relationships, ensuring efficient and adaptive simulation behavior.
+        /// </summary>
+
         private ICalcAffordanceBase GetBestAffordanceFromList_Adapted_Q_Learning_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now)
         {
             //If the QTable is empty, then load it from the file
-            if (qTable.Count == 0)
+            if (qTable.IsEmpty)
             {
                 LoadQTableFromFile_RL();
             }
 
-            this.Q_Learning_Experience_Replay_RL(time.InternalStep);
+            //Experience Replay for better Update Rate
+            Q_Learning_Experience_Replay_RL(time.InternalStep);
 
             //Initilize the variables
             var bestQ_S_A = double.MinValue;
@@ -1465,7 +1559,7 @@ namespace CalculationEngine.HouseholdElements {
 
                 affordanceSearchCounter++;// Update Counter
 
-                //Get n-step prediction Infomation 
+                //Get next-step prediction Infomation 
 
                 DateTime endOfDay = now.Date.AddHours(23).AddMinutes(59);
                 bool state_after_pass_day = TimeAfter > endOfDay;
@@ -1518,6 +1612,48 @@ namespace CalculationEngine.HouseholdElements {
              return bestAffordance;
 
         }
+
+        /// <summary>
+        /// Implements experience replay for reinforcement learning (RL) by revisiting previously encountered states
+        /// in the Q-Table and updating their Q-values to refine the learned policy. This mechanism enhances
+        /// learning stability and efficiency by allowing the agent to learn from past experiences without
+        /// needing additional interactions with the environment.
+        ///
+        /// <b>Inputs:</b>
+        /// - <paramref name="seed"/>: An integer seed used for generating random numbers to ensure reproducibility.
+        ///
+        /// <b>Details:</b>
+        /// 1. <b>State Selection:</b>
+        ///    - Randomly selects up to 100 states from the Q-Table or the total number of states if fewer than 100 exist.
+        ///    - Uses a random number generator to ensure diverse state sampling.
+        ///
+        /// 2. <b>Q-Value Update:</b>
+        ///    - For each selected state, retrieves its associated actions and their Q-values.
+        ///    - Identifies the top actions based on their Q-values and processes each action to update the Q-value:
+        ///       - Calculates the predicted Q-value using the Bellman equation, factoring in immediate rewards (R_S_A)
+        ///         and future rewards (from the next state).
+        ///       - Updates the Q-value in the Q-Table for the current state-action pair.
+        ///
+        /// 3. <b>Parallel Processing:</b>
+        ///    - Leverages parallel computation to update Q-values for multiple states simultaneously,
+        ///      improving performance for large Q-Tables.
+        ///
+        /// <b>Usage:</b>
+        /// - Call this method during training phases to reinforce learning without additional environmental interactions.
+        /// - Integrate it as part of the RL algorithm to smooth out Q-value updates and improve convergence.
+        ///
+        /// <b>Key Parameters:</b>
+        /// - <c>alpha</c>: The learning rate, controls the weight of new information versus existing knowledge.
+        /// - <c>gamma</c>: The discount factor, determines the importance of future rewards (commented out here but configurable).
+        ///
+        /// <b>Example Workflow:</b>
+        /// 1. Initialize the Q-Table during the RL setup phase.
+        /// 2. Populate the Q-Table with state-action data through interaction with the environment.
+        /// 3. Periodically invoke this method to update Q-values and enhance the policy's performance.
+        ///
+        /// This method is integral to RL processes, supporting efficient learning through experience replay, which reduces reliance
+        /// on real-time interactions and improves policy stability and accuracy over time.
+        /// </summary>
 
         private void Q_Learning_Experience_Replay_RL(int seed)
         {
@@ -1582,7 +1718,6 @@ namespace CalculationEngine.HouseholdElements {
 
                         // Update the Q-value using the Bellman equation
                         double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
-                        //
                         var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4);
 
                         current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
@@ -1591,6 +1726,37 @@ namespace CalculationEngine.HouseholdElements {
             });
         }
 
+        /// <summary>
+        /// Performs the first stage of Q-Learning for reinforcement learning (RL), calculating the immediate reward (R_S_A),
+        /// next state (newState), and Q-value (Q_S_A) for a given affordance and state.
+        /// This method evaluates the impact of the affordance by simulating its execution and updating the RL parameters accordingly.
+        ///
+        /// <b>Inputs:</b>
+        /// - <paramref name="affordance"/>: The affordance being evaluated.
+        /// - <paramref name="currentState"/>: The current state, represented as a tuple of desires and time state.
+        /// - <paramref name="time"/>: The time step of the simulation.
+        /// - <paramref name="now"/>: The current simulation time as a DateTime object.
+        ///
+        /// <b>Outputs:</b>
+        /// - <c>Q_S_A</c>: The Q-value associated with the current state-action pair.
+        /// - <c>R_S_A</c>: The immediate reward for performing the action in the current state.
+        /// - <c>newState</c>: The resulting state after the action is executed.
+        /// - <c>weightSum</c>: The summed weights of the desires affected by the action.
+        /// - <c>TimeAfter</c>: The simulation time after executing the action.
+        ///
+        /// <b>Usage:</b>
+        /// 1. Call this method during the RL process to evaluate potential actions.
+        /// 2. Use the returned Q-value to update the Q-Table or make policy decisions.
+        /// 3. Leverage the reward and new state to guide future actions or refine the policy.
+        ///
+        /// <b>Details:</b>
+        /// - The reward (R_S_A) is calculated based on the deviation of desire satisfaction values and prioritized for critical actions.
+        /// - The next state is generated by applying the affordance's effects on the current state.
+        /// - The method initializes Q-values to zero if the action is not previously encountered in the Q-Table.
+        /// - Time and satisfaction are adjusted to reflect the affordance's duration and impact.
+        ///
+        /// This method is a core part of the RL algorithm, bridging simulation states and the Q-Table for learning.
+        /// </summary>
         public ((double, int,double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1_RL(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now)
         {
             int duration = time==null? affordance.GetDuration() : affordance.GetRealDuration(time);
@@ -1629,6 +1795,48 @@ namespace CalculationEngine.HouseholdElements {
         }
 
 
+        /// <summary>
+        /// Calculates the maximum Q-value for a given state during the second stage of Q-Learning 
+        /// in a reinforcement learning (RL) process. This method identifies the best possible action 
+        /// from the current state to predict future rewards effectively.
+        ///
+        /// <b>Inputs:</b>
+        /// - <paramref name="currentState"/>: A tuple representing the current state in the format 
+        ///   (<c>Dictionary&lt;string, int&gt;</c>, <c>string</c>), where:
+        ///   - The dictionary maps desires to their levels.
+        ///   - The string represents the current time state.
+        ///
+        /// <b>Outputs:</b>
+        /// - Returns the maximum Q-value (<c>double</c>) for the given state, based on the best possible action.
+        ///
+        /// <b>Details:</b>
+        /// 1. <b>State Validation:</b>
+        ///    - Checks if the Q-Table contains entries for the given state.
+        ///    - Ensures that the state has associated actions before proceeding.
+        ///
+        /// 2. <b>Action Evaluation:</b>
+        ///    - Iterates over all actions associated with the state.
+        ///    - Identifies the action with the highest Q-value using <c>MaxBy</c>.
+        ///    - Extracts the Q-value of the best action for use in reward prediction.
+        ///
+        /// 3. <b>Output:</b>
+        ///    - If valid actions exist, returns the highest Q-value for the given state.
+        ///    - Otherwise, returns 0, indicating no viable actions for the state.
+        ///
+        /// <b>Usage:</b>
+        /// - Call this method during the RL process to evaluate future rewards for a given state.
+        /// - Use the returned Q-value as part of the Bellman equation to update Q-values in the Q-Table.
+        /// - Ensure that the Q-Table is populated with state-action pairs for accurate predictions.
+        ///
+        /// <b>Example Workflow:</b>
+        /// 1. During a Q-Learning update, invoke this method to determine the maximum Q-value of the next state.
+        /// 2. Incorporate the result into the reward calculation to refine the policy.
+        /// 3. Repeat the process for multiple states to improve the overall learning accuracy.
+        ///
+        /// This method plays a vital role in the RL algorithm by enabling forward-looking decision-making 
+        /// and ensuring that the policy considers the best possible outcomes for a given state.
+        /// </summary>
+
         public double Q_Learning_Stage2_RL((Dictionary<string, int>, string) currentState)
         {
             double maxQ_Value = 0;
@@ -1647,16 +1855,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
                 
             }
-
-            if (maxQ_Value == 0)
-            {
-                return 0;
-            }
-            else
-            {
-                return maxQ_Value;               
-            }
-
+            return maxQ_Value;
         }
 
 
@@ -1826,6 +2025,12 @@ namespace CalculationEngine.HouseholdElements {
 
 }
 
+
+/// <summary>
+/// Custom comparer for Q-Table states to determine equality and generate hash codes.
+/// Two states are considered equal if they have the same time state (string) and identical
+/// desire names with corresponding levels in their dictionaries.
+/// </summary>
 
 public class CustomKeyComparer : IEqualityComparer<(Dictionary<string, int>, string)>
 {
