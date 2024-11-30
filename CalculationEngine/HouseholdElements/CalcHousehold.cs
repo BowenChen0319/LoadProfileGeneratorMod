@@ -331,7 +331,7 @@ namespace CalculationEngine.HouseholdElements {
                     var person_name = person.Name;
                     Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
                     Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
-                    person.SaveQTableToFile_RL();
+                    person.qTable.SaveQTableToFile_RL(person_name);
                     Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
 
                 }                
