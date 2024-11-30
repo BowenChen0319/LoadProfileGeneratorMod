@@ -61,7 +61,8 @@ using System.Data.SqlTypes;
 
 #endregion
 
-namespace CalculationEngine.HouseholdElements {
+namespace CalculationEngine.HouseholdElements
+{
 
     public class CalcPerson : CalcBase {
         [ItemNotNull]
@@ -148,12 +149,10 @@ namespace CalculationEngine.HouseholdElements {
 
         public ICalcAffordanceBase executingAffordance = null;
 
-        public bool _debug_print = false;
+        public bool _debug_print = false;        
+        
+        public QTable qTable =  new QTable();
 
-        
-        
-        public ConcurrentDictionary<(Dictionary<string,int> , string ), ConcurrentDictionary<string,(double,int,double, (Dictionary<string, int>, string))>> qTable =  new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int,double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-        
         public int searchCounter = 0;
 
         public int foundCounter = 0;
@@ -1137,12 +1136,12 @@ namespace CalculationEngine.HouseholdElements {
             executedAffordance[now] = (bestaff.Name, bestaff.AffCategory);
             
             int durationInMinutes = personTimeProfile.StepValues.Count;
-
+            //NEW
             PersonDesires.ApplyAffordanceEffect_Linear(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, now);
             executingAffordance = bestaff;
             remainExecutionSteps = durationInMinutes - 1;
             currentDuration = durationInMinutes;
-            
+            //NEW
             CurrentLocation = bestaff.ParentLocation;
             var duration = SetBusy(currentTimeStep, personTimeProfile, bestaff.ParentLocation, isDaylight,
                 bestaff.NeedsLight);
@@ -1268,41 +1267,7 @@ namespace CalculationEngine.HouseholdElements {
         /// </summary>
         public void SaveQTableToFile_RL()
         {
-            string baseDir2 = @"C:\Work\ML\Models";
-
-            var convertedQTable = new Dictionary<string, string>();
-
-            foreach (var outerEntry in qTable)
-            {
-                var outerKeyDictSerialized = string.Join("±", outerEntry.Key.Item1.Select(d => $"{d.Key}⦿{d.Value.ToString()}"));
-                var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.Item2}";
-                //var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
-                //    $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{String.Join("∥", innerEntry.Value.Item3.Select(d => $"{d.Key}⨁{d.Value}"))}‖{innerEntry.Value.Item4}"
-                //);
-                var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
-                        $"{innerEntry.Key}¶{innerEntry.Value.Item1}‖{innerEntry.Value.Item2}‖{innerEntry.Value.Item3}‖{string.Join("¥", innerEntry.Value.Item4.Item1.Select(d => $"{d.Key}○{d.Value}"))}♯{innerEntry.Value.Item4.Item2}"
-                    );
-                convertedQTable[outerKey] = String.Join("★", innerDictSerialized);
-            }
-
-            if (!Directory.Exists(baseDir2))
-            {
-                Directory.CreateDirectory(baseDir2);
-            }
-            string personName = _calcPerson.Name.Replace("/", "_");
-            //string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
-            string filePath = Path.Combine(baseDir2, $"qTable-{personName}.json");
-            try
-            {
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string jsonString = JsonSerializer.Serialize(convertedQTable, options);
-                File.WriteAllText(filePath, jsonString);
-                Debug.WriteLine("QTable has been successfully saved to " + filePath);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("Error saving QTable: " + ex.Message);
-            }
+            this.qTable.SaveQTableToFile_RL(_calcPerson.Name);
         }
 
 
@@ -1315,75 +1280,7 @@ namespace CalculationEngine.HouseholdElements {
         /// </summary>
         public void LoadQTableFromFile_RL()
         {
-            Debug.WriteLine("Now Loading QTable from file...");
-            string baseDir = @"C:\Work\ML\Models";
-            
-            if (!Directory.Exists(baseDir))
-            {
-                Directory.CreateDirectory(baseDir);
-            }
-
-            
-            string personName = _calcPerson.Name.Replace("/", "_");
-            string filePath = Path.Combine(baseDir, $"qTable-{personName}.json");
-
-            
-            if (File.Exists(filePath))
-            {
-                try
-                {
-                    var jsonString = File.ReadAllText(filePath);
-                    var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
-
-                    var readed_QTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-
-                    foreach (var outerEntry in convertedQTable)
-                    {
-                        var outerKeyParts = outerEntry.Key.Split('§');
-                        var outerKeyDictParts = outerKeyParts[0].Split('±').Select(p => p.Split('⦿')).ToDictionary(p => p[0], p => int.Parse(p[1]));
-                        var outerKey = (outerKeyDictParts, outerKeyParts[1]);
-                        var innerDict = new ConcurrentDictionary<string, (double, int,double, (Dictionary<string, int>, string))>();
-
-                        var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
-                        foreach (var innerEntry in innerEntries)
-                        {
-                            var parts = innerEntry.Split('¶');
-                            var key = parts[0];
-                            var valueParts = parts[1].Split('‖');
-                            var decimalValue = double.Parse(valueParts[0]);
-                            var intValue = int.Parse(valueParts[1]);
-                            var r_value = double.Parse(valueParts[2]);
-                            var newStateParts = valueParts[3].Split('♯');
-                            var newStateDictParts = newStateParts[0].Split('¥').Select(p => p.Split('○')).ToDictionary(p => p[0], p => int.Parse(p[1]));
-                            var newState = (newStateDictParts, newStateParts[1]);
-                            innerDict[key] = (decimalValue, intValue, r_value, newState);
-                            
-                        }
-
-                        readed_QTable[outerKey] = innerDict;
-                    }
-                    this.qTable = readed_QTable;
-
-                    Debug.WriteLine("QTable has been successfully loaded from " + filePath);
-                    Logger.Info("QTable has been successfully loaded from " + filePath);
-
-
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("Error loading QTable: " + ex.Message);
-                    Logger.Info("Error loading QTable: " + ex.Message);
-                    this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-
-
-                }
-            }
-            else
-            {
-                Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
-                Logger.Info("No saved QTable found. Initializing a new QTable.");
-                this.qTable = new ConcurrentDictionary<(Dictionary<string, int>, string), ConcurrentDictionary<string, (double, int, double, (Dictionary<string, int>, string))>>(new CustomKeyComparer());
-            }
+           this.qTable.LoadQTableFromFile_RL(_calcPerson.Name);
         }
 
 
@@ -1491,7 +1388,7 @@ namespace CalculationEngine.HouseholdElements {
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now)
         {
             //If the QTable is empty, then load it from the file
-            if (qTable.IsEmpty)
+            if (qTable.Table.IsEmpty)
             {
                 LoadQTableFromFile_RL();
             }
@@ -1556,7 +1453,8 @@ namespace CalculationEngine.HouseholdElements {
 
                 //Start prediction, variable initialization
                 double prediction = R_S_A;
-                (Dictionary<string, int>, string) nextState = newState; //new state
+                //(Dictionary<string, int>, string) nextState = newState; //new state
+                StateInfo nextState = new StateInfo(newState.Item1, newState.Item2);
                 DateTime nextTime = TimeAfter;
 
                 affordanceSearchCounter++;// Update Counter
@@ -1577,9 +1475,13 @@ namespace CalculationEngine.HouseholdElements {
 
                 double new_Q_S_A = Q_S_A.Item1 == 0 ? R_S_A : (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
                 double new_R_S_A = Q_S_A.Item1 == 0 ? R_S_A :  (1 - alpha) * Q_S_A.Item3 + alpha * R_S_A;
-                var QSA_Info = (new_Q_S_A, affordance.GetDuration(), R_S_A, firstStageQ_Learning_Info.newState);
-                var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, double, (Dictionary<string, int>, string))>());
-                currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
+                //var QSA_Info = (new_Q_S_A, affordance.GetDuration(), R_S_A, firstStageQ_Learning_Info.newState);
+                StateInfo stateToAdd = new StateInfo(currentState.Item1, currentState.Item2);
+                StateInfo stateToAddNext = new StateInfo(newState.Item1, newState.Item2);
+                ActionInfo actionInfo = new ActionInfo(new_Q_S_A, affordance.GetDuration(), R_S_A, stateToAddNext);
+                qTable.AddOrUpdate(stateToAdd, affordance.Name, actionInfo);
+                //var currentStateData = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int, double, (Dictionary<string, int>, string))>());
+                //currentStateData.AddOrUpdate(affordance.Name, QSA_Info, (key, oldValue) => QSA_Info);
 
                 //Get Best Affordance
                 if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
@@ -1671,7 +1573,7 @@ namespace CalculationEngine.HouseholdElements {
             Random rand = new Random(seed);
 
             // Get all states from Q-Table
-            var allStates = qTable.Keys.ToList();
+            var allStates = qTable.Table.Keys.ToList();
 
             // Randomly select m states
             var randomStates = allStates.OrderBy(x => rand.Next()).Take(m).ToList();
@@ -1679,50 +1581,54 @@ namespace CalculationEngine.HouseholdElements {
             // Parallel loop to update Q-values for best actions in selected states
             Parallel.ForEach(randomStates, state =>
             {
-                if (qTable.TryGetValue(state, out var current_State))
+                if (qTable.Table.TryGetValue(state, out var current_State))
                 {
                     //int numer_of_update_action = Math.Max(1, current_State.Count/4);
-                    TimeSpan time_state = TimeSpan.Parse(state.Item2.Substring(2));
+                    TimeSpan time_state = TimeSpan.Parse(state.TimeOfDay.Substring(2));
                     int numer_of_update_action = current_State.Count;
-                    var topActions = current_State.OrderByDescending(action => action.Value.Item1).Take(numer_of_update_action).ToList();
+                    var topActions = current_State.OrderByDescending(action => action.Value.QValue).Take(numer_of_update_action).ToList();
 
                     foreach (var bestActionEntry in topActions)
                     {
-
                         if (bestActionEntry.Key == null)
                         {
                             continue;
                         }
 
                         var bestAction = bestActionEntry.Key;
-                        var newStateInfo = bestActionEntry.Value.Item4;
-                        TimeSpan time_newState = TimeSpan.Parse(newStateInfo.Item2.Substring(2));
-                        var R_S_A = bestActionEntry.Value.Item3;
-                        var Q_S_A = bestActionEntry.Value.Item1;
-                        bool inTheSameDay = time_newState>=time_state;
-                        
+                        var newStateInfo = bestActionEntry.Value.nextState;
+                        TimeSpan time_newState = TimeSpan.Parse(newStateInfo.TimeOfDay.Substring(2));
+                        var R_S_A = bestActionEntry.Value.RValue;
+                        var Q_S_A = bestActionEntry.Value.QValue;
+                        bool inTheSameDay = time_newState >= time_state;
+
                         double prediction = R_S_A;
-                        var newState = newStateInfo;
 
-                        if (qTable.TryGetValue(newState, out var next_State))
+                        // 使用 QTable 获取新状态的动作字典
+                        if (qTable.Table.TryGetValue(newStateInfo, out var nextStateActions))
                         {
-                            if(inTheSameDay)
+                            if (inTheSameDay)
                             {
-                                var next_Action_Entry = next_State.DefaultIfEmpty().MaxBy(action => action.Value.Item1);
+                                // 获取下一状态中 Q-value 最大的动作
+                                var nextActionEntry = nextStateActions
+                                    .DefaultIfEmpty()
+                                    .MaxBy(action => action.Value.QValue);
 
-                                if (next_Action_Entry.Key == null || next_Action_Entry.Value.Item1 == 0)
+                                if (nextActionEntry.Key == null || nextActionEntry.Value.QValue == 0)
                                 {
                                     continue;
                                 }
-                                prediction += gamma * next_Action_Entry.Value.Item1;
-                            }                                                       
+                                prediction += gamma * nextActionEntry.Value.QValue;
+                            }
                         }
 
-                        // Update the Q-value using the Bellman equation
+                        // 使用 Bellman 方程更新 Q-value
                         double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
-                        var QSA_Info = (new_Q_S_A, bestActionEntry.Value.Item2, bestActionEntry.Value.Item3, bestActionEntry.Value.Item4);
 
-                        current_State.AddOrUpdate(bestAction, QSA_Info, (key, oldValue) => QSA_Info);
+                        // 更新当前状态的动作信息
+                        var updatedActionInfo = new ActionInfo(new_Q_S_A, bestActionEntry.Value.weightSum, R_S_A, newStateInfo);
+
+                        current_State.AddOrUpdate(bestAction, updatedActionInfo, (key, oldValue) => updatedActionInfo);
                     }
                 }
             });
@@ -1782,18 +1688,27 @@ namespace CalculationEngine.HouseholdElements {
                 R_S_A = 20000000;
             }
 
-            var Q_S = qTable.GetOrAdd(currentState, new ConcurrentDictionary<string, (double, int,double, (Dictionary<string, int>, string))>());
+            // 将 (Dictionary<string, int>, string) 转为 PersonDesireState
+            var currentPersonDesireState = new StateInfo(currentState.Item1, currentState.Item2);
 
-            (double, int,double, (Dictionary<string, int>, string)) Q_S_A;
+            // 使用 GetOrAdd 方法获取或添加当前状态和动作信息
+            var actionDetails = qTable.GetOrAdd(
+                currentPersonDesireState,
+                affordance.Name,
+                new ActionInfo(0, 0, 0, currentPersonDesireState) // 默认值：QValue=0, weightSum=0, RValue=0, nextState=currentPersonDesireState
+            );
 
-            if (!Q_S.TryGetValue((affordance.Name), out Q_S_A))
-            {
-                Q_S_A.Item1 = 0; // Initialize to 0 if the action is not found
-            }
+            // 转换 actionInfo 为 (double, int, double, (Dictionary<string, int>, string)) 格式
+            var Q_S_A = (
+                actionDetails.QValue,
+                actionDetails.weightSum,
+                actionDetails.RValue,
+                (actionDetails.nextState.DesireStates, actionDetails.nextState.TimeOfDay)
+            );
 
             var TimeAfter = now.AddMinutes(duration);
 
-            return (Q_S_A, R_S_A, newState,weightSum,TimeAfter);
+            return (Q_S_A, R_S_A, newState, weightSum, TimeAfter);
         }
 
 
@@ -1839,24 +1754,25 @@ namespace CalculationEngine.HouseholdElements {
         /// and ensuring that the policy considers the best possible outcomes for a given state.
         /// </summary>
 
-        public double Q_Learning_Stage2_RL((Dictionary<string, int>, string) currentState)
+        public double Q_Learning_Stage2_RL(StateInfo currentPersonDesireState)
         {
             double maxQ_Value = 0;
 
-            if (qTable.TryGetValue(currentState, out var Q_newState_actions_nS))
+            // 从 QTable 获取当前状态的动作字典
+            if (qTable.Table.TryGetValue(currentPersonDesireState, out var Q_newState_actions_nS))
             {
                 if (Q_newState_actions_nS != null && Q_newState_actions_nS.Any())
                 {
-                    var maxAction = Q_newState_actions_nS
-                    .MaxBy(action => action.Value.Item1); 
+                    // 查找 Q-value 最大的动作
+                    var maxAction = Q_newState_actions_nS.MaxBy(action => action.Value.QValue);
 
                     if (maxAction.Key != null)
                     {
-                        maxQ_Value = maxAction.Value.Item1; 
+                        maxQ_Value = maxAction.Value.QValue;
                     }
                 }
-                
             }
+
             return maxQ_Value;
         }
 
@@ -2025,50 +1941,4 @@ namespace CalculationEngine.HouseholdElements {
 
     }
 
-}
-
-
-/// <summary>
-/// Custom comparer for Q-Table states to determine equality and generate hash codes.
-/// Two states are considered equal if they have the same time state (string) and identical
-/// desire names with corresponding levels in their dictionaries.
-/// </summary>
-
-public class CustomKeyComparer : IEqualityComparer<(Dictionary<string, int>, string)>
-{
-    public bool Equals((Dictionary<string, int>, string) x, (Dictionary<string, int>, string) y)
-    {
-        if (!x.Item2.Equals(y.Item2))
-        {
-            return false;
-        }
-
-        if (x.Item1.Count != y.Item1.Count)
-        {
-            return false;
-        }
-
-        foreach (var kvp in x.Item1)
-        {
-            if (!y.Item1.TryGetValue(kvp.Key, out var value) || kvp.Value != value)
-            {
-                return false;
-            }
-        }
-
-        return true;
-        
-    }
-
-    public int GetHashCode((Dictionary<string, int>, string) obj)
-    {
-        int hash = 17;
-        hash = hash * 23 + obj.Item2.GetHashCode();
-        foreach (var kvp in obj.Item1.OrderBy(kvp => kvp.Key))
-        {
-            hash = hash * 23 + kvp.Key.GetHashCode();
-            hash = hash * 23 + kvp.Value.GetHashCode();
-        }
-        return hash;
-    }
 }
