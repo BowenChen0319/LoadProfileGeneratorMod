@@ -142,35 +142,16 @@ public class QTable
 
     public ActionInfo GetOrAdd(StateInfo state, string action, ActionInfo defaultActionInfo)
     {
-        // 获取或添加状态的动作字典
+        
         var actions = Table.GetOrAdd(
             state,
             _ => new ConcurrentDictionary<string, ActionInfo>()
         );
 
-        // 获取或添加具体的动作信息
+        
         return actions.GetOrAdd(action, _ => defaultActionInfo);
     }
 
-
-    //public ConcurrentDictionary<string, actionInfo> GetActions(PersonDesireState state)
-    //{
-    //    return Table.TryGetValue(state, out var actions) ? actions : null;
-    //}
-
-    //public bool RemoveAction(PersonDesireState state, string action)
-    //{
-    //    if (Table.TryGetValue(state, out var actions))
-    //    {
-    //        return actions.TryRemove(action, out _);
-    //    }
-    //    return false;
-    //}
-
-    //public bool RemoveState(PersonDesireState state)
-    //{
-    //    return Table.TryRemove(state, out _);
-    //}
 
     public void SaveQTableToFile_RL(string personName)
     {
@@ -230,16 +211,16 @@ public class QTable
         {
             try
             {
-                // 从文件读取 JSON 数据
+                
                 var jsonString = File.ReadAllText(filePath);
                 var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
 
-                // 创建新的 QTable 实例
+                
                 var loadedQTable = new ConcurrentDictionary<StateInfo, ConcurrentDictionary<string, ActionInfo>>();
 
                 foreach (var outerEntry in convertedQTable)
                 {
-                    // 反序列化外层键（PersonDesireState）
+                    
                     var outerKeyParts = outerEntry.Key.Split('§');
                     var desireStates = outerKeyParts[0]
                         .Split('±')
@@ -248,7 +229,7 @@ public class QTable
                     var timeOfDay = outerKeyParts[1];
                     var outerKey = new StateInfo(desireStates, timeOfDay);
 
-                    // 反序列化内层动作字典
+                    
                     var innerDict = new ConcurrentDictionary<string, ActionInfo>();
                     var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
                     foreach (var innerEntry in innerEntries)
@@ -257,13 +238,13 @@ public class QTable
                         var actionName = parts[0];
                         var valueParts = parts[1].Split('‖');
 
-                        // 解析 actionInfo 的字段
+                        
                         var qValue = double.Parse(valueParts[0]);
                         var weightSum = int.Parse(valueParts[1]);
                         var rValue = double.Parse(valueParts[2]);
                         var nextStateParts = valueParts[3].Split('♯');
 
-                        // 解析 nextState
+                        
                         var nextStateDesireStates = nextStateParts[0]
                             .Split('¥')
                             .Select(p => p.Split('○'))
@@ -271,15 +252,15 @@ public class QTable
                         var nextStateTimeOfDay = nextStateParts[1];
                         var nextState = new StateInfo(nextStateDesireStates, nextStateTimeOfDay);
 
-                        // 构建 actionInfo 并添加到内层字典
+                        
                         innerDict[actionName] = new ActionInfo(qValue, weightSum, rValue, nextState);
                     }
 
-                    // 添加到 QTable
+                    
                     loadedQTable[outerKey] = innerDict;
                 }
 
-                // 替换当前实例的 QTable
+                
                 this.Table.Clear();
                 foreach (var kvp in loadedQTable)
                 {
@@ -294,7 +275,7 @@ public class QTable
                 Debug.WriteLine("Error loading QTable: " + ex.Message);
                 Logger.Info("Error loading QTable: " + ex.Message);
 
-                // 初始化一个空的 QTable
+                
                 this.Table.Clear();
             }
         }

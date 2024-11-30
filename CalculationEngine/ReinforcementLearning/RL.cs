@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class RL
+public static class RL
 {
 
     /// <summary>
@@ -59,11 +59,16 @@ public class RL
     /// This method is critical to the RL process, enabling dynamic and intelligent decision-making based on 
     /// learned state-action relationships, ensuring efficient and adaptive simulation behavior.
     /// </summary>
+    public static (double,double) GetGemmaAndAlpha()
+    {
+        return (0.8, 0.2);
+    }
+
 
     public static ICalcAffordanceBase GetBestAffordanceFromList_Adapted_Q_Learning_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                   [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now, string PersonName, bool isHumanInterventionInvolved, ref QTable qTable, CalcPersonDesires PersonDesires, ref Dictionary<DateTime, (string, string)> executedAffordance, ref int searchCounter, ref int foundCounter)
     {
-        double gamma = 0.8;
+        (double gamma, double alpha) = GetGemmaAndAlpha();
         //If the QTable is empty, then load it from the file
         if (qTable.Table.IsEmpty)
         {
@@ -82,8 +87,8 @@ public class RL
 
         var desire_ValueBefore = PersonDesires.GetCurrentDesireValue_Linear();
         var desire_level_before = MergeDictAndLevels_RL(desire_ValueBefore);
-        (Dictionary<string, int>, string) currentState = (desire_level_before, MakeTimeSpan_RL(now, 0));
-
+        //(Dictionary<string, int>, string) currentState = (desire_level_before, MakeTimeSpan_RL(now, 0));
+        StateInfo currentState = new StateInfo(desire_level_before, MakeTimeSpan_RL(now, 0));
         int currentSearchCounter = allAvailableAffordances.Count;
         int currentFoundCounter = 0;
 
@@ -105,8 +110,6 @@ public class RL
             }
 
             //Hyperparameters
-            double alpha = 0.2;
-
             bool existsInPastThreeHoursCurrent = false;
             DateTime threeHoursAgo = now.AddHours(-3);
 
@@ -126,15 +129,15 @@ public class RL
             var firstStageQ_Learning_Info = Q_Learning_Stage1_RL(affordance, currentState, time, now, ref localQTable, ref localPersonDesires);
             var R_S_A = firstStageQ_Learning_Info.R_S_A;
             var Q_S_A = firstStageQ_Learning_Info.Q_S_A;
-            var newState = firstStageQ_Learning_Info.newState;
+            var nextState = firstStageQ_Learning_Info.newState;
             var weightSum = firstStageQ_Learning_Info.weightSum;
             var TimeAfter = firstStageQ_Learning_Info.TimeAfter;
 
-            affordanceFoundCounter += Q_S_A.Item1 > 0 ? 1 : 0; //Update Counter, if this state is already visited, then increase the FoundCounter
+            affordanceFoundCounter += Q_S_A.QValue > 0 ? 1 : 0; //Update Counter, if this state is already visited, then increase the FoundCounter
 
             //Start prediction, variable initialization
             double prediction = R_S_A;
-            StateInfo nextState = new StateInfo(newState.Item1, newState.Item2);
+            //StateInfo nextState = new StateInfo(newState.Item1, newState.Item2);
             DateTime nextTime = TimeAfter;
 
             affordanceSearchCounter++;// Update Counter
@@ -151,15 +154,13 @@ public class RL
             }
 
             // Update the Q value for the current state and action
-            double new_Q_S_A = Q_S_A.Item1 == 0 ? R_S_A : (1 - alpha) * Q_S_A.Item1 + alpha * prediction;
-            double new_R_S_A = Q_S_A.Item1 == 0 ? R_S_A : (1 - alpha) * Q_S_A.Item3 + alpha * R_S_A;
-            StateInfo stateToAdd = new StateInfo(currentState.Item1, currentState.Item2);
-            StateInfo stateToAddNext = new StateInfo(newState.Item1, newState.Item2);
-            ActionInfo actionInfo = new ActionInfo(new_Q_S_A, affordance.GetDuration(), R_S_A, stateToAddNext);
+            double new_Q_S_A = Q_S_A.QValue == 0 ? R_S_A : (1 - alpha) * Q_S_A.QValue + alpha * prediction;
+            double new_R_S_A = Q_S_A.QValue == 0 ? R_S_A : (1 - alpha) * Q_S_A.RValue + alpha * R_S_A;
+            ActionInfo actionInfo = new ActionInfo(new_Q_S_A, affordance.GetDuration(), R_S_A, nextState);
 
             // Use a local variable to avoid using ref parameter inside the lambda
             
-            localQTable.AddOrUpdate(stateToAdd, affordance.Name, actionInfo);
+            localQTable.AddOrUpdate(currentState, affordance.Name, actionInfo);
 
             //Get Best Affordance
             if (new_Q_S_A > bestQ_S_A && !existsInPastThreeHoursCurrent)
@@ -238,16 +239,13 @@ public class RL
 
     public static void Q_Learning_Experience_Replay_RL(int seed, QTable qTable )
     {
-        double gamma = 0.8;
+        (double gamma, double alpha) = GetGemmaAndAlpha();
         if (qTable.Count == 0)
         {
             return;
         }
         int m = Math.Min(100, qTable.Count);
 
-        // Hyperparameters
-        double alpha = 0.2;
-        //double gamma = 0.9;
         Random rand = new Random(seed);
 
         // Get all states from Q-Table
@@ -282,12 +280,12 @@ public class RL
 
                     double prediction = R_S_A;
 
-                    // 使用 QTable 获取新状态的动作字典
+                    
                     if (qTable.Table.TryGetValue(newStateInfo, out var nextStateActions))
                     {
                         if (inTheSameDay)
                         {
-                            // 获取下一状态中 Q-value 最大的动作
+                            
                             var nextActionEntry = nextStateActions
                                 .DefaultIfEmpty()
                                 .MaxBy(action => action.Value.QValue);
@@ -300,10 +298,10 @@ public class RL
                         }
                     }
 
-                    // 使用 Bellman 方程更新 Q-value
+                    
                     double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
 
-                    // 更新当前状态的动作信息
+                    
                     var updatedActionInfo = new ActionInfo(new_Q_S_A, bestActionEntry.Value.weightSum, R_S_A, newStateInfo);
 
                     current_State.AddOrUpdate(bestAction, updatedActionInfo, (key, oldValue) => updatedActionInfo);
@@ -343,47 +341,31 @@ public class RL
     ///
     /// This method is a core part of the RL algorithm, bridging simulation states and the Q-Table for learning.
     /// </summary>
-    public static ((double, int, double, (Dictionary<string, int>, string)) Q_S_A, double R_S_A, (Dictionary<string, int>, string) newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1_RL(ICalcAffordanceBase affordance, (Dictionary<string, int>, string) currentState, TimeStep time, DateTime now, ref QTable qTable, ref CalcPersonDesires PersonDesires)
+    public static (ActionInfo Q_S_A, double R_S_A, StateInfo newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1_RL(ICalcAffordanceBase affordance, StateInfo currentState, TimeStep time, DateTime now, ref QTable qTable, ref CalcPersonDesires PersonDesires)
     {
         int duration = time == null ? affordance.GetDuration() : affordance.GetRealDuration(time);
-        //int duration = affordance.GetRealDuration(time);
         bool isInterruptable = affordance.IsInterruptable;
         var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
-        var calcTotalDeviationResult = PersonDesires.CalcEffect_Partly_Linear(duration, out var thoughtstring, satValue: satisfactionvalues, interruptable: isInterruptable);
-
-        var desireDiff = calcTotalDeviationResult.totalDeviation;
-        var desire_ValueAfter = calcTotalDeviationResult.desireName_ValueAfterApply_Dict;
-        var weightSum = calcTotalDeviationResult.WeightSum;
+        var (desireDiff, weightSum, desire_ValueAfter, realDuration) = PersonDesires.CalcEffect_Partly_Linear(duration, out var thoughtstring, satValue: satisfactionvalues, interruptable: isInterruptable);
 
         string newTimeState = MakeTimeSpan_RL(now, duration);
-
         Dictionary<string, int> desire_level_after = MergeDictAndLevels_RL(desire_ValueAfter);
+        StateInfo newState = new StateInfo(desire_level_after, newTimeState);
 
-        (Dictionary<string, int>, string) newState = (desire_level_after, newTimeState);
         var R_S_A = -desireDiff + 1000000;
         if (weightSum >= 1000)
         {
             R_S_A = 20000000;
         }
 
-        // 将 (Dictionary<string, int>, string) 转为 PersonDesireState
-        var currentPersonDesireState = new StateInfo(currentState.Item1, currentState.Item2);
-
-        // 使用 GetOrAdd 方法获取或添加当前状态和动作信息
+        
         var actionDetails = qTable.GetOrAdd(
-            currentPersonDesireState,
+            currentState,
             affordance.Name,
-            new ActionInfo(0, 0, 0, currentPersonDesireState) // 默认值：QValue=0, weightSum=0, RValue=0, nextState=currentPersonDesireState
+            new ActionInfo(0, 0, 0, currentState) 
         );
-
-        // 转换 actionInfo 为 (double, int, double, (Dictionary<string, int>, string)) 格式
-        var Q_S_A = (
-            actionDetails.QValue,
-            actionDetails.weightSum,
-            actionDetails.RValue,
-            (actionDetails.nextState.DesireStates, actionDetails.nextState.TimeOfDay)
-        );
-
+        
+        ActionInfo Q_S_A = new ActionInfo(actionDetails.QValue, actionDetails.weightSum, actionDetails.RValue, actionDetails.nextState);
         var TimeAfter = now.AddMinutes(duration);
 
         return (Q_S_A, R_S_A, newState, weightSum, TimeAfter);
@@ -436,12 +418,12 @@ public class RL
     {
         double maxQ_Value = 0;
 
-        // 从 QTable 获取当前状态的动作字典
+        
         if (qTable.Table.TryGetValue(currentPersonDesireState, out var Q_newState_actions_nS))
         {
             if (Q_newState_actions_nS != null && Q_newState_actions_nS.Any())
             {
-                // 查找 Q-value 最大的动作
+                
                 var maxAction = Q_newState_actions_nS.MaxBy(action => action.Value.QValue);
 
                 if (maxAction.Key != null)

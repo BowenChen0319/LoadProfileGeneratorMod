@@ -461,7 +461,7 @@ namespace CalculationEngine.HouseholdElements {
                 Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}");
             }
             
-            p.NextStep_Linear(timestep, _locations, _daylightArray,
+            p.NextStep(timestep, _locations, _daylightArray,
             _householdKey, _persons, _simulationSeed, now);
             //NEW
         }
