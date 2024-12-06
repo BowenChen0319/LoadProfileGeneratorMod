@@ -1,11 +1,10 @@
 ﻿using CalculationEngine.HouseholdElements;
+using CalculationEngine.ReinforcementLearning;
 using Common;
 using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Speech.Recognition;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -70,9 +69,9 @@ public static class RL
     {
         (double gamma, double alpha) = GetGemmaAndAlpha();
         //If the QTable is empty, then load it from the file
-        if (qTable.Table.IsEmpty)
-        {
-            qTable.LoadQTableFromFile_RL(PersonName);
+        if (time.InternalStep == 0 && qTable.Table.IsEmpty)
+        {            
+            qTable = QTable.LoadQTableFromFile_RL(PersonName);
         }
 
         //Experience Replay for better Update Rate
@@ -272,7 +271,7 @@ public static class RL
                     }
 
                     var bestAction = bestActionEntry.Key;
-                    var newStateInfo = bestActionEntry.Value.nextState;
+                    var newStateInfo = bestActionEntry.Value.NextState;
                     TimeSpan time_newState = TimeSpan.Parse(newStateInfo.TimeOfDay.Substring(2));
                     var R_S_A = bestActionEntry.Value.RValue;
                     var Q_S_A = bestActionEntry.Value.QValue;
@@ -302,7 +301,7 @@ public static class RL
                     double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
 
                     
-                    var updatedActionInfo = new ActionInfo(new_Q_S_A, bestActionEntry.Value.weightSum, R_S_A, newStateInfo);
+                    var updatedActionInfo = new ActionInfo(new_Q_S_A, bestActionEntry.Value.WeightSum, R_S_A, newStateInfo);
 
                     current_State.AddOrUpdate(bestAction, updatedActionInfo, (key, oldValue) => updatedActionInfo);
                 }
@@ -361,11 +360,10 @@ public static class RL
         
         var actionDetails = qTable.GetOrAdd(
             currentState,
-            affordance.Name,
-            new ActionInfo(0, 0, 0, currentState) 
+            affordance.Name
         );
         
-        ActionInfo Q_S_A = new ActionInfo(actionDetails.QValue, actionDetails.weightSum, actionDetails.RValue, actionDetails.nextState);
+        ActionInfo Q_S_A = new ActionInfo(actionDetails.QValue, actionDetails.WeightSum, actionDetails.RValue, actionDetails.NextState);
         var TimeAfter = now.AddMinutes(duration);
 
         return (Q_S_A, R_S_A, newState, weightSum, TimeAfter);
@@ -413,7 +411,14 @@ public static class RL
     /// This method plays a vital role in the RL algorithm by enabling forward-looking decision-making 
     /// and ensuring that the policy considers the best possible outcomes for a given state.
     /// </summary>
+    /// 
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="currentPersonDesireState"></param>
+    /// <param name="qTable"></param>
+    /// <returns></returns>
     public static double Q_Learning_Stage2_RL(StateInfo currentPersonDesireState, ref QTable qTable)
     {
         double maxQ_Value = 0;

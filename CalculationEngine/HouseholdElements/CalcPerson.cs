@@ -30,14 +30,10 @@
 
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Automation;
 using Automation.ResultFiles;
 using CalculationEngine.Helper;
@@ -48,16 +44,8 @@ using Common.CalcDto;
 using Common.Enums;
 using Common.JSON;
 using Common.SQLResultLogging.InputLoggers;
-using Database.Tables.BasicHouseholds;
 using JetBrains.Annotations;
-using Newtonsoft.Json.Linq;
-using System.Text.Json.Serialization;
-using System.IO;
-using System.Runtime.CompilerServices;
-using static System.Collections.Specialized.BitVector32;
-using System.Threading;
-using System.Timers;
-using System.Data.SqlTypes;
+using CalculationEngine.ReinforcementLearning;
 
 #endregion
 
@@ -151,7 +139,7 @@ namespace CalculationEngine.HouseholdElements
 
         public bool _debug_print = false;        
         
-        public QTable qTable =  new QTable();
+        public QTable qTable =  new();
 
         public int searchCounter = 0;
 
