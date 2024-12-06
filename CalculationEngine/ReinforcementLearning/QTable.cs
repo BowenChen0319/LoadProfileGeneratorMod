@@ -35,7 +35,6 @@ namespace CalculationEngine.ReinforcementLearning
             //return true;
         }
 
-
         public override int GetHashCode()
         {
             int hash = 17;
@@ -47,8 +46,23 @@ namespace CalculationEngine.ReinforcementLearning
                 hash = hash * 23 + kvp.Key.GetHashCode();
                 hash = hash * 23 + kvp.Value.GetHashCode();
             }
-
             return hash;
+        }
+
+        public string Serialize()
+        {
+            var desireStatesSerialized = string.Join("±", DesireStates.Select(d => $"{d.Key}⦿{d.Value}"));
+            return $"{desireStatesSerialized}§{TimeOfDay}";
+        }
+
+        public static StateInfo Deserialize(string serialized)
+        {
+            var parts = serialized.Split('§');
+            var desireStates = parts[0]
+                .Split('±')
+                .Select(p => p.Split('⦿'))
+                .ToDictionary(p => p[0], p => int.Parse(p[1]));
+            return new StateInfo(desireStates,parts[1]);
         }
     }
 
@@ -61,6 +75,23 @@ namespace CalculationEngine.ReinforcementLearning
         public double RValue { get; set; } = rValue;
 
         public StateInfo NextState { get; set; } = nextState;
+
+        public string Serialize()
+        {
+            var nextStateSerialized = NextState.Serialize();
+            return $"{QValue}‖{WeightSum}‖{RValue}‖{nextStateSerialized}";
+        }
+
+        public static ActionInfo Deserialize(string serialized)
+        {
+            var parts = serialized.Split('‖');
+            var qValue = double.Parse(parts[0]);
+            var weightSum = int.Parse(parts[1]);
+            var rValue = double.Parse(parts[2]);
+            var nextState = StateInfo.Deserialize(parts[3]);
+
+            return new ActionInfo(qValue, weightSum, rValue, nextState);
+        }
     }
 
     public class QTable
@@ -110,22 +141,132 @@ namespace CalculationEngine.ReinforcementLearning
             return (baseDir, filePath);
         }
 
-        public void SaveQTableToFile_RL(string personName)
+        //public void SaveQTableToFile_RL(string personName)
+        //{
+        //    (string baseDir2, string filePath) = GetQTablePath(personName);
+        //    var convertedQTable = new Dictionary<string, string>();
+
+        //    foreach (var outerEntry in Table)
+        //    {
+        //        var outerKey = outerEntry.Key.Serialize();
+        //        var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
+        //            $"{innerEntry.Key}¶{innerEntry.Value.Serialize()}"
+        //        );
+
+        //        convertedQTable[outerKey] = string.Join("★", innerDictSerialized);
+        //    }
+
+        //    if (!Directory.Exists(baseDir2))
+        //    {
+        //        Directory.CreateDirectory(baseDir2);
+        //    }
+
+        //    try
+        //    {
+        //        var options = new JsonSerializerOptions { WriteIndented = true };
+        //        string jsonString = JsonSerializer.Serialize(convertedQTable, options);
+        //        File.WriteAllText(filePath, jsonString);
+        //        Debug.WriteLine("QTable has been successfully saved to " + filePath);
+        //        Logger.Info("QTable has been successfully saved to " + filePath);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine("Error saving QTable: " + ex.Message);
+        //        Logger.Info("Error saving QTable: " + ex.Message);
+        //        throw new LPGException("Error in Q-Table Saving");
+        //    }
+        //}
+
+        //public static QTable LoadQTableFromFile_RL(string personName)
+        //{
+        //    (string baseDir2, string filePath) = GetQTablePath(personName);
+
+        //    if (!File.Exists(filePath))
+        //    {
+        //        Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
+        //        Logger.Info("No saved QTable found. Initializing a new QTable.");
+        //        return new QTable();
+        //    }
+
+        //    try
+        //    {
+        //        var jsonString = File.ReadAllText(filePath);
+        //        var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
+        //        QTable readedQTable = new();
+        //        foreach (var outerEntry in convertedQTable)
+        //        {
+        //            var outerKey = StateInfo.Deserialize(outerEntry.Key);
+        //            var innerDict = outerEntry.Value
+        //                .Split('★')
+        //                .Select(innerSerialized =>
+        //                {
+        //                    var parts = innerSerialized.Split('¶');
+        //                    var actionName = parts[0];
+        //                    var actionInfo = ActionInfo.Deserialize(parts[1]);
+        //                    return new KeyValuePair<string, ActionInfo>(actionName, actionInfo);
+        //                })
+        //                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+        //            readedQTable.Table[outerKey] = new ConcurrentDictionary<string, ActionInfo>(innerDict);
+        //        }
+
+        //        Debug.WriteLine("QTable has been successfully loaded from " + filePath);
+        //        Logger.Info("QTable has been successfully loaded from " + filePath);
+        //        return readedQTable;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine("Error loading QTable: " + ex.Message);
+        //        Logger.Info("Error loading QTable: " + ex.Message);
+        //        throw new LPGException("Error in Q-Table Loading");
+        //    }
+        //}
+        public string Serialize()
         {
-            (string baseDir2, string filePath) = GetQTablePath(personName);
             var convertedQTable = new Dictionary<string, string>();
 
             foreach (var outerEntry in Table)
             {
-                var outerKeyDictSerialized = string.Join("±", outerEntry.Key.DesireStates.Select(d => $"{d.Key}⦿{d.Value}"));
-                var outerKey = $"{outerKeyDictSerialized}§{outerEntry.Key.TimeOfDay}";
-
+                var outerKey = outerEntry.Key.Serialize();
                 var innerDictSerialized = outerEntry.Value.Select(innerEntry =>
-                    $"{innerEntry.Key}¶{innerEntry.Value.QValue}‖{innerEntry.Value.WeightSum}‖{innerEntry.Value.RValue}‖" +
-                    $"{string.Join("¥", innerEntry.Value.NextState.DesireStates.Select(d => $"{d.Key}○{d.Value}"))}♯{innerEntry.Value.NextState.TimeOfDay}"
+                    $"{innerEntry.Key}¶{innerEntry.Value.Serialize()}"
                 );
+
                 convertedQTable[outerKey] = string.Join("★", innerDictSerialized);
             }
+
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            return JsonSerializer.Serialize(convertedQTable, options);
+        }
+
+        public static QTable Deserialize(string jsonString)
+        {
+            var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
+            QTable qTable = new();
+
+            foreach (var outerEntry in convertedQTable)
+            {
+                var outerKey = StateInfo.Deserialize(outerEntry.Key);
+                var innerDict = outerEntry.Value
+                    .Split('★')
+                    .Select(innerSerialized =>
+                    {
+                        var parts = innerSerialized.Split('¶');
+                        var actionName = parts[0];
+                        var actionInfo = ActionInfo.Deserialize(parts[1]);
+                        return new KeyValuePair<string, ActionInfo>(actionName, actionInfo);
+                    })
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+                qTable.Table[outerKey] = new ConcurrentDictionary<string, ActionInfo>(innerDict);
+            }
+
+            return qTable;
+        }
+
+        public void SaveQTableToFile_RL(string personName)
+        {
+            (string baseDir2, string filePath) = GetQTablePath(personName);
 
             if (!Directory.Exists(baseDir2))
             {
@@ -134,8 +275,7 @@ namespace CalculationEngine.ReinforcementLearning
 
             try
             {
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string jsonString = JsonSerializer.Serialize(convertedQTable, options);
+                var jsonString = Serialize();
                 File.WriteAllText(filePath, jsonString);
                 Debug.WriteLine("QTable has been successfully saved to " + filePath);
                 Logger.Info("QTable has been successfully saved to " + filePath);
@@ -144,94 +284,34 @@ namespace CalculationEngine.ReinforcementLearning
             {
                 Debug.WriteLine("Error saving QTable: " + ex.Message);
                 Logger.Info("Error saving QTable: " + ex.Message);
+                throw new LPGException("Error in Q-Table Saving");
             }
         }
 
         public static QTable LoadQTableFromFile_RL(string personName)
         {
-            Debug.WriteLine("Now Loading QTable from file...");
-            QTable readedQTable = new QTable();
-            (string baseDir, string filePath) = GetQTablePath(personName);
-            if (!Directory.Exists(baseDir))
-            {
-                Directory.CreateDirectory(baseDir);
-            }
+            (string baseDir2, string filePath) = GetQTablePath(personName);
 
-            if (File.Exists(filePath))
-            {
-                try
-                {
-
-                    var jsonString = File.ReadAllText(filePath);
-                    var convertedQTable = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
-
-
-                    var loadedQTable = new ConcurrentDictionary<StateInfo, ConcurrentDictionary<string, ActionInfo>>();
-
-                    foreach (var outerEntry in convertedQTable)
-                    {
-
-                        var outerKeyParts = outerEntry.Key.Split('§');
-                        var desireStates = outerKeyParts[0]
-                            .Split('±')
-                            .Select(p => p.Split('⦿'))
-                            .ToDictionary(p => p[0], p => int.Parse(p[1]));
-                        var timeOfDay = outerKeyParts[1];
-                        var outerKey = new StateInfo(desireStates, timeOfDay);
-
-
-                        var innerDict = new ConcurrentDictionary<string, ActionInfo>();
-                        var innerEntries = outerEntry.Value.Split(new string[] { "★" }, StringSplitOptions.None);
-                        foreach (var innerEntry in innerEntries)
-                        {
-                            var parts = innerEntry.Split('¶');
-                            var actionName = parts[0];
-                            var valueParts = parts[1].Split('‖');
-
-
-                            var qValue = double.Parse(valueParts[0]);
-                            var weightSum = int.Parse(valueParts[1]);
-                            var rValue = double.Parse(valueParts[2]);
-                            var nextStateParts = valueParts[3].Split('♯');
-
-
-                            var nextStateDesireStates = nextStateParts[0]
-                                .Split('¥')
-                                .Select(p => p.Split('○'))
-                                .ToDictionary(p => p[0], p => int.Parse(p[1]));
-                            var nextStateTimeOfDay = nextStateParts[1];
-                            var nextState = new StateInfo(nextStateDesireStates, nextStateTimeOfDay);
-
-
-                            innerDict[actionName] = new ActionInfo(qValue, weightSum, rValue, nextState);
-                        }
-
-
-                        loadedQTable[outerKey] = innerDict;
-                    }
-
-                    foreach (var kvp in loadedQTable)
-                    {
-                        readedQTable.Table[kvp.Key] = kvp.Value;
-                    }
-
-                    Debug.WriteLine("QTable has been successfully loaded from " + filePath);
-                    Logger.Info("QTable has been successfully loaded from " + filePath);
-                    return readedQTable;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("Error loading QTable: " + ex.Message);
-                    Logger.Info("Error loading QTable: " + ex.Message);
-                    throw new LPGException("SW was null");
-                    return null;
-                }
-            }
-            else
+            if (!File.Exists(filePath))
             {
                 Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
                 return new QTable();
+            }
+
+            try
+            {
+                var jsonString = File.ReadAllText(filePath);
+                var qTable = QTable.Deserialize(jsonString);
+                Debug.WriteLine("QTable has been successfully loaded from " + filePath);
+                Logger.Info("QTable has been successfully loaded from " + filePath);
+                return qTable;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Error loading QTable: " + ex.Message);
+                Logger.Info("Error loading QTable: " + ex.Message);
+                throw new LPGException("Error in Q-Table Loading");
             }
         }
     }
