@@ -241,11 +241,11 @@ namespace CalculationEngine.ReinforcementLearning
         public static void Q_Learning_Experience_Replay_RL(int seed, QTable qTable)
         {
             (double gamma, double alpha) = GetGemmaAndAlpha();
-            if (qTable.Count == 0)
+            if (qTable.StatesCount == 0)
             {
                 return;
             }
-            int m = Math.Min(100, qTable.Count);
+            int m = Math.Min(100, qTable.StatesCount);
 
             Random rand = new Random(seed);
 

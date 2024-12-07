@@ -329,8 +329,8 @@ namespace CalculationEngine.HouseholdElements {
                 foreach (var person in _persons)
                 {
                     var person_name = person.Name;
-                    Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.Count}");
-                    Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.Count);
+                    Debug.WriteLine($"Name: {person_name}, Q-Table-Count: {person.qTable.StatesCount}");
+                    Logger.Info("Name: " + person_name + ", Q-Table-Count: " + person.qTable.StatesCount);
                     person.qTable.SaveQTableToFile_RL(person_name);
                     Debug.WriteLine($"Name: {person_name}, Q-Table-Saved");
 
@@ -457,8 +457,8 @@ namespace CalculationEngine.HouseholdElements {
                 p.searchCounter = 0;
                 p.foundCounter = 0;
 
-                Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count},{result}, {foundResultSum}");
-                Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.Count}, {result}, {foundResultSum}");
+                Debug.WriteLine($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.StatesCount},{result}, {foundResultSum}");
+                Logger.Info($"{now.Date.ToString("yyyy-MM-dd")},  {p.qTable.StatesCount}, {result}, {foundResultSum}");
             }
             
             p.NextStep(timestep, _locations, _daylightArray,
