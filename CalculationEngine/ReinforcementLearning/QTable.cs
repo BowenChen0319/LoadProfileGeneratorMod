@@ -69,12 +69,12 @@ namespace CalculationEngine.ReinforcementLearning
         {
             // Serialize the DesireStates dictionary into a string representation.
             // Each key-value pair in the dictionary is converted to the format "key^value",
-            // and pairs are joined together with the "±" delimiter.
-            var desireStatesSerialized = string.Join("±", DesireStates.Select(d => $"{d.Key}^{d.Value}"));
+            // and pairs are joined together with the "[" delimiter.
+            var desireStatesSerialized = string.Join("[", DesireStates.Select(d => $"{d.Key}^{d.Value}"));
 
             // Combine the serialized DesireStates string with the TimeOfDay string.
-            // The two parts are separated by the "§" delimiter.
-            return $"{desireStatesSerialized}§{TimeOfDay}";
+            // The two parts are separated by the "]" delimiter.
+            return $"{desireStatesSerialized}]{TimeOfDay}";
         }
 
         /// <summary>
@@ -87,9 +87,9 @@ namespace CalculationEngine.ReinforcementLearning
         /// </exception>
         public static StateInfo Deserialize(string serialized)
         {
-            var parts = serialized.Split('§');
+            var parts = serialized.Split(']');
             var desireStates = parts[0]
-                .Split('±')
+                .Split('[')
                 .Select(p => p.Split('^'))
                 .ToDictionary(p => p[0], p => int.Parse(p[1]));
             return new StateInfo(desireStates,parts[1]);
@@ -122,8 +122,8 @@ namespace CalculationEngine.ReinforcementLearning
             // Serialize the NextState property using its Serialize method
             var nextStateSerialized = NextState.Serialize();
             // Combine the QValue, WeightSum, RValue, and the serialized NextState into a single string.
-            // Use '`' as the delimiter between the parts.
-            return $"{QValue}`{WeightSum}`{RValue}`{nextStateSerialized}";
+            // Use '%' as the delimiter between the parts.
+            return $"{QValue}%{WeightSum}%{RValue}%{nextStateSerialized}";
         }
 
         /// <summary>
@@ -138,8 +138,8 @@ namespace CalculationEngine.ReinforcementLearning
         /// </exception>
         public static ActionInfo Deserialize(string serialized)
         {
-            // Split the serialized string using '`' as the delimiter.
-            var parts = serialized.Split('`');
+            // Split the serialized string using '%' as the delimiter.
+            var parts = serialized.Split('%');
             // Parse each part to reconstruct the original object.
             var qValue = double.Parse(parts[0]); // Parse QValue
             var weightSum = int.Parse(parts[1]); // Parse WeightSum

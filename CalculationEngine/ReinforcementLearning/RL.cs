@@ -12,59 +12,45 @@ namespace CalculationEngine.ReinforcementLearning
 {
     public static class RL
     {
-
         /// <summary>
-        /// Selects the optimal affordance from a list of available affordances using an adapted Q-Learning algorithm 
-        /// in a reinforcement learning (RL) framework. This method evaluates each affordance, calculates predicted rewards, 
-        /// and updates the Q-Table for the current state-action pairs.
-        ///
-        /// <b>Inputs:</b>
-        /// - <paramref name="time"/>: The current time step of the simulation.
-        /// - <paramref name="allAvailableAffordances"/>: A list of affordances that can be performed at the current state.
-        /// - <paramref name="now"/>: The current DateTime in the simulation.
-        ///
-        /// <b>Outputs:</b>
-        /// - Returns the affordance with the highest predicted Q-value (that is not recently executed, to ensure diversity).
-        ///
-        /// <b>Details:</b>
-        /// 1. <b>Initialization:</b>
-        ///    - Loads the Q-Table from the file if it is empty.
-        ///    - Performs experience replay to update Q-values based on past experiences.
-        ///    - Sets up variables to track the best affordance, current state, and counters for search and found actions.
-        ///
-        /// 2. <b>Parallel Evaluation:</b>
-        ///    - Processes each affordance in parallel to improve computational efficiency.
-        ///    - For each affordance:
-        ///       - Computes immediate rewards (R_S_A) and next state information (newState) using <c>Q_Learning_Stage1_RL</c>.
-        ///       - Predicts future rewards using n-step predictions from <c>Q_Learning_Stage2_RL</c>.
-        ///       - Updates the Q-value in the Q-Table using the Bellman equation.
-        ///       (Optional) - Considers constraints like avoiding recently executed affordances and prioritizes critical actions (e.g., sleep).
-        ///
-        /// 3. <b>Selection of Best Affordance:</b>
-        ///    - Maintains a thread-safe mechanism to select the affordance with the highest Q-value.
-        ///    - Skips affordances marked as "Replacement Activity" to focus on meaningful actions.
-        ///
-        /// 4. <b>Global Metrics Update:</b>
-        ///    - Updates global counters to track search and found actions for monitoring learning efficiency.
-        ///
-        /// <b>Usage:</b>
-        /// - Invoke this method during the RL process to determine the next action to take based on the learned policy.
-        /// - Ensure the Q-Table is populated and updated regularly for accurate predictions.
-        /// - Use the returned affordance to execute the next step in the simulation.
-        ///
-        /// <b>Key Parameters:</b>
-        /// - <c>alpha</c>: Learning rate, balances new information and existing knowledge.
-        /// - <c>gamma</c>: Discount factor, determines the weight of future rewards in decision-making.
-        /// - <c>currentState</c>: Represents the current state as a combination of desire levels and time information.
-        ///
-        /// This method is critical to the RL process, enabling dynamic and intelligent decision-making based on 
-        /// learned state-action relationships, ensuring efficient and adaptive simulation behavior.
+        /// Gets the gamma and alpha values for the Q-Learning algorithm in reinforcement learning (RL).
         /// </summary>
+        /// <returns></returns>
         public static (double, double) GetGemmaAndAlpha()
         {
             return (0.8, 0.2);
         }
 
+        /// <summary>
+        /// Selects the best affordance from a list of available affordances using an adapted Q-Learning algorithm.
+        /// </summary>
+        /// <param name="time">The current simulation time step.</param>
+        /// <param name="allAvailableAffordances">A list of all affordances available for selection.</param>
+        /// <param name="now">The current time.</param>
+        /// <param name="PersonName">The name of the person for whom the affordance is being selected.</param>
+        /// <param name="isHumanInterventionInvolved">
+        /// A flag indicating whether human intervention affects affordance selection.
+        /// </param>
+        /// <param name="qTable">
+        /// A reference to the Q-Table used for storing and updating state-action values.
+        /// </param>
+        /// <param name="PersonDesires">The person's desire states, used to calculate rewards and future states.</param>
+        /// <param name="executedAffordance">
+        /// A reference to a dictionary storing affordances executed in the past, used for decision constraints.
+        /// </param>
+        /// <param name="searchCounter">
+        /// A reference to the search counter tracking the total number of affordances evaluated.
+        /// </param>
+        /// <param name="foundCounter">
+        /// A reference to the found counter tracking the number of valid affordances found.
+        /// </param>
+        /// <returns>The best affordance determined by the Q-Learning algorithm.</returns>
+        /// <remarks>
+        /// This method implements an adapted Q-Learning algorithm to find the best affordance based on the
+        /// current state, past actions, and predictions for future rewards. It supports parallel computation
+        /// for affordance evaluation and updates the Q-Table with learned values.
+        /// </remarks>
+        /// <exception cref="LPGException">Thrown if the Q-Table cannot be loaded or updated.</exception>
 
         public static ICalcAffordanceBase GetBestAffordanceFromList_Adapted_Q_Learning_RL([JetBrains.Annotations.NotNull] TimeStep time,
                                                       [JetBrains.Annotations.NotNull][ItemNotNull] List<ICalcAffordanceBase> allAvailableAffordances, DateTime now, string PersonName, bool isHumanInterventionInvolved, ref QTable qTable, CalcPersonDesires PersonDesires, ref Dictionary<DateTime, (string, string)> executedAffordance, ref int searchCounter, ref int foundCounter)
@@ -88,19 +74,15 @@ namespace CalculationEngine.ReinforcementLearning
 
             var desire_ValueBefore = PersonDesires.GetCurrentDesireValue_Linear();
             var desire_level_before = MergeDictAndLevels_RL(desire_ValueBefore);
-            //(Dictionary<string, int>, string) currentState = (desire_level_before, MakeTimeSpan_RL(now, 0));
             StateInfo currentState = new StateInfo(desire_level_before, MakeTimeSpan_RL(now, 0));
             int currentSearchCounter = allAvailableAffordances.Count;
             int currentFoundCounter = 0;
 
             //Initilize the Lock object
             object locker = new object();
-
-
             var localExecutedAffordance = isHumanInterventionInvolved ? executedAffordance : null;
 
             //First prediction, in Parallel Computing       
-
             Parallel.ForEach(allAvailableAffordances, affordance =>
             {
                 //If the affordance is a replacement activity, then skip it
@@ -125,14 +107,9 @@ namespace CalculationEngine.ReinforcementLearning
                        .Where(kvp => kvp.Key >= threeHoursAgo && kvp.Key <= now && kvp.Value.Item2 == affordance.AffCategory)
                        .Any();
                 }
+                
+                (ActionInfo Q_S_A, double R_S_A, StateInfo nextState, double weightSum, DateTime TimeAfter) = Q_Learning_Stage1_RL(affordance, currentState, time, now, ref localQTable, ref localPersonDesires);
 
-                //GetNextStateAndQ_R_Value(state, time,now)// input: State, time, now // output: Q, R, next state
-                var firstStageQ_Learning_Info = Q_Learning_Stage1_RL(affordance, currentState, time, now, ref localQTable, ref localPersonDesires);
-                var R_S_A = firstStageQ_Learning_Info.R_S_A;
-                var Q_S_A = firstStageQ_Learning_Info.Q_S_A;
-                var nextState = firstStageQ_Learning_Info.newState;
-                var weightSum = firstStageQ_Learning_Info.weightSum;
-                var TimeAfter = firstStageQ_Learning_Info.TimeAfter;
 
                 affordanceFoundCounter += Q_S_A.QValue > 0 ? 1 : 0; //Update Counter, if this state is already visited, then increase the FoundCounter
 
@@ -197,74 +174,51 @@ namespace CalculationEngine.ReinforcementLearning
         }
 
         /// <summary>
-        /// Implements experience replay for reinforcement learning (RL) by revisiting previously encountered states
-        /// in the Q-Table and updating their Q-values to refine the learned policy. This mechanism enhances
-        /// learning stability and efficiency by allowing the agent to learn from past experiences without
-        /// needing additional interactions with the environment.
-        ///
-        /// <b>Inputs:</b>
-        /// - <paramref name="seed"/>: An integer seed used for generating random numbers to ensure reproducibility.
-        ///
-        /// <b>Details:</b>
-        /// 1. <b>State Selection:</b>
-        ///    - Randomly selects up to 100 states from the Q-Table or the total number of states if fewer than 100 exist.
-        ///    - Uses a random number generator to ensure diverse state sampling.
-        ///
-        /// 2. <b>Q-Value Update:</b>
-        ///    - For each selected state, retrieves its associated actions and their Q-values.
-        ///    - Identifies the top actions based on their Q-values and processes each action to update the Q-value:
-        ///       - Calculates the predicted Q-value using the Bellman equation, factoring in immediate rewards (R_S_A)
-        ///         and future rewards (from the next state).
-        ///       - Updates the Q-value in the Q-Table for the current state-action pair.
-        ///
-        /// 3. <b>Parallel Processing:</b>
-        ///    - Leverages parallel computation to update Q-values for multiple states simultaneously,
-        ///      improving performance for large Q-Tables.
-        ///
-        /// <b>Usage:</b>
-        /// - Call this method during training phases to reinforce learning without additional environmental interactions.
-        /// - Integrate it as part of the RL algorithm to smooth out Q-value updates and improve convergence.
-        ///
-        /// <b>Key Parameters:</b>
-        /// - <c>alpha</c>: The learning rate, controls the weight of new information versus existing knowledge.
-        /// - <c>gamma</c>: The discount factor, determines the importance of future rewards (commented out here but configurable).
-        ///
-        /// <b>Example Workflow:</b>
-        /// 1. Initialize the Q-Table during the RL setup phase.
-        /// 2. Populate the Q-Table with state-action data through interaction with the environment.
-        /// 3. Periodically invoke this method to update Q-values and enhance the policy's performance.
-        ///
-        /// This method is integral to RL processes, supporting efficient learning through experience replay, which reduces reliance
-        /// on real-time interactions and improves policy stability and accuracy over time.
+        /// Performs experience replay to improve Q-value updates in the Q-Table.
         /// </summary>
+        /// <param name="seed">The random seed used to select states for experience replay.</param>
+        /// <param name="qTable">The <see cref="QTable"/> object containing state-action mappings to be updated.</param>
+        /// <remarks>
+        /// Experience replay selects a subset of states from the Q-Table and updates Q-values for all actions in these states.
+        /// This process improves the stability and convergence of the Q-Learning algorithm. The updates are performed in parallel for efficiency.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="qTable"/> is null.
+        /// </exception>
 
         public static void Q_Learning_Experience_Replay_RL(int seed, QTable qTable)
         {
+            // Retrieve the gamma and alpha hyperparameters for the Q-Learning algorithm.
             (double gamma, double alpha) = GetGemmaAndAlpha();
+
+            // If the Q-Table is empty, exit the method as there is nothing to update.
             if (qTable.StatesCount == 0)
             {
                 return;
             }
+
+            // Determine the number of states to select for experience replay.
             int m = Math.Min(100, qTable.StatesCount);
-
+            // Initialize a random number generator with the given seed.
             Random rand = new Random(seed);
-
-            // Get all states from Q-Table
+            // Get all state keys from the Q-Table.
             var allStates = qTable.Table.Keys.ToList();
-
-            // Randomly select m states
+            // Randomly select m states for experience replay.
             var randomStates = allStates.OrderBy(x => rand.Next()).Take(m).ToList();
 
-            // Parallel loop to update Q-values for best actions in selected states
+            // Use a parallel loop to process each selected state for Q-value updates.
             Parallel.ForEach(randomStates, state =>
             {
+                // Retrieve the actions associated with the current state.
                 if (qTable.Table.TryGetValue(state, out var current_State))
                 {
-                    //int numer_of_update_action = Math.Max(1, current_State.Count/4);
+                    // Determine the number of top actions to update (currently all actions).
                     TimeSpan time_state = TimeSpan.Parse(state.TimeOfDay.Substring(2));
                     int numer_of_update_action = current_State.Count;
+                    // Select the top actions in the current state based on Q-value.
                     var topActions = current_State.OrderByDescending(action => action.Value.QValue).Take(numer_of_update_action).ToList();
 
+                    // Update Q-values for each top action in the current state.
                     foreach (var bestActionEntry in topActions)
                     {
                         if (bestActionEntry.Key == null)
@@ -272,39 +226,38 @@ namespace CalculationEngine.ReinforcementLearning
                             continue;
                         }
 
-                        var bestAction = bestActionEntry.Key;
-                        var newStateInfo = bestActionEntry.Value.NextState;
+                        // Deconstruct the current action's information.
+                        (string bestAction, ActionInfo bestActionInfo) = bestActionEntry;
+                        (StateInfo newStateInfo, double R_S_A, double Q_S_A) = (bestActionInfo.NextState, bestActionInfo.RValue, bestActionInfo.QValue);
+                        // Calculate if the new state occurs on the same day as the current state.
                         TimeSpan time_newState = TimeSpan.Parse(newStateInfo.TimeOfDay.Substring(2));
-                        var R_S_A = bestActionEntry.Value.RValue;
-                        var Q_S_A = bestActionEntry.Value.QValue;
                         bool inTheSameDay = time_newState >= time_state;
-
+                        // Initialize prediction with the reward value.
                         double prediction = R_S_A;
 
-
+                        // Check if the next state exists in the Q-Table and retrieve the best next action.
                         if (qTable.Table.TryGetValue(newStateInfo, out var nextStateActions))
                         {
                             if (inTheSameDay)
                             {
-
                                 var nextActionEntry = nextStateActions
                                     .DefaultIfEmpty()
                                     .MaxBy(action => action.Value.QValue);
-
+                                // Skip updates if no valid next action exists.
                                 if (nextActionEntry.Key == null || nextActionEntry.Value.QValue == 0)
                                 {
                                     continue;
                                 }
+                                // Add the discounted future Q-value to the prediction.
                                 prediction += gamma * nextActionEntry.Value.QValue;
                             }
                         }
 
-
+                        // Update the Q-value using the Bellman equation.
                         double new_Q_S_A = (1 - alpha) * Q_S_A + alpha * prediction;
-
-
+                        // Create a new ActionInfo object with the updated Q-value.
                         var updatedActionInfo = new ActionInfo(new_Q_S_A, bestActionEntry.Value.WeightSum, R_S_A, newStateInfo);
-
+                        // Update the Q-Table with the new action information.
                         current_State.AddOrUpdate(bestAction, updatedActionInfo, (key, oldValue) => updatedActionInfo);
                     }
                 }
@@ -312,127 +265,116 @@ namespace CalculationEngine.ReinforcementLearning
         }
 
         /// <summary>
-        /// Performs the first stage of Q-Learning for reinforcement learning (RL), calculating the immediate reward (R_S_A),
-        /// next state (newState), and Q-value (Q_S_A) for a given affordance and state.
-        /// This method evaluates the impact of the affordance by simulating its execution and updating the RL parameters accordingly.
-        ///
-        /// <b>Inputs:</b>
-        /// - <paramref name="affordance"/>: The affordance being evaluated.
-        /// - <paramref name="currentState"/>: The current state, represented as a tuple of desires and time state.
-        /// - <paramref name="time"/>: The time step of the simulation.
-        /// - <paramref name="now"/>: The current simulation time as a DateTime object.
-        ///
-        /// <b>Outputs:</b>
-        /// - <c>Q_S_A</c>: The Q-value associated with the current state-action pair.
-        /// - <c>R_S_A</c>: The immediate reward for performing the action in the current state.
-        /// - <c>newState</c>: The resulting state after the action is executed.
-        /// - <c>weightSum</c>: The summed weights of the desires affected by the action.
-        /// - <c>TimeAfter</c>: The simulation time after executing the action.
-        ///
-        /// <b>Usage:</b>
-        /// 1. Call this method during the RL process to evaluate potential actions.
-        /// 2. Use the returned Q-value to update the Q-Table or make policy decisions.
-        /// 3. Leverage the reward and new state to guide future actions or refine the policy.
-        ///
-        /// <b>Details:</b>
-        /// - The reward (R_S_A) is calculated based on the deviation of desire satisfaction values and prioritized for critical actions.
-        /// - The next state is generated by applying the affordance's effects on the current state.
-        /// - The method initializes Q-values to zero if the action is not previously encountered in the Q-Table.
-        /// - Time and satisfaction are adjusted to reflect the affordance's duration and impact.
-        ///
-        /// This method is a core part of the RL algorithm, bridging simulation states and the Q-Table for learning.
+        /// Executes the first stage of the Q-Learning process by calculating the immediate reward, next state, and other parameters
+        /// for a given affordance and the current state.
         /// </summary>
-        public static (ActionInfo Q_S_A, double R_S_A, StateInfo newState, double weightSum, DateTime TimeAfter) Q_Learning_Stage1_RL(ICalcAffordanceBase affordance, StateInfo currentState, TimeStep time, DateTime now, ref QTable qTable, ref CalcPersonDesires PersonDesires)
+        /// <param name="affordance">The affordance being evaluated, which defines its satisfaction values and duration.</param>
+        /// <param name="currentState">The current state as a <see cref="StateInfo"/> object.</param>
+        /// <param name="time">The current simulation time step.</param>
+        /// <param name="now">The current real-world time.</param>
+        /// <param name="qTable">A reference to the Q-Table for retrieving or updating state-action values.</param>
+        /// <param name="PersonDesires">The desires of the person, used to compute the effect of the affordance.</param>
+        /// <returns>
+        /// A tuple containing the following components:
+        /// <list type="bullet">
+        /// <item><description><see cref="ActionInfo"/> Q_S_A: The Q-value and detail infos of the selected state-action pair.</description></item>
+        /// <item><description>double R_S_A: The immediate reward for taking the action in the current state.</description></item>
+        /// <item><description><see cref="StateInfo"/> newState: The resulting state after applying the affordance's effects.</description></item>
+        /// <item><description>double weightSum: The sum of all weight of affordances, which are relevent with this action.</description></item>
+        /// <item><description>DateTime TimeAfter: The time after the affordance has been applied.</description></item>
+        /// </list>
+        /// </returns>
+        /// <remarks>
+        /// This method calculates the immediate reward for taking the affordance, determines the next state, and retrieves
+        /// relevant Q-Table information.
+        /// </remarks>
+        public static (ActionInfo Q_S_A, double R_S_A, StateInfo newState, double weightSum, DateTime TimeAfter)
+        Q_Learning_Stage1_RL(
+            ICalcAffordanceBase affordance, 
+            StateInfo currentState, 
+            TimeStep time, 
+            DateTime now, 
+            ref QTable qTable, 
+            ref CalcPersonDesires PersonDesires)
         {
+            // Determine the duration of the affordance, either real or standard duration on the time step.
             int duration = time == null ? affordance.GetDuration() : affordance.GetRealDuration(time);
+            // Check if the affordance is interruptable.
             bool isInterruptable = affordance.IsInterruptable;
+            // Retrieve the satisfaction values for the affordance.
             var satisfactionvalues = affordance.Satisfactionvalues.ToDictionary(s => s.DesireID, s => (double)s.Value);
-            var (desireDiff, weightSum, desire_ValueAfter, realDuration) = PersonDesires.CalcEffect_Partly_Linear(duration, out var thoughtstring, satValue: satisfactionvalues, interruptable: isInterruptable);
 
+            // Calculate the effect of the affordance on the person's desires.
+            // Includes changes in desire levels, total weight, updated desires, and real duration.
+            var (desireDiff, weightSum, desire_ValueAfter, realDuration) = PersonDesires.CalcEffect_Partly_Linear(
+                duration,
+                out var thoughtstring,
+                satValue: satisfactionvalues,
+                interruptable: isInterruptable
+            );
+
+            // Create a string representation of the next state's time span.
             string newTimeState = MakeTimeSpan_RL(now, duration);
+            // Merge the updated desire values into levels for the resulting state.
             Dictionary<string, int> desire_level_after = MergeDictAndLevels_RL(desire_ValueAfter);
+            // Construct the new state information.
             StateInfo newState = new StateInfo(desire_level_after, newTimeState);
 
+            // Calculate the immediate reward (R_S_A) based on the desire difference.
+            // Apply upper bound if the weightSum exceeds a predefined threshold.
+            // 1000000 is the big M value, which is used to ensure that the reward is always positive.
             var R_S_A = -desireDiff + 1000000;
             if (weightSum >= 1000)
             {
                 R_S_A = 20000000;
             }
 
-
+            // Retrieve or add the current state-action pair's details from the Q-Table.
             var actionDetails = qTable.GetOrAdd(
                 currentState,
                 affordance.Name
             );
 
+            // Create an ActionInfo object to represent the current state-action pair.
             ActionInfo Q_S_A = new ActionInfo(actionDetails.QValue, actionDetails.WeightSum, actionDetails.RValue, actionDetails.NextState);
+            // Calculate the time after the affordance's duration.
             var TimeAfter = now.AddMinutes(duration);
 
+            // Return the tuple containing the action details, immediate reward, new state, weight sum, and resulting time.
             return (Q_S_A, R_S_A, newState, weightSum, TimeAfter);
         }
 
 
         /// <summary>
-        /// Calculates the maximum Q-value for a given state during the second stage of Q-Learning 
-        /// in a reinforcement learning (RL) process. This method identifies the best possible action 
-        /// from the current state to predict future rewards effectively.
-        ///
-        /// <b>Inputs:</b>
-        /// - <paramref name="currentState"/>: A tuple representing the current state in the format 
-        ///   (<c>Dictionary&lt;string, int&gt;</c>, <c>string</c>), where:
-        ///   - The dictionary maps desires to their levels.
-        ///   - The string represents the current time state.
-        ///
-        /// <b>Outputs:</b>
-        /// - Returns the maximum Q-value (<c>double</c>) for the given state, based on the best possible action.
-        ///
-        /// <b>Details:</b>
-        /// 1. <b>State Validation:</b>
-        ///    - Checks if the Q-Table contains entries for the given state.
-        ///    - Ensures that the state has associated actions before proceeding.
-        ///
-        /// 2. <b>Action Evaluation:</b>
-        ///    - Iterates over all actions associated with the state.
-        ///    - Identifies the action with the highest Q-value using <c>MaxBy</c>.
-        ///    - Extracts the Q-value of the best action for use in reward prediction.
-        ///
-        /// 3. <b>Output:</b>
-        ///    - If valid actions exist, returns the highest Q-value for the given state.
-        ///    - Otherwise, returns 0, indicating no viable actions for the state.
-        ///
-        /// <b>Usage:</b>
-        /// - Call this method during the RL process to evaluate future rewards for a given state.
-        /// - Use the returned Q-value as part of the Bellman equation to update Q-values in the Q-Table.
-        /// - Ensure that the Q-Table is populated with state-action pairs for accurate predictions.
-        ///
-        /// <b>Example Workflow:</b>
-        /// 1. During a Q-Learning update, invoke this method to determine the maximum Q-value of the next state.
-        /// 2. Incorporate the result into the reward calculation to refine the policy.
-        /// 3. Repeat the process for multiple states to improve the overall learning accuracy.
-        ///
-        /// This method plays a vital role in the RL algorithm by enabling forward-looking decision-making 
-        /// and ensuring that the policy considers the best possible outcomes for a given state.
+        /// Executes the second stage of the Q-Learning process by determining the maximum Q-value for a given state.
         /// </summary>
-        /// 
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="currentPersonDesireState"></param>
-        /// <param name="qTable"></param>
-        /// <returns></returns>
+        /// <param name="currentPersonDesireState">The current state as a <see cref="StateInfo"/> object.</param>
+        /// <param name="qTable">
+        /// A reference to the Q-Table containing state-action mappings used to calculate the maximum Q-value.
+        /// </param>
+        /// <returns>
+        /// The maximum Q-value of all actions associated with the given state.
+        /// Returns 0 if the state is not present in the Q-Table or if no actions are associated with it.
+        /// </returns>
+        /// <remarks>
+        /// This method retrieves the actions for a given state from the Q-Table and calculates the maximum Q-value among them.
+        /// It is used to evaluate the future potential reward for transitioning to this state.
+        /// </remarks>
         public static double Q_Learning_Stage2_RL(StateInfo currentPersonDesireState, ref QTable qTable)
         {
+            // Initialize the maximum Q-value to 0.
             double maxQ_Value = 0;
 
-
+            // Attempt to retrieve the actions associated with the current state from the Q-Table.
             if (qTable.Table.TryGetValue(currentPersonDesireState, out var Q_newState_actions_nS))
             {
+                // Check if the retrieved action dictionary is not null and contains actions.
                 if (Q_newState_actions_nS != null && Q_newState_actions_nS.Any())
                 {
-
+                    // Find the action with the maximum Q-value.
                     var maxAction = Q_newState_actions_nS.MaxBy(action => action.Value.QValue);
 
+                    // If a valid action is found, update the maximum Q-value.
                     if (maxAction.Key != null)
                     {
                         maxQ_Value = maxAction.Value.QValue;
@@ -440,58 +382,93 @@ namespace CalculationEngine.ReinforcementLearning
                 }
             }
 
+            // Return the maximum Q-value found for the current state.
             return maxQ_Value;
         }
 
 
         /// <summary>
-        /// Merges a dictionary of desires with their weights and values into a simplified dictionary for RL.
-        /// Each desire's level is calculated based on its weight and value, with higher weights increasing the granularity of levels.
-        /// Only desires with a weight of 20 or higher are included in the resulting dictionary.
-        /// This method is designed to support reinforcement learning by simplifying the representation of desire states.
+        /// Merges a dictionary of desires and their associated weights and values into a dictionary of desire levels.
         /// </summary>
+        /// <param name="desireName_Value_Dict">
+        /// A dictionary where the key is the desire name, and the value is a tuple containing:
+        /// <list type="bullet">
+        /// <item><description>The desire weight as an integer.</description></item>
+        /// <item><description>The updated desire value as a double.</description></item>
+        /// </list>
+        /// </param>
+        /// <returns>
+        /// A dictionary where the key is the desire name, and the value is the computed desire level as an integer.
+        /// Only desires with a weight of 20 or greater are included in the result.
+        /// </returns>
+        /// <remarks>
+        /// This method calculates the desire levels based on their weights and values using scaling slots (levels).
+        /// It excludes any desires with weights below 20 from the resulting dictionary.
+        /// </remarks>
         public static Dictionary<string, int> MergeDictAndLevels_RL(Dictionary<string, (int, double)> desireName_Value_Dict)
         {
+            // Initialize a new dictionary to store the merged desire levels.
             var mergedDict = new Dictionary<string, int>();
 
+            // Iterate through the input dictionary to process each desire.
             foreach (var kvp in desireName_Value_Dict)
             {
-                var key = kvp.Key;
-                var desire_Info = kvp.Value;
-                int desire_weight = desire_Info.Item1;
-                double desire_valueAfter = desire_Info.Item2;
-
+                // Extract the desire name (key) and its associated weight and value.
+                (var key, var desire_Info) = kvp;
+                (int desire_weight, double desire_valueAfter) = desire_Info;
+ 
+                // Determine the scaling slot (level) based on the weight of the desire.
                 int slot = 1;
                 if (desire_weight >= 1) slot = 2;
                 if (desire_weight >= 20) slot = 3;
                 if (desire_weight >= 100) slot = 5;
 
-                //var desire_level = (int)(desire_valueAfter / (1 / slot));
-                var desire_level = (int)Math.Floor(desire_valueAfter * slot);
+                // Calculate the desire level using the scaling slot.
+                var desire_level = (int)(desire_valueAfter * slot);
 
-                if (desire_weight >= 20)//20
+                // Only include desires with a weight of 20 or greater in the result.
+                if (desire_weight >= 20)
                 {
                     mergedDict[key] = desire_level;
                 }
-
             }
 
+            // Return the resulting dictionary containing the computed desire levels.
             return mergedDict;
         }
 
         /// <summary>
-        /// Generates a time span string for RL state representation, rounded to the nearest 15-minute interval.
-        /// Adjusts the time by a given offset and prefixes the result with "R:" for weekends or "W:" for weekdays.
-        /// This method standardizes time representation for use in reinforcement learning processes.
+        /// Generates a time state string based on the given time and offset, rounded to the nearest 15-minute interval.
         /// </summary>
+        /// <param name="time">The starting <see cref="DateTime"/> value.</param>
+        /// <param name="offset">The number of minutes to offset the starting time.</param>
+        /// <returns>
+        /// A string representing the rounded time state. The format is either:
+        /// <list type="bullet">
+        /// <item><description>"W:HH:mm" for weekdays (Monday to Friday).</description></item>
+        /// <item><description>"R:HH:mm" for weekends (Saturday and Sunday).</description></item>
+        /// </list>
+        /// </returns>
+        /// <remarks>
+        /// This method calculates a new time by adding the specified offset in minutes to the provided time,
+        /// rounds it down to the nearest 15-minute interval, and prefixes the result with either "W:" or "R:" 
+        /// depending on whether the new time falls on a weekday or weekend.
+        /// </remarks>
         public static string MakeTimeSpan_RL(DateTime time, int offset)
         {
+            // Define the rounding unit for minutes (15-minute intervals).
             int unit = 15;
+            // Add the specified offset in minutes to the provided time.
             var newTime = time.AddMinutes(offset);
+            // Calculate the remainder when the current minutes are divided by the rounding unit.
             var rounded_minutes_new = newTime.Minute % unit;
+            // Subtract the remainder to round down to the nearest 15-minute interval.
             newTime = newTime.AddMinutes(-rounded_minutes_new);
+            // Determine the prefix based on whether the new time is on a weekend or a weekday.
             string prefix = newTime.DayOfWeek == DayOfWeek.Saturday || newTime.DayOfWeek == DayOfWeek.Sunday ? "R:" : "W:";
+            // Format the new time as "HH:mm" and add the prefix.
             string newTimeState = prefix + newTime.ToString("HH:mm");
+            // Return the formatted time state string.
             return newTimeState;
         }
     }
