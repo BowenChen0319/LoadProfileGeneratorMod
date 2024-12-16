@@ -153,7 +153,7 @@ namespace CalculationEngine.HouseholdElements
 
         public Dictionary<DateTime, (string, string)> executedAffordance = new Dictionary<DateTime, (string, string)>();
 
-        public bool isHumanInterventionInvolved = true;
+        public bool avoidMoreFrequentRun = true;
 
         public bool useNewAlgo = true;
         
@@ -438,7 +438,7 @@ namespace CalculationEngine.HouseholdElements
             //NEW
             if (useNewAlgo)
             {
-                return RL.GetBestAffordanceFromList_Adapted_Q_Learning_RL(time, allAffordances, (DateTime) now, this.Name, this.isHumanInterventionInvolved, ref qTable, PersonDesires, ref executedAffordance, ref searchCounter, ref foundCounter);
+                return AdaptedQLearning.GetBestAffordanceFromList(time, allAffordances, (DateTime) now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
                 
             }
             //NEW
@@ -627,7 +627,7 @@ namespace CalculationEngine.HouseholdElements
                     if (useNewAlgo)
                     {
                         
-                        bestAffordance = RL.GetBestAffordanceFromList_Adapted_Q_Learning_RL(time, availableInterruptingAffordances, (DateTime) now, this.Name, this.isHumanInterventionInvolved, ref qTable, PersonDesires, ref executedAffordance, ref searchCounter, ref foundCounter);
+                        bestAffordance = AdaptedQLearning.GetBestAffordanceFromList(time, availableInterruptingAffordances, (DateTime) now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
                         ActivateAffordance(time, isDaylight, bestAffordance, (DateTime) now);                        
                     }
                     //NEW

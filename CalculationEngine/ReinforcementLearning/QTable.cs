@@ -241,7 +241,6 @@ namespace CalculationEngine.ReinforcementLearning
         {
             // Define the base directory for storing Q-Table files.
             string baseDir = @"ActivityModels";
-            //string baseDir = @"C:\Work\ML\Models";
 
             // Ensure the directory exists; create it if necessary.
             if (!Directory.Exists(baseDir))
@@ -349,13 +348,11 @@ namespace CalculationEngine.ReinforcementLearning
                 File.WriteAllText(filePath, jsonString);
 
                 // Log and debug the success message with the full file path.
-                Debug.WriteLine("QTable has been successfully saved to " + Path.GetFullPath(filePath));
                 Logger.Info("QTable has been successfully saved to " + Path.GetFullPath(filePath));
             }
             catch (Exception ex)
             {
                 // Log and throw an exception if an error occurs during saving.
-                Debug.WriteLine("Error saving QTable: " + ex.Message);
                 Logger.Info("Error saving QTable: " + ex.Message);
                 throw new LPGException("Error in Q-Table Saving");
             }
@@ -383,7 +380,6 @@ namespace CalculationEngine.ReinforcementLearning
             // If the file does not exist, return a new, empty Q-Table.
             if (!File.Exists(filePath))
             {
-                Debug.WriteLine("No saved QTable found. Initializing a new QTable.");
                 Logger.Info("No saved QTable found. Initializing a new QTable.");
                 return new QTable();
             }
@@ -397,14 +393,12 @@ namespace CalculationEngine.ReinforcementLearning
                 var qTable = QTable.Deserialize(jsonString);
 
                 // Log and debug the success message with the full file path.
-                Debug.WriteLine("QTable has been successfully loaded from " + Path.GetFullPath(filePath));
                 Logger.Info("QTable has been successfully loaded from " + Path.GetFullPath(filePath));
                 return qTable;
             }
             catch (Exception ex)
             {
                 // Log and throw an exception if an error occurs during loading.
-                Debug.WriteLine("Error loading QTable: " + ex.Message);
                 Logger.Info("Error loading QTable: " + ex.Message);
                 throw new LPGException("Error in Q-Table Loading");
             }
