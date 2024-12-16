@@ -230,16 +230,32 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        
+        /// <summary>
+        /// Applies a decay function to all desires except those specified in the provided list.
+        /// </summary>
+        /// <param name="timestep">The current simulation time step.</param>
+        /// <param name="satisfactionvalues">
+        /// A list of desires (as <see cref="CalcDesire"/> objects) that should not have decay applied.
+        /// </param>
+        /// <remarks>
+        /// This method identifies the desires to exclude from decay by creating a set of their IDs.
+        /// All other desires in the internal <see cref="Desires"/> collection will have the decay function applied.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="timestep"/> or <paramref name="satisfactionvalues"/> is null.</exception>
+
         public void ApplyDecay_WithoutSome_Linear([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
         {
+            // Create a set of DesireIDs from the satisfactionvalues list.
+            // These IDs represent desires that will be excluded from decay.
             HashSet<int> satisfactionDesireIDs = new HashSet<int>(satisfactionvalues.Select(sv => sv.DesireID));
 
-            // Apply decay to each desire that is not in the HashSet
+            // Iterate over all desires in the Desires collection.
             foreach (var calcDesire in Desires.Values)
             {
+                // Check if the current desire's ID is not in the exclusion set.
                 if (!satisfactionDesireIDs.Contains(calcDesire.DesireID))
                 {
+                    // Apply the decay function to the current desire.
                     calcDesire.ApplyDecay(timestep);
                 }
             }
@@ -275,101 +291,210 @@ namespace CalculationEngine.HouseholdElements {
             return CalcTotalDeviation(out thoughtstring);
         }
 
-
+        /// <summary>
+        /// Calculates the total deviation, weight sum, and the updated desire values over a specified duration, 
+        /// with support for partial linear effects and optional parameters.
+        /// </summary>
+        /// <param name="duration">The duration for which the effect is calculated. Represents the total action time.</param>
+        /// <param name="optionalList">
+        /// An optional dictionary of additional desire values, where the key is the desire name and the value is a tuple containing:
+        /// <list type="bullet">
+        /// <item><description>The desire weight as an integer.</description></item>
+        /// <item><description>The initial value of the desire as a double.</description></item>
+        /// </list>
+        /// </param>
+        /// <param name="satValue">
+        /// An optional dictionary mapping desire IDs to satisfaction values. These values may adjust the total deviation calculation.
+        /// </param>
+        /// <param name="interruptable">
+        /// A flag indicating whether the effect should be interrupted (true) or calculated for the full duration (false).
+        /// Default is false.
+        /// </param>
+        /// <returns>
+        /// A tuple containing:
+        /// <list type="bullet">
+        /// <item><description><see cref="double"/> totalDeviation: The total deviation of the desire values.</description></item>
+        /// <item><description><see cref="double"/> WeightSum: The total weight of the desires affected.</description></item>
+        /// <item><description>
+        /// A dictionary mapping desire names to their updated weights and values after the effect is applied.
+        /// </description></item>
+        /// <item><description><see cref="int"/> realDuration: The actual duration of the effect applied.</description></item>
+        /// </list>
+        /// </returns>
+        /// <remarks>
+        /// This method updates the temporary values of the desires and calculates the effect based on whether the process 
+        /// is interruptable. If interruptable, the effect is limited to 1 unit of duration; otherwise, it spans the specified duration.
+        /// </remarks>
         public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, int realDuration) CalcEffect_Partly_Linear(int duration, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, bool? interruptable = false)
         {
+            // Set the temporary value of each desire to its current value.
+            // This ensures a clean starting point for the calculation.
             foreach (var calcDesire in Desires.Values)
             {
                 calcDesire.TempValue = calcDesire.Value;
             }
 
+            // Determine whether the process is interruptable.
             if (interruptable == true)
             {
+                // If interruptable, limit the effect calculation to a duration of 1.
                 return CalcTotalDeviation_Linear(1, satValue, out thoughtstring, optionalList);
             }
             else
             {
+                // If not interruptable, calculate the effect for the full specified duration.
                 return CalcTotalDeviation_Linear(duration, satValue, out thoughtstring, optionalList);
             }
-
         }
 
-        public Dictionary<string, (int, double)>  GetCurrentDesireValue_Linear()
+        /// <summary>
+        /// Retrieves the current values of desires in a linear format, including their weights and temporary values.
+        /// </summary>
+        /// <returns>
+        /// A dictionary where:
+        /// <list type="bullet">
+        /// <item><description>The key is the name of the desire as a <see cref="string"/>.</description></item>
+        /// <item><description>
+        /// The value is a tuple containing:
+        /// <list type="bullet">
+        /// <item><description><see cref="int"/>: The weight of the desire.</description></item>
+        /// <item><description><see cref="double"/>: The temporary value of the desire.</description></item>
+        /// </list>
+        /// </description></item>
+        /// </list>
+        /// </returns>
+        /// <remarks>
+        /// This method iterates through all desires in the internal <see cref="Desires"/> collection and extracts
+        /// their weights and temporary values into a dictionary. The temporary value reflects the current state
+        /// of the desire, which may have been updated during the simulation.
+        /// </remarks>
+        public Dictionary<string, (int, double)> GetCurrentDesireValue_Linear()
         {
+            // Initialize a dictionary to store the desire names and their corresponding weight and temporary values.
             Dictionary<string, (int, double)> desireName_ValueBeforeApply_Dict = new Dictionary<string, (int, double)>();
 
+            // Iterate over all desires in the Desires collection.
             foreach (var calcDesire in Desires.Values)
             {
+                // Extract the name, weight, and temporary value of the desire.
+                // Convert the weight to an integer and the temporary value to a double.
                 desireName_ValueBeforeApply_Dict[calcDesire.Name] = (((int)calcDesire.Weight), (double)calcDesire.TempValue);
             }
 
+            // Return the dictionary containing the extracted desire values.
             return desireName_ValueBeforeApply_Dict;
         }
 
+        /// <summary>
+        /// Calculates the total deviation, weight sum, and updated desire values for a given duration, 
+        /// considering satisfaction values and decay rates in a linear fashion.
+        /// </summary>
+        /// <param name="duration">The duration for which the calculation is performed.</param>
+        /// <param name="satisfactionvaluesDict">
+        /// A dictionary mapping desire IDs to satisfaction values. These values influence the 
+        /// updating of desire states during the duration.
+        /// </param>
+        /// <param name="thoughtstring">An optional output parameter, ignored in this implementation.</param>
+        /// <param name="optionalList">
+        /// An optional dictionary mapping desire names to their weight and temporary values. If provided 
+        /// and its count matches the desires collection, it overrides the current desire values.
+        /// </param>
+        /// <returns>
+        /// A tuple containing:
+        /// <list type="bullet">
+        /// <item><description><see cref="double"/> totalDeviation: The total weighted deviation over the duration.</description></item>
+        /// <item><description><see cref="double"/> WeightSum: The total weight of all desires with positive satisfaction values.</description></item>
+        /// <item><description>
+        /// A dictionary where keys are desire names and values are tuples containing:
+        /// <list type="bullet">
+        /// <item><description>Weight of the desire (<see cref="int"/>).</description></item>
+        /// <item><description>Updated value of the desire (<see cref="double"/>).</description></item>
+        /// </list>
+        /// </description></item>
+        /// <item><description><see cref="int"/> realDuration: The actual duration of the calculation (same as input).</description></item>
+        /// </list>
+        /// </returns>
+        /// <remarks>
+        /// This method iterates through all desires, applying either a satisfaction value or decay rate
+        /// to update their states and calculate the weighted deviation.
+        /// </remarks>
+
         private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, int realDuration) CalcTotalDeviation_Linear(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
         {
+            // Initialize the total weighted deviation and satisfaction value (after the apply) dictionary
             Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (int, double)>();
-            
             double totalDeviation = 0;
-            StringBuilder? sb = null;
-            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile);
+
+            StringBuilder? sb = null; 
+            var makeThoughts = _calcRepo.CalcParameters.IsSet(CalcOption.ThoughtsLogfile); 
             if (makeThoughts)
             {
                 sb = new StringBuilder(_calcRepo.CalcParameters.CSVCharacter);
             }
 
+            // Initialize the weight sum and satisfaction value dictionary
             var satisfactionValueDictionary = satisfactionvaluesDict;
-
             double weight_sum = 0;
 
+            // Iterate through all desires in the Desires collection
             foreach (var calcDesire in Desires.Values)
             {
+                // Extract the desire ID and name
                 var desireID = calcDesire.DesireID;
                 var DesireName = calcDesire.Name;
+
+                // Retrieve the satisfaction value for the current desire, if present
                 satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueDBL);
-         
+
+                // Get the decay rate, temporary value, and weight of the desire
                 var decayrate = calcDesire.GetDecayRateDoulbe();
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
 
+                // Override current value if an optional list is provided and matches the desires count
                 if (optionalList != null && optionalList.Count == Desires.Values.Count)
                 {
                     currentValueDBL = optionalList[DesireName].Item2;
                 }
 
+                // Include weight in the weight sum if satisfaction value is positive
                 if (satisfactionvalueDBL > 0)
                 {
                     weight_sum += weightDBL;
                 }
 
+                // Initialize variables for deviation and updated value calculation
                 double deviration = 0;
                 double updateValue = currentValueDBL;
+
+                // Update values based on satisfaction value or decay rate
                 if (satisfactionvalueDBL > 0)
                 {
+                    // Apply satisfaction incrementally over the duration
                     for (var i = 0; i < duration; i++)
                     {
                         updateValue = Math.Min(1, updateValue + (satisfactionvalueDBL / duration));
                         deviration += (1 - updateValue);
                     }
-
                 }
                 else
                 {
+                    // Apply decay incrementally over the duration
                     for (var i = 0; i < duration; i++)
                     {
                         updateValue *= decayrate;
                         deviration += (1 - updateValue);
                     }
-                    
                 }
 
+                // Store the updated desire value and weight in the resulting dictionary
                 desireName_ValueAfterApply_Dict[calcDesire.Name] = (((int)calcDesire.Weight), updateValue);
 
+                // Calculate the weighted deviation and add it to the total deviation
                 var weightedDeviration = deviration * weightDBL;
-
                 totalDeviation += weightedDeviration;
 
-                if (sb != null)
+                if (sb != null) 
                 {
                     var deviation = (((1 - currentValueDBL) + (1 - updateValue)) / 2) * 100;
                     sb.Append(calcDesire.Name);
@@ -385,10 +510,12 @@ namespace CalculationEngine.HouseholdElements {
                 }
             }
 
+            // Ensure the weight sum is at least 1 to prevent division errors in subsequent calculations
             weight_sum = weight_sum < 1 ? 1 : weight_sum;
-
+           
             thoughtstring = sb?.ToString() ?? null;
 
+            // Return the calculated values
             return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict, duration);
         }
 
