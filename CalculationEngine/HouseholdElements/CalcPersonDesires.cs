@@ -81,46 +81,84 @@ namespace CalculationEngine.HouseholdElements {
             }
         }
 
-        
 
+        /// <summary>
+        /// Applies the linear effect of an affordance to the person's desires over a specified duration.
+        /// </summary>
+        /// <param name="satisfactionvalues">
+        /// A list of <see cref="CalcDesire"/> objects representing the desires affected by the affordance.
+        /// </param>
+        /// <param name="randomEffect">
+        /// A flag indicating whether random effects are applied (not used in the current implementation).
+        /// </param>
+        /// <param name="affordance">
+        /// The name of the affordance being applied.
+        /// </param>
+        /// <param name="durationInMinutes">
+        /// The duration over which the affordance's effect is applied, measured in minutes.
+        /// </param>
+        /// <param name="firsttime">
+        /// A flag indicating whether this is the first time the affordance is being applied.
+        /// </param>
+        /// <param name="currentTimeStep">
+        /// The current simulation time step at which the affordance is being applied.
+        /// </param>
+        /// <param name="now">
+        /// The current date and time.
+        /// </param>
+        /// <remarks>
+        /// This method updates the desire values linearly over the specified duration. It also keeps track of the
+        /// last applied affordances and their corresponding timestamps for historical record-keeping.
+        /// </remarks>
         public void ApplyAffordanceEffect_Linear([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
             [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep, DateTime now) {
             if (firsttime)
             {
+                // Maintain a history of the last 10 affordances by removing the oldest entries
                 while (_lastAffordances.Count > 10)
                 {
                     _lastAffordances.RemoveAt(0);
                 }
 
+                // Record the affordance name and trim it to the first three words as a key
                 TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
                 var words = affordance.Split(' ');
-                string affordanceKey = string.Join(" ", words.Take(3)); 
+                string affordanceKey = string.Join(" ", words.Take(3));
 
+                // Update or add the time step of the affordance in the _lastAffordanceTime dictionary
                 if (_lastAffordanceTime.ContainsKey(affordanceKey))
                 {
-                    _lastAffordanceTime[affordanceKey] = currentTimeStep; 
+                    _lastAffordanceTime[affordanceKey] = currentTimeStep;
                 }
                 else
                 {
-                    _lastAffordanceTime.Add(affordanceKey, currentTimeStep); 
+                    _lastAffordanceTime.Add(affordanceKey, currentTimeStep);
                 }
 
-
+                // Update or add the timestamp (date and time) of the affordance in the _lastAffordanceDate dictionary
                 if (_lastAffordanceDate.ContainsKey(affordanceKey))
                 {
-                    _lastAffordanceDate[affordanceKey] = now; 
+                    _lastAffordanceDate[affordanceKey] = now;
                 }
                 else
                 {
-                    _lastAffordanceDate.Add(affordanceKey, now); 
+                    _lastAffordanceDate.Add(affordanceKey, now);
                 }
             }
-            
-            foreach (var satisfactionvalue in satisfactionvalues) {
-                if (Desires.ContainsKey(satisfactionvalue.DesireID)) {
-                    Desires[satisfactionvalue.DesireID].Value += (satisfactionvalue.Value)/durationInMinutes;
-                    if (Desires[satisfactionvalue.DesireID].Value > 1) {
+
+            // Apply the satisfaction value of the affordance linearly over the duration to each desire
+            foreach (var satisfactionvalue in satisfactionvalues)
+            {
+                // Check if the desire exists in the person's desire dictionary
+                if (Desires.ContainsKey(satisfactionvalue.DesireID))
+                {
+                    // Increment the desire's value linearly by distributing the satisfaction value over the duration
+                    Desires[satisfactionvalue.DesireID].Value += satisfactionvalue.Value / durationInMinutes;
+
+                    // Ensure that the desire value does not exceed the maximum threshold of 1
+                    if (Desires[satisfactionvalue.DesireID].Value > 1)
+                    {
                         Desires[satisfactionvalue.DesireID].Value = 1;
                     }
                 }

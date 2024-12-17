@@ -131,33 +131,43 @@ namespace CalculationEngine.HouseholdElements
 
         public int ID => _calcPerson.ID;
 
+        /// <summary> Remaining execution steps for the current affordance. </summary>
         public int remainExecutionSteps = 0;
 
+        /// <summary> Total duration (in steps) of the current affordance. </summary>
         public int currentDuration = 0;
 
+        /// <summary> The affordance currently being executed. </summary>
         public ICalcAffordanceBase executingAffordance = null;
 
-        public bool _debug_print = false;        
-        
-        public QTable qTable =  new();
+        /// <summary> Q-Table for storing and updating state-action values. </summary>
+        public QTable qTable = new();
 
+        /// <summary> Number of affordances searched in the current operation. </summary>
         public int searchCounter = 0;
 
+        /// <summary> Number of valid affordances found in the current operation. </summary>
         public int foundCounter = 0;
 
+        /// <summary> Total affordances searched across all operations. </summary>
         public int sumSearchCounter = 0;
 
-        public int sumFoundCounter = 0;        
-        
-        public Dictionary<string, int> remainStepsFromOtherPerson = new Dictionary<string, int>();
+        /// <summary> Total affordances found across all operations. </summary>
+        public int sumFoundCounter = 0;
 
-        public Dictionary<DateTime, (string, string)> executedAffordance = new Dictionary<DateTime, (string, string)>();
+        /// <summary> Remaining execution steps for affordances of other persons. </summary>
+        public Dictionary<string, int> remainStepsFromOtherPerson = new();
 
+        /// <summary> Executed affordances with their time and category. </summary>
+        public Dictionary<DateTime, (string, string)> executedAffordance = new();
+
+        /// <summary> Flag to avoid frequent execution of the same affordances. </summary>
         public bool avoidMoreFrequentRun = true;
 
+        /// <summary> Flag to enable the use of the new algorithm. </summary>
         public bool useNewAlgo = true;
-        
-        
+
+
 
         [JetBrains.Annotations.NotNull]
         public string PrettyName => _calcPerson.Name + "(" + _calcPerson.Age + "/" + _calcPerson.Gender + ")";
@@ -288,13 +298,25 @@ namespace CalculationEngine.HouseholdElements
                 //NEW
                 if (useNewAlgo)
                 {
+                    // Check if there is an affordance currently being executed and remaining execution steps exist
                     if (executingAffordance != null && remainExecutionSteps > 0)
                     {
+                        // Decrease the remaining execution steps by 1, as one time step has passed
                         remainExecutionSteps--;
-                        //here use ApplyAffordanceEffectPartly to get the correct affordance effect
-                        PersonDesires.ApplyAffordanceEffect_Linear(executingAffordance.Satisfactionvalues, executingAffordance.RandomEffect, executingAffordance.Name, currentDuration, false, time, (DateTime) now);
+
+                        // Apply the effect of the currently executing affordance to the person's desires
+                        // This ensures the affordance effect is applied progressively over its total duration 
+                        PersonDesires.ApplyAffordanceEffect_Linear(
+                            executingAffordance.Satisfactionvalues,
+                            executingAffordance.RandomEffect,
+                            executingAffordance.Name,
+                            currentDuration,
+                            false,
+                            time,
+                            now ?? DateTime.Now
+                        );
                     }
-                    InterruptIfNeeded(time, isDaylight, false, (DateTime)now);
+                    InterruptIfNeeded(time, isDaylight, false, now ?? DateTime.Now);
                     return;
                 }
                 //NEW
@@ -328,8 +350,8 @@ namespace CalculationEngine.HouseholdElements
             if (useNewAlgo)
             {
                 var bestaff = FindBestAffordance(time, persons,
-                simulationSeed, (DateTime) now);
-                ActivateAffordance(time, isDaylight, bestaff, (DateTime) now);
+                simulationSeed, now ?? DateTime.Now);
+                ActivateAffordance(time, isDaylight, bestaff, now ?? DateTime.Now);
             }
             //NEW
             else
@@ -438,7 +460,7 @@ namespace CalculationEngine.HouseholdElements
             //NEW
             if (useNewAlgo)
             {
-                return AdaptedQLearning.GetBestAffordanceFromList(time, allAffordances, (DateTime) now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
+                return AdaptedQLearning.GetBestAffordanceFromList(time, allAffordances, now ?? DateTime.Now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
                 
             }
             //NEW
@@ -542,18 +564,29 @@ namespace CalculationEngine.HouseholdElements
             //NEW
             if (useNewAlgo)
             {
-                bestaff.Activate(currentTimeStep, Name, CurrentLocation,
-                    out personTimeProfile);
-                //add to list of executed affordances
-                executedAffordance[(DateTime)now] = (bestaff.Name, bestaff.AffCategory);
+                // Activate the best affordance using the new algorithm and retrieve its time profile.
+                bestaff.Activate(currentTimeStep, Name, CurrentLocation, out personTimeProfile);
 
+                // Add the activated affordance to the list of executed affordances with its execution time and category.
+                executedAffordance[now ?? DateTime.Now] = (bestaff.Name, bestaff.AffCategory);
+
+                // Determine the duration of the affordance execution in minutes based on its time profile.
                 int durationInMinutes = personTimeProfile.StepValues.Count;
 
-                PersonDesires.ApplyAffordanceEffect_Linear(bestaff.Satisfactionvalues, bestaff.RandomEffect, bestaff.Name, durationInMinutes, true, currentTimeStep, (DateTime) now);
+                // Apply the effects of the affordance to the person's desires, considering its satisfaction values and random effects.
+                PersonDesires.ApplyAffordanceEffect_Linear(
+                    bestaff.Satisfactionvalues,
+                    bestaff.RandomEffect,
+                    bestaff.Name,
+                    durationInMinutes,
+                    true,
+                    currentTimeStep,
+                    now ?? DateTime.Now);
+
+                // Update the executing affordance and set the remaining execution steps and current duration.
                 executingAffordance = bestaff;
                 remainExecutionSteps = durationInMinutes - 1;
                 currentDuration = durationInMinutes;
-                
             }
             //NEW
             else
@@ -627,8 +660,8 @@ namespace CalculationEngine.HouseholdElements
                     if (useNewAlgo)
                     {
                         
-                        bestAffordance = AdaptedQLearning.GetBestAffordanceFromList(time, availableInterruptingAffordances, (DateTime) now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
-                        ActivateAffordance(time, isDaylight, bestAffordance, (DateTime) now);                        
+                        bestAffordance = AdaptedQLearning.GetBestAffordanceFromList(time, availableInterruptingAffordances, now ?? DateTime.Now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
+                        ActivateAffordance(time, isDaylight, bestAffordance, now ?? DateTime.Now);                        
                     }
                     //NEW
                     else

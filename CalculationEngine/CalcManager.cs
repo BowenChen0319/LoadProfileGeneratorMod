@@ -147,19 +147,13 @@ namespace CalculationEngine {
                     CalcRepo.CalculationProfiler.StopPart(Utili.GetCurrentMethodAndClass() + " - Preperation");
                 }
 
-                int coreCount = Environment.ProcessorCount;
-                Debug.WriteLine($"CPU Core Total：{coreCount}");
-                //CalcRepo.CalcParameters.InternalStartTime.AddDays(-90);
+
+                //NEW
                 var now = CalcRepo.CalcParameters.InternalStartTime;
                 
-                //Debug.WriteLine("Starting the simulation");
-
                 var timestep = new TimeStep(0, CalcRepo.CalcParameters);
 
                 var calcParameters = CalcRepo.CalcParameters;
-                Debug.WriteLine("Use New Algo: " + calcParameters.UseNewAlgo);
-
-                Debug.WriteLine("Starttime: " + DateTime.Now);
 
                 Stopwatch sw = new Stopwatch();
 
@@ -195,8 +189,6 @@ namespace CalculationEngine {
                     
                     sw.Stop();
                     Logger.Info("Time used in seconds:"+ sw.Elapsed.TotalSeconds);
-                    Debug.WriteLine("Time used in seconds:" + sw.Elapsed.TotalSeconds);
-                    Debug.WriteLine("Endtime: " + DateTime.Now);
                     
                     Logger.Info("Finished the simulation");
                 }
