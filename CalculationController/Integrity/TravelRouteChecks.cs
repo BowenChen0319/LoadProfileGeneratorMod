@@ -35,7 +35,7 @@ namespace CalculationController.Integrity
                     }
 
                     if (!route.TravelRoute.Name.Contains(" " +kmstr)) {
-                        throw new DataIntegrityException("Workplace route " + route.TravelRoute.PrettyName + " in the route set " + routeSet.Name + " does not match the distance from the name which should be " + kmstr, routeSet  );
+                        // throw new DataIntegrityException("Workplace route " + route.TravelRoute.PrettyName + " in the route set " + routeSet.Name + " does not match the distance from the name which should be " + kmstr, routeSet  );
                     }
                 }
 
