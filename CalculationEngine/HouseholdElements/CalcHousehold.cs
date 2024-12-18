@@ -324,7 +324,7 @@ namespace CalculationEngine.HouseholdElements {
         {
             // Logs Q-Table counts for each person and saves their Q-Tables to a file if the new algorithm is enabled.
             //NEW
-            if (_calcRepo.CalcParameters.UseNewAlgo)
+            if (_calcRepo.CalcParameters.useQLearningForAffordanceChoose)
             {               
                 foreach (var person in _persons)
                 {
@@ -403,7 +403,7 @@ namespace CalculationEngine.HouseholdElements {
             //NEW: Set the useNewAlgo flag for each person
             foreach (var person in _persons)
             {
-                person.useNewAlgo = _calcRepo.CalcParameters.UseNewAlgo;
+                person.useQLearningForAffordanceChoose = _calcRepo.CalcParameters.useQLearningForAffordanceChoose;
             }
 
 
@@ -509,7 +509,7 @@ namespace CalculationEngine.HouseholdElements {
             foreach (var p in _persons) {
 
                 //NEW: Run the next step for each person using the new algorithm
-                if (_calcRepo.CalcParameters.UseNewAlgo)
+                if (_calcRepo.CalcParameters.useQLearningForAffordanceChoose)
                 {
                     RunNextStep_Linear(timestep, now, p);
                 }

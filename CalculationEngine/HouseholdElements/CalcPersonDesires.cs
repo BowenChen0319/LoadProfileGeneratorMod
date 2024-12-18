@@ -28,23 +28,23 @@
 
 #region
 
+using Automation;
+using Automation.ResultFiles;
+using CalculationEngine.ReinforcementLearning;
+using Common;
+using Common.SQLResultLogging;
+using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Automation;
-using Automation.ResultFiles;
-using Common;
-using Common.SQLResultLogging;
-using Common.SQLResultLogging.InputLoggers;
-using JetBrains.Annotations;
 
 #endregion
 
-namespace CalculationEngine.HouseholdElements {
+namespace CalculationEngine.HouseholdElements
+{
     public class CalcPersonDesires {
         private readonly CalcRepo _calcRepo;
 
@@ -56,10 +56,7 @@ namespace CalculationEngine.HouseholdElements {
         private List<string> _lastAffordances = new List<string>();
         [ItemNotNull]
         [NotNull]
-        //private List<TimeStep> _timeOfLastAffordance = new List<TimeStep>();
-        private Dictionary<string, TimeStep> _lastAffordanceTime = new Dictionary<string, TimeStep>();
-        private Dictionary<string, DateTime> _lastAffordanceDate = new Dictionary<string, DateTime>();
-        [NotNull]
+
         private readonly DateStampCreator _dsc;
         private StreamWriter? _sw;
 
@@ -94,24 +91,18 @@ namespace CalculationEngine.HouseholdElements {
         /// <param name="affordance">
         /// The name of the affordance being applied.
         /// </param>
-        /// <param name="durationInMinutes">
+        /// <param name="durationInTimeSteps">
         /// The duration over which the affordance's effect is applied, measured in minutes.
         /// </param>
         /// <param name="firsttime">
         /// A flag indicating whether this is the first time the affordance is being applied.
-        /// </param>
-        /// <param name="currentTimeStep">
-        /// The current simulation time step at which the affordance is being applied.
-        /// </param>
-        /// <param name="now">
-        /// The current date and time.
         /// </param>
         /// <remarks>
         /// This method updates the desire values linearly over the specified duration. It also keeps track of the
         /// last applied affordances and their corresponding timestamps for historical record-keeping.
         /// </remarks>
         public void ApplyAffordanceEffect_Linear([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
-            [NotNull] string affordance, int durationInMinutes, Boolean firsttime, TimeStep currentTimeStep, DateTime now) {
+            [NotNull] string affordance, int durationInTimeSteps, Boolean firsttime) {
             if (firsttime)
             {
                 // Maintain a history of the last 10 affordances by removing the oldest entries
@@ -121,30 +112,8 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 // Record the affordance name and trim it to the first three words as a key
-                TimeStep durationAsTimestep = new(durationInMinutes, 0, false);
                 _lastAffordances.Add(affordance);
-                var words = affordance.Split(' ');
-                string affordanceKey = string.Join(" ", words.Take(3));
 
-                // Update or add the time step of the affordance in the _lastAffordanceTime dictionary
-                if (_lastAffordanceTime.ContainsKey(affordanceKey))
-                {
-                    _lastAffordanceTime[affordanceKey] = currentTimeStep;
-                }
-                else
-                {
-                    _lastAffordanceTime.Add(affordanceKey, currentTimeStep);
-                }
-
-                // Update or add the timestamp (date and time) of the affordance in the _lastAffordanceDate dictionary
-                if (_lastAffordanceDate.ContainsKey(affordanceKey))
-                {
-                    _lastAffordanceDate[affordanceKey] = now;
-                }
-                else
-                {
-                    _lastAffordanceDate.Add(affordanceKey, now);
-                }
             }
 
             // Apply the satisfaction value of the affordance linearly over the duration to each desire
@@ -154,7 +123,7 @@ namespace CalculationEngine.HouseholdElements {
                 if (Desires.ContainsKey(satisfactionvalue.DesireID))
                 {
                     // Increment the desire's value linearly by distributing the satisfaction value over the duration
-                    Desires[satisfactionvalue.DesireID].Value += satisfactionvalue.Value / durationInMinutes;
+                    Desires[satisfactionvalue.DesireID].Value += satisfactionvalue.Value / durationInTimeSteps;
 
                     // Ensure that the desire value does not exceed the maximum threshold of 1
                     if (Desires[satisfactionvalue.DesireID].Value > 1)
@@ -163,47 +132,10 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
             }
-
             if (firsttime)
             {
-                if (randomEffect)
-                {
-                    var usedDesires = new Dictionary<CalcDesire, bool>();
-                    foreach (var satisfactionvalue in satisfactionvalues)
-                    {
-                        usedDesires.Add(satisfactionvalue, true);
-                    }
-                    var desiresArray = new CalcDesire[Desires.Count];
-                    Desires.Values.CopyTo(desiresArray, 0);
-                    var affectedCount = _calcRepo.Rnd.Next(Desires.Count - usedDesires.Count + 1);
-                    for (var i = 0; i < affectedCount; i++)
-                    {
-                        CalcDesire? d = null;
-                        var loopcount = 0;
-                        while (d == null)
-                        {
-                            var selectedkey = _calcRepo.Rnd.Next(Desires.Count);
-                            d = desiresArray[selectedkey];
-                            loopcount++;
-                            if (usedDesires.ContainsKey(d))
-                            {
-                                d = null;
-                            }
-                            if (loopcount > 500)
-                            {
-                                throw new LPGException("Random result failed after 500 tries...");
-                            }
-                        }
-                        d.Value += (decimal)_calcRepo.Rnd.NextDouble();
-                        if (d.Value > 1)
-                        {
-                            d.Value = 1;
-                        }
-                    }
-                }
-            }
-
-            
+                ApplyRandomEffect(satisfactionvalues, randomEffect);
+            }            
         }
 
         public void ApplyAffordanceEffect([NotNull][ItemNotNull] List<CalcDesire> satisfactionvalues, bool randomEffect,
@@ -225,6 +157,11 @@ namespace CalculationEngine.HouseholdElements {
                     }
                 }
             }
+            ApplyRandomEffect(satisfactionvalues, randomEffect);
+        }
+
+        private void ApplyRandomEffect(List<CalcDesire> satisfactionvalues, bool randomEffect)
+        {
             if (randomEffect)
             {
                 var usedDesires = new Dictionary<CalcDesire, bool>();
@@ -279,8 +216,7 @@ namespace CalculationEngine.HouseholdElements {
         /// This method identifies the desires to exclude from decay by creating a set of their IDs.
         /// All other desires in the internal <see cref="Desires"/> collection will have the decay function applied.
         /// </remarks>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="timestep"/> or <paramref name="satisfactionvalues"/> is null.</exception>
-
+        
         public void ApplyDecay_WithoutSome_Linear([NotNull] TimeStep timestep, List<CalcDesire> satisfactionvalues)
         {
             // Create a set of DesireIDs from the satisfactionvalues list.
@@ -363,7 +299,7 @@ namespace CalculationEngine.HouseholdElements {
         /// This method updates the temporary values of the desires and calculates the effect based on whether the process 
         /// is interruptable. If interruptable, the effect is limited to 1 unit of duration; otherwise, it spans the specified duration.
         /// </remarks>
-        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, int realDuration) CalcEffect_Partly_Linear(int duration, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null, Dictionary<int,double>? satValue = null, bool? interruptable = false)
+        public (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict, int realDuration) CalcEffect_Linear(int duration, out string? thoughtstring, Dictionary<int, double>? satValue = null, bool? interruptable = false)
         {
             // Set the temporary value of each desire to its current value.
             // This ensures a clean starting point for the calculation.
@@ -375,13 +311,13 @@ namespace CalculationEngine.HouseholdElements {
             // Determine whether the process is interruptable.
             if (interruptable == true)
             {
-                // If interruptable, limit the effect calculation to a duration of 1.
-                return CalcTotalDeviation_Linear(1, satValue, out thoughtstring, optionalList);
+                // If interruptable, limit the effect calculation to a duration of State Time Intervale in Adapted Q-Learning.
+                return CalcTotalDeviation_Linear(AdaptedQLearning.stateTimeIntervale, satValue, out thoughtstring);
             }
             else
             {
                 // If not interruptable, calculate the effect for the full specified duration.
-                return CalcTotalDeviation_Linear(duration, satValue, out thoughtstring, optionalList);
+                return CalcTotalDeviation_Linear(duration, satValue, out thoughtstring);
             }
         }
 
@@ -457,10 +393,10 @@ namespace CalculationEngine.HouseholdElements {
         /// to update their states and calculate the weighted deviation.
         /// </remarks>
 
-        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, int realDuration) CalcTotalDeviation_Linear(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring, Dictionary<string, (int, double)>? optionalList = null)
+        private (double totalDeviation, double WeightSum, Dictionary<string, (int, double)> desireName_ValueAfterApply, int realDuration) CalcTotalDeviation_Linear(int duration, Dictionary<int,double> satisfactionvaluesDict, out string? thoughtstring)
         {
             // Initialize the total weighted deviation and satisfaction value (after the apply) dictionary
-            Dictionary<string, (int, double)> desireName_ValueAfterApply_Dict = new Dictionary<string, (int, double)>();
+            Dictionary<string, (int, double)> desireValueAfterApply = new Dictionary<string, (int, double)>();
             double totalDeviation = 0;
 
             StringBuilder? sb = null; 
@@ -488,12 +424,6 @@ namespace CalculationEngine.HouseholdElements {
                 var decayrate = calcDesire.GetDecayRateDoulbe();
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
-
-                // Override current value if an optional list is provided and matches the desires count
-                if (optionalList != null && optionalList.Count == Desires.Values.Count)
-                {
-                    currentValueDBL = optionalList[DesireName].Item2;
-                }
 
                 // Include weight in the weight sum if satisfaction value is positive
                 if (satisfactionvalueDBL > 0)
@@ -526,7 +456,7 @@ namespace CalculationEngine.HouseholdElements {
                 }
 
                 // Store the updated desire value and weight in the resulting dictionary
-                desireName_ValueAfterApply_Dict[calcDesire.Name] = (((int)calcDesire.Weight), updateValue);
+                desireValueAfterApply[calcDesire.Name] = (((int)calcDesire.Weight), updateValue);
 
                 // Calculate the weighted deviation and add it to the total deviation
                 var weightedDeviration = deviration * weightDBL;
@@ -554,7 +484,7 @@ namespace CalculationEngine.HouseholdElements {
             thoughtstring = sb?.ToString() ?? null;
 
             // Return the calculated values
-            return (totalDeviation, weight_sum, desireName_ValueAfterApply_Dict, duration);
+            return (totalDeviation, weight_sum, desireValueAfterApply, duration);
         }
 
 

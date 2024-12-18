@@ -26,6 +26,8 @@ namespace CalculationEngine.ReinforcementLearning
         /// </summary>
         const int bigM = 1000000;
 
+        public const int stateTimeIntervale = 15;
+
         /// <summary>
         /// Selects the best affordance from a list of available affordances using an adapted Q-Learning algorithm.
         /// </summary>
@@ -350,7 +352,7 @@ namespace CalculationEngine.ReinforcementLearning
 
             // Calculate the effect of the affordance on the person's desires.
             // Includes changes in desire levels, total weight, updated desires, and real duration.
-            var (desireDiff, weightSum, desire_ValueAfter, realDuration) = PersonDesires.CalcEffect_Partly_Linear(
+            var (desireDiff, weightSum, desire_ValueAfter, realDuration) = PersonDesires.CalcEffect_Linear(
                 duration,
                 out var thoughtstring,
                 satValue: satisfactionvalues,

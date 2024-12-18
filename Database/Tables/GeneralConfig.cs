@@ -539,7 +539,7 @@ namespace Database.Tables {
             gc.CheckExistence(nameof(CarpetPlotWidth), "7", ignoreMissing);
             gc.CheckExistence(nameof(SelectedEnergyIntensity), "0", ignoreMissing);
             gc.CheckExistence(nameof(WriteExcelColumn), "True", ignoreMissing);
-            gc.CheckExistence(nameof(UseNewAlgo), "True", ignoreMissing);
+            gc.CheckExistence(nameof(UseNewAlgo), "False", ignoreMissing);
 
 
             gc.CheckExistence(nameof(PerformCleanUpChecks), "True", ignoreMissing);

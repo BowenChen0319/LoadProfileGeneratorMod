@@ -67,7 +67,7 @@ namespace Common.JSON {
         public int UserSelectedRandomSeed { get; set; }
         public bool WriteExcelColumn { get; set; }
 
-        public bool UseNewAlgo { get; set; }
+        public bool useQLearningForAffordanceChoose { get; set; }
         public bool IgnorePreviousActivitesWhenNeeded { get; set; }
         public bool EnableIdlemode { get; set; }
 
@@ -400,7 +400,7 @@ namespace Common.JSON {
 
         public CalcParameters SetUseNewAlgo(bool useNewAlgo)
         {
-            UseNewAlgo = useNewAlgo;
+            useQLearningForAffordanceChoose = useNewAlgo;
             return this;
         }
         /*public void ClearOptions()

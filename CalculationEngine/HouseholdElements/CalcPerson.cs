@@ -165,7 +165,7 @@ namespace CalculationEngine.HouseholdElements
         public bool avoidMoreFrequentRun = true;
 
         /// <summary> Flag to enable the use of the new algorithm. </summary>
-        public bool useNewAlgo = true;
+        public bool useQLearningForAffordanceChoose = true;
 
 
 
@@ -249,6 +249,7 @@ namespace CalculationEngine.HouseholdElements
                              [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons,
                              int simulationSeed, DateTime? now = null)
         {
+            
             if (_calcRepo.Logfile == null)
             {
                 throw new LPGException("Logfile was null.");
@@ -272,7 +273,7 @@ namespace CalculationEngine.HouseholdElements
                 PersonDesires.CheckForCriticalThreshold(this, time, _calcRepo.FileFactoryAndTracker, householdKey);
             }
 
-            if (useNewAlgo)
+            if (useQLearningForAffordanceChoose)
             {
                 if (executingAffordance != null)
                 {
@@ -296,8 +297,12 @@ namespace CalculationEngine.HouseholdElements
             if (_isBusy[time.InternalStep])
             {
                 //NEW
-                if (useNewAlgo)
+                if (useQLearningForAffordanceChoose)
                 {
+                    if (now is null)
+                    {
+                        throw new LPGException("DateTime Now was null");
+                    }
                     // Check if there is an affordance currently being executed and remaining execution steps exist
                     if (executingAffordance != null && remainExecutionSteps > 0)
                     {
@@ -311,12 +316,10 @@ namespace CalculationEngine.HouseholdElements
                             executingAffordance.RandomEffect,
                             executingAffordance.Name,
                             currentDuration,
-                            false,
-                            time,
-                            now ?? DateTime.Now
+                            false
                         );
                     }
-                    InterruptIfNeeded(time, isDaylight, false, now ?? DateTime.Now);
+                    InterruptIfNeeded(time, isDaylight, false, now);
                     return;
                 }
                 //NEW
@@ -347,11 +350,11 @@ namespace CalculationEngine.HouseholdElements
                 BecomeHealthy(time);
             }
             //NEW
-            if (useNewAlgo)
+            if (useQLearningForAffordanceChoose)
             {
                 var bestaff = FindBestAffordance(time, persons,
-                simulationSeed, now ?? DateTime.Now);
-                ActivateAffordance(time, isDaylight, bestaff, now ?? DateTime.Now);
+                simulationSeed, now);
+                ActivateAffordance(time, isDaylight, bestaff, now);
             }
             //NEW
             else
@@ -378,6 +381,7 @@ namespace CalculationEngine.HouseholdElements
         private ICalcAffordanceBase FindBestAffordance([JetBrains.Annotations.NotNull] TimeStep time,
                                                        [JetBrains.Annotations.NotNull][ItemNotNull] List<CalcPerson> persons, int simulationSeed, DateTime? now = null)
         {
+            
             var allAffs = IsSick[time.InternalStep] ? _sicknessPotentialAffs : _normalPotentialAffs;
 
             if (_calcRepo.Rnd == null)
@@ -458,9 +462,13 @@ namespace CalculationEngine.HouseholdElements
             }
 
             //NEW
-            if (useNewAlgo)
+            if (useQLearningForAffordanceChoose)
             {
-                return AdaptedQLearning.GetBestAffordanceFromList(time, allAffordances, now ?? DateTime.Now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
+                if (now is null)
+                {
+                    throw new LPGException("DateTime Now was null");
+                }
+                return AdaptedQLearning.GetBestAffordanceFromList(time, allAffordances, now.Value, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
                 
             }
             //NEW
@@ -523,6 +531,7 @@ namespace CalculationEngine.HouseholdElements
         private void ActivateAffordance([JetBrains.Annotations.NotNull] TimeStep currentTimeStep, [JetBrains.Annotations.NotNull] DayLightStatus isDaylight,
                                          [JetBrains.Annotations.NotNull] ICalcAffordanceBase bestaff, DateTime? now = null)
         {
+            
             if (_calcRepo.Logfile == null)
             {
                 throw new LPGException("Logfile was null.");
@@ -562,31 +571,33 @@ namespace CalculationEngine.HouseholdElements
                 bestaff.AffCategory, bestaff.BodilyActivityLevel);
             ICalcProfile personTimeProfile;
             //NEW
-            if (useNewAlgo)
+            if (useQLearningForAffordanceChoose)
             {
+                if(now is null)
+                {
+                    throw new LPGException("DateTime Now was null");
+                }
                 // Activate the best affordance using the new algorithm and retrieve its time profile.
                 bestaff.Activate(currentTimeStep, Name, CurrentLocation, out personTimeProfile);
 
                 // Add the activated affordance to the list of executed affordances with its execution time and category.
-                executedAffordance[now ?? DateTime.Now] = (bestaff.Name, bestaff.AffCategory);
+                executedAffordance[now.Value] = (bestaff.Name, bestaff.AffCategory);
 
                 // Determine the duration of the affordance execution in minutes based on its time profile.
-                int durationInMinutes = personTimeProfile.StepValues.Count;
+                int durationInTimeSteps = personTimeProfile.StepValues.Count;
 
                 // Apply the effects of the affordance to the person's desires, considering its satisfaction values and random effects.
                 PersonDesires.ApplyAffordanceEffect_Linear(
                     bestaff.Satisfactionvalues,
                     bestaff.RandomEffect,
                     bestaff.Name,
-                    durationInMinutes,
-                    true,
-                    currentTimeStep,
-                    now ?? DateTime.Now);
+                    durationInTimeSteps,
+                    true);
 
                 // Update the executing affordance and set the remaining execution steps and current duration.
                 executingAffordance = bestaff;
-                remainExecutionSteps = durationInMinutes - 1;
-                currentDuration = durationInMinutes;
+                remainExecutionSteps = durationInTimeSteps - 1;
+                currentDuration = durationInTimeSteps;
             }
             //NEW
             else
@@ -657,11 +668,14 @@ namespace CalculationEngine.HouseholdElements
                 {
                     ICalcAffordanceBase bestAffordance;
                     //NEW
-                    if (useNewAlgo)
+                    if (useQLearningForAffordanceChoose)
                     {
-                        
-                        bestAffordance = AdaptedQLearning.GetBestAffordanceFromList(time, availableInterruptingAffordances, now ?? DateTime.Now, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
-                        ActivateAffordance(time, isDaylight, bestAffordance, now ?? DateTime.Now);                        
+                        if(now is null)
+                        {
+                            throw new LPGException("DateTime Now was null");
+                        }
+                        bestAffordance = AdaptedQLearning.GetBestAffordanceFromList(time, availableInterruptingAffordances, now.Value, this.Name, this.avoidMoreFrequentRun, ref qTable, PersonDesires, executedAffordance, ref searchCounter, ref foundCounter);
+                        ActivateAffordance(time, isDaylight, bestAffordance, now.Value);                        
                     }
                     //NEW
                     else

@@ -202,7 +202,7 @@
                                   Style="{StaticResource ComboBoxStyle}" />
                         <Label Grid.Row="14"
                                Grid.Column="0"
-                               Content="Use New Algorithm"
+                               Content="Use Adapted Q-Learning Algorithm"
                                Style="{StaticResource LabelStyle}"
                                Target="{Binding ElementName=CmbUseNewAlgo}" />
                         <ComboBox Name="CmbUseNewAlgo"
