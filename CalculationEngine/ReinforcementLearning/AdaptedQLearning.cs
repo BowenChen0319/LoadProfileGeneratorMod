@@ -133,7 +133,7 @@ namespace CalculationEngine.ReinforcementLearning
         /// </remarks>
         static void AdaptedQLearningCore(TimeStep time, DateTime now, bool avoidMoreFrequentRun, Dictionary<DateTime, (string, string)> executedAffordance, ICalcAffordanceBase affordance, ref QTable localQTable, ref CalcPersonDesires localPersonDesires, ref double bestQValue, ref ICalcAffordanceBase bestAffordance, ref ICalcAffordanceBase? highPriorityAffordance, StateInfo currentState, ref int currentSearchCounter, ref int currentFoundCounter, object locker)
         {
-            //If the affordance is a replacement activity, then skip it
+            //If the affordance is a replacement activity, then skip it.
             if (affordance.Name.Contains("Replacement Activity"))
             {
                 Interlocked.Increment(ref currentFoundCounter);
