@@ -133,14 +133,14 @@ namespace CalculationController.Queue {
             DeviceProfileHeaderMode deviceProfileHeaderMode,
             bool ignorePreviousActivitiesWhenNeeded,
             string resultPath, bool transportationEnabled, bool enableIdlemode, string decimalSeperator,
-            bool flexibilityEnabled, bool useQLearning)
+            bool flexibilityEnabled, bool? useQLearning = false)
         {
             IgnorePreviousActivitiesWhenNeeded = ignorePreviousActivitiesWhenNeeded;
             ResultPath = resultPath;
             LoadTypesToProcess = loadTypesToProcess;
             ExternalTimeResolution = externalTimeResolution;
             WriteExcelColumn = writeExcelColumn;
-            UseQLearning = useQLearning;
+            UseQLearning = useQLearning ?? false;
             ShowSettlingPeriod = showSettlingPeriod;
             SettlingDays = settlingDays;
             AffordanceRepetitionCount = affordanceRepetitionCount;

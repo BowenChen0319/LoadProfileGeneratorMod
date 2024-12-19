@@ -30,22 +30,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using Automation;
 using Automation.ResultFiles;
 using CalculationEngine.Helper;
 using CalculationEngine.Transportation;
 using Common;
-using Common.JSON;
-using Database.Tables.BasicHouseholds;
 using JetBrains.Annotations;
-
 
 #endregion
 
@@ -82,7 +75,6 @@ namespace CalculationEngine.HouseholdElements {
         private int _simulationSeed;
         [NotNull] private readonly string _description;
         private readonly CalcRepo _calcRepo;
-
 
         //[CanBeNull] private VariableLogfile _variableLogfile;
 
@@ -324,7 +316,7 @@ namespace CalculationEngine.HouseholdElements {
         {
             // Logs Q-Table counts for each person and saves their Q-Tables to a file if the new algorithm is enabled.
             //NEW
-            if (_calcRepo.CalcParameters.useQLearningForAffordanceChoose)
+            if (_calcRepo.CalcParameters.UseQLearningForAffordanceChoose)
             {               
                 foreach (var person in _persons)
                 {
@@ -403,7 +395,7 @@ namespace CalculationEngine.HouseholdElements {
             //NEW: Set the useQLearning flag for each person
             foreach (var person in _persons)
             {
-                person.useQLearningForAffordanceChoose = _calcRepo.CalcParameters.useQLearningForAffordanceChoose;
+                person.useQLearningForAffordanceChoose = _calcRepo.CalcParameters.UseQLearningForAffordanceChoose;
             }
 
 
@@ -473,7 +465,6 @@ namespace CalculationEngine.HouseholdElements {
             // NEW
         }
 
-
         public void RunOneStep(TimeStep timestep, DateTime now, bool runProcessing)
         {
             if (_locations == null) {
@@ -503,13 +494,10 @@ namespace CalculationEngine.HouseholdElements {
             if (_autoDevs == null) {
                 throw new LPGException("_autoDevs should not be null");
             }
-
             
-
             foreach (var p in _persons) {
-
                 //NEW: Run the next step for each person using the new algorithm
-                if (_calcRepo.CalcParameters.useQLearningForAffordanceChoose)
+                if (_calcRepo.CalcParameters.UseQLearningForAffordanceChoose)
                 {
                     RunNextStep_Linear(timestep, now, p);
                 }
@@ -517,9 +505,7 @@ namespace CalculationEngine.HouseholdElements {
                 {
                     p.NextStep(timestep, _locations, _daylightArray,
                     _householdKey, _persons, _simulationSeed);
-                }
-                
-                
+                }                
             }
             
             /*    if ((timestep % RangeCleaningFrequency) == 0)
@@ -529,7 +515,6 @@ namespace CalculationEngine.HouseholdElements {
                 foreach (CalcAutoDev autoDev in _autoDevs)
                     autoDev.ClearExpiredRanges(timestep);
             }*/
-
             if (Logger.Threshold > Severity.Information) {
                 if (timestep.InternalStep % 5000 == 0 || (DateTime.Now - _lastDisplay).TotalSeconds > 5) {
                     var timeelapesed = DateTime.Now - _startSimulation;
@@ -617,8 +602,6 @@ namespace CalculationEngine.HouseholdElements {
                 person.LogPersonStatus(timestep);
             }
         }
-
-        
 
         public void Dispose()
         {
@@ -800,6 +783,3 @@ namespace CalculationEngine.HouseholdElements {
         }
     }
 }
-
-
-

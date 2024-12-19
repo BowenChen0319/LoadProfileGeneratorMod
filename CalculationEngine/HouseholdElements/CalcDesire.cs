@@ -76,7 +76,6 @@ namespace CalculationEngine.HouseholdElements {
             if (decayTime > 0) {
                 _decayRate = GetRate(decayTime);
             }
-
             _sourceTrait = sourceTrait;
             _desireCategory = desireCategory;
             Value = value;
@@ -93,12 +92,7 @@ namespace CalculationEngine.HouseholdElements {
 
         public decimal CriticalThreshold { get; }
 
-        //public decimal GetDecayRate => _decayRate;
-
-        public decimal GetDecayRate()
-        {            
-            return _decayRate;
-        }
+        public decimal DecayRate => _decayRate;
 
         public decimal DecayTime { get; }
 
@@ -165,7 +159,6 @@ namespace CalculationEngine.HouseholdElements {
                 throw new DataIntegrityException("Desire value above 1. This should never happen.");
             }
         }
-
 
         private decimal GetRate(decimal decayTime)
         {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using Automation;
 using JetBrains.Annotations;
@@ -66,12 +65,9 @@ namespace Common.JSON {
 
         public int UserSelectedRandomSeed { get; set; }
         public bool WriteExcelColumn { get; set; }
-
-        public bool useQLearningForAffordanceChoose { get; set; }
+        public bool UseQLearningForAffordanceChoose { get; set; }
         public bool IgnorePreviousActivitesWhenNeeded { get; set; }
         public bool EnableIdlemode { get; set; }
-
-        
 
         //public void CheckDependenyOnOptions()
         //{
@@ -310,7 +306,6 @@ namespace Common.JSON {
         public CalcParameters SetEndDate(DateTime enddate)
         {
             OfficialEndTime = enddate;
-            Debug.WriteLine("Enddate: " + enddate);
             InitializeTimeSteps();
             return this;
         }
@@ -382,7 +377,6 @@ namespace Common.JSON {
         public CalcParameters SetStartDate(DateTime startdate)
         {
             OfficialStartTime = startdate;
-            Debug.WriteLine("Startdate: " + startdate);
             InitializeTimeSteps();
             return this;
         }
@@ -400,7 +394,7 @@ namespace Common.JSON {
 
         public CalcParameters SetUseQLearning(bool useQLearning)
         {
-            useQLearningForAffordanceChoose = useQLearning;
+            UseQLearningForAffordanceChoose = useQLearning;
             return this;
         }
         /*public void ClearOptions()

@@ -197,7 +197,6 @@ namespace CalculationEngine.Transportation {
             return result;
         }
 
-
         //public BitArray IsBusyArray => _sourceAffordance.IsBusyArray;
 
         public bool IsInterruptable => _sourceAffordance.IsInterruptable;
@@ -246,7 +245,6 @@ namespace CalculationEngine.Transportation {
         {
             return _sourceAffordance.AreDeviceProfilesEmpty();
         }
-
 
         public int Weight => _sourceAffordance.Weight;
     }

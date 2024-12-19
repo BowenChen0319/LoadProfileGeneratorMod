@@ -28,7 +28,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Automation;
@@ -147,16 +146,8 @@ namespace CalculationEngine {
                     CalcRepo.CalculationProfiler.StopPart(Utili.GetCurrentMethodAndClass() + " - Preperation");
                 }
 
-
-                //NEW
-                var now = CalcRepo.CalcParameters.InternalStartTime;
-                
+                var now = CalcRepo.CalcParameters.InternalStartTime;                
                 var timestep = new TimeStep(0, CalcRepo.CalcParameters);
-
-                var calcParameters = CalcRepo.CalcParameters;
-
-                Stopwatch sw = new Stopwatch();
-
                 try {
                     CalcRepo.CalculationProfiler.StartPart(Utili.GetCurrentMethodAndClass() + " - Core Simulation");
                     if (ExitCalcFunction) {
@@ -172,23 +163,14 @@ namespace CalculationEngine {
                         throw new LPGException("CalcObject was null");
                     }
 
-                    sw.Start();
-
-                   
-
                     while (now < CalcRepo.CalcParameters.InternalEndTime && ContinueRunning) {
                         // ReSharper disable once PossibleNullReferenceException
-                        // Timestep is always running until the end of the simulation, even between the durations of the affordacne 
                         CalcObject.RunOneStep(timestep, now, true);
-                        //Debug.WriteLine("TimeNow: "+now+" Timestep: " + timestep);
                         SaveVariableStatesIfNeeded(timestep);
                         CalcRepo.OnlineLoggingData.SaveIfNeeded(timestep);
                         now += CalcRepo.CalcParameters.InternalStepsize;
                         timestep = timestep.AddSteps(1);
                     }
-                    
-                    sw.Stop();
-                    Logger.Info("Time used in seconds:"+ sw.Elapsed.TotalSeconds);
                     
                     Logger.Info("Finished the simulation");
                 }

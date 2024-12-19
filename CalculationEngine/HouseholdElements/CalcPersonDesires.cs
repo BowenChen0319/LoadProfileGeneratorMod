@@ -421,7 +421,7 @@ namespace CalculationEngine.HouseholdElements
                 satisfactionValueDictionary.TryGetValue(desireID, out var satisfactionvalueDBL);
 
                 // Get the decay rate, temporary value, and weight of the desire
-                var decayrate = (double)calcDesire.GetDecayRate();
+                var decayrate = (double)calcDesire.DecayRate;
                 var currentValueDBL = (double)calcDesire.TempValue;
                 var weightDBL = (double)calcDesire.Weight;
 

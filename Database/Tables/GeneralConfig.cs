@@ -429,7 +429,6 @@ namespace Database.Tables {
 
         public bool UseQLearningBool => UseQLearning.ToUpper() == "TRUE";
 
-
         [JetBrains.Annotations.NotNull]
         [UsedImplicitly]
         public string EnableIdlemode
