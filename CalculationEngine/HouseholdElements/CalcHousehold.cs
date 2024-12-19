@@ -400,7 +400,7 @@ namespace CalculationEngine.HouseholdElements {
             }
 
 
-            //NEW: Set the useNewAlgo flag for each person
+            //NEW: Set the useQLearning flag for each person
             foreach (var person in _persons)
             {
                 person.useQLearningForAffordanceChoose = _calcRepo.CalcParameters.useQLearningForAffordanceChoose;

@@ -19,7 +19,7 @@ namespace CalculationController.DtoFactories
             CalcParameters cp = CalcParameters.GetNew();
             cp.LoadtypesToPostprocess = csps.LoadTypesToProcess;
             cp.SetWriteExcelColumn (csps.WriteExcelColumn);
-            cp.SetUseNewAlgo(csps.UseNewAlgo);
+            cp.SetUseQLearning(csps.UseQLearning);
             cp.SetManyOptionsWithClear(csps.CalcOptions);
             FileFactoryAndTrackerDummy fftd = new FileFactoryAndTrackerDummy();
             ChartProcessorManager.ChartingFunctionDependencySetter(csps.ResultPath,csps.CalculationProfiler,fftd,cp.Options,false);
@@ -101,7 +101,7 @@ namespace CalculationController.DtoFactories
             cp.SetSettlingDays(3);
             cp.SetRandomSeed(17,false);
             cp.SetWriteExcelColumn(false);
-            cp.SetUseNewAlgo(false);
+            cp.SetUseQLearning(false);
             cp.SetAffordanceRepetitionCount(3);
             cp.CheckSettings();
             return cp;

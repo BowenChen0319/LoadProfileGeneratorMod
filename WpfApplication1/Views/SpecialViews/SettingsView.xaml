@@ -204,13 +204,13 @@
                                Grid.Column="0"
                                Content="Use Adapted Q-Learning Algorithm"
                                Style="{StaticResource LabelStyle}"
-                               Target="{Binding ElementName=CmbUseNewAlgo}" />
-                        <ComboBox Name="CmbUseNewAlgo"
+                               Target="{Binding ElementName=CmbUseQLearning}" />
+                        <ComboBox Name="CmbQLearning"
                                   Grid.Row="14"
                                   Grid.Column="1"
                                   x:FieldModifier="private"
                                   ItemsSource="{Binding BoolValues}"
-                                  SelectedItem="{Binding ThisConfig.UseNewAlgo}"
+                                  SelectedItem="{Binding ThisConfig.UseQLearning}"
                                   Style="{StaticResource ComboBoxStyle}" />
                     </Grid>
                 </Expander>

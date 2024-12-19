@@ -398,9 +398,9 @@ namespace Common.JSON {
             return this;
         }
 
-        public CalcParameters SetUseNewAlgo(bool useNewAlgo)
+        public CalcParameters SetUseQLearning(bool useQLearning)
         {
-            useQLearningForAffordanceChoose = useNewAlgo;
+            useQLearningForAffordanceChoose = useQLearning;
             return this;
         }
         /*public void ClearOptions()
