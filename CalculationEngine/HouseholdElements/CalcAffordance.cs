@@ -117,38 +117,46 @@ namespace CalculationEngine.HouseholdElements {
         [JetBrains.Annotations.NotNull]
         public override string TimeLimitName { get; }
 
+        /// <summary>
+        /// Gets the total duration of the step values in the person's profile.
+        /// </summary>
+        /// <returns>The total number of steps in the profile.</returns>
         public override int GetDuration()
         {
+            // Calculate the duration by counting the number of step values in the person's profile
             var duration = _personProfile.StepValues.Count;
+
+            // Return the calculated duration
             return duration;
-            
         }
 
+        /// <summary>
+        /// Calculates the real duration based on the current time step and the time factor associated with it.
+        /// </summary>
+        /// <param name="now">The current time step of the simulation.</param>
+        /// <returns>The adjusted duration based on the time factor if available; otherwise, returns the default duration.</returns>
         public override int GetRealDuration(TimeStep now)
         {
             int duration;
-            // 尝试获取timeFactorsForTimes字典中的值
+
+            // Attempt to get the time factor associated with the current time step
             if (_timeFactorsForTimes.TryGetValue(now.InternalStep, out double timeFactor))
             {
-                // 如果存在，则使用timeFactor计算duration
+                // If a time factor exists, calculate the new duration using the compression/expansion logic
                 duration = CalcProfile.GetNewLengthAfterCompressExpand(_personProfile.StepValues.Count, timeFactor);
             }
             else
             {
-                // 如果不存在，则直接使用_personProfile.StepValues.Count作为duration
+                // If no time factor exists, use the default duration (step count)
                 duration = _personProfile.StepValues.Count;
             }
 
+            // Return the calculated real duration
             return duration;
         }
 
-
-
         public override void Activate(TimeStep startTime, string activatorName, CalcLocation personSourceLocation, out ICalcProfile personTimeProfile)
         {   
-            //Debug.WriteLine("Activating " + Name + " at " + startTime.InternalStep);
-            //Debug.WriteLine("activate: "+_personProfile.StepValues.Count);
-
             TimeStep timeLastDeviceEnds = startTime.GetAbsoluteStep(0);
             //flexibility
             var allDevices = Energyprofiles.Select(x => x.CalcDevice).Distinct().ToList();
@@ -164,12 +172,8 @@ namespace CalculationEngine.HouseholdElements {
                     if (dpt.Probability > _probabilitiesForTimes[startTime.InternalStep]) {
                         //_calcDevice.SetTimeprofile(tbp, startidx + TimeOffsetInSteps, loadType, timeFactor, affordancename,activatorName, _multiplier);
                         CalcProfile adjustedProfile = dpt.TimeProfile.CompressExpandDoubleArray(_timeFactorsForTimes[startTime.InternalStep]);
-
-                        //Debug.WriteLine("adjustedProfile: " + adjustedProfile);
-
                         var endtime = dpt.CalcDevice.SetTimeprofile(adjustedProfile, startTime.AddSteps(dpt.TimeOffsetInSteps), dpt.LoadType, Name,
                             activatorName, dpt.Multiplier, false, out var finalValues);
-                        //Debug.WriteLine("Affordance " + device.Name + " started at " + startTime + " and ended at " + endtime);
                         if (endtime > timeLastDeviceEnds) {
                             timeLastDeviceEnds = endtime;
                         }
@@ -192,10 +196,6 @@ namespace CalculationEngine.HouseholdElements {
                 _timeFactorsForTimes[startTime.InternalStep]);
             _startTimeStep = startTime;
             _endTimeStep = startTime.AddSteps(personsteps);
-            //Debug.WriteLine(_startTimeStep);
-            //Debug.WriteLine(personsteps);
-            //Debug.WriteLine(_endTimeStep);
-            //personstps = duration
             if (DoubleCheckBusyArray) {
                 for (var i = 0; i < personsteps && i + startTime.InternalStep < CalcRepo.CalcParameters.InternalTimesteps; i++) {
                     if (IsBusyArray[i + startTime.InternalStep]) {
@@ -237,13 +237,6 @@ namespace CalculationEngine.HouseholdElements {
             personTimeProfile = _personProfile.CompressExpandDoubleArray(tf);
             //return tf ;
         }
-
-        //public void GetPersonTimeProfile(TimeStep startTime, out ICalcProfile personTimeProfile)
-        //{
-        //    var tf = _timeFactorsForTimes[startTime.InternalStep];
-        //    personTimeProfile = _personProfile.CompressExpandDoubleArray(tf);
-        //}
-
 
         public void AddDeviceTuple([JetBrains.Annotations.NotNull] CalcDevice dev, [JetBrains.Annotations.NotNull] CalcProfile newprof,
                                    [JetBrains.Annotations.NotNull] CalcLoadType lt, decimal timeoffset, TimeSpan internalstepsize, double multiplier,
@@ -370,7 +363,6 @@ namespace CalculationEngine.HouseholdElements {
 
             return BusynessType.NotBusy;
         }
-
 
         public override string ToString() => "Affordance:" + Name;
 

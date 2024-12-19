@@ -29,7 +29,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Automation;
 using Automation.ResultFiles;
 using Common;
@@ -80,10 +79,6 @@ namespace CalculationEngine.HouseholdElements {
         public override void Activate(TimeStep startTime, string activatorName, CalcLocation personSourceLocation,
              out ICalcProfile personTimeProfile)
         {
-            //Debug.WriteLine(activatorName);
-            //Debug.WriteLine(startTime);
-            //Debug.WriteLine(PersonProfileDuration);
-            
             for (var i = 0; i < PersonProfileDuration && i + startTime.InternalStep < IsBusyArray.Length; i++) {
                 IsBusyArray[i + startTime.InternalStep] = true;
             }
@@ -118,7 +113,6 @@ namespace CalculationEngine.HouseholdElements {
             return BusynessType.NotBusy;
         }
 
-
         public override List<CalcSubAffordance> CollectSubAffordances(TimeStep time,
                                                                       bool onlyInterrupting,
                                                                       CalcLocation srcLocation) => throw new NotImplementedException();
@@ -129,12 +123,21 @@ namespace CalculationEngine.HouseholdElements {
         public override string SourceTrait { get; }
         public override string? TimeLimitName { get; }
         public override bool AreThereDuplicateEnergyProfiles() => false;
+        
+        /// <summary>
+        /// Gets the total duration of the step values in the person's profile.
+        /// </summary>
+        /// <returns>The total number of steps in the profile.</returns>
         public override int GetDuration()
         {
-            //var duration = _personProfile.StepValues.Count;
             return _durations;
         }
 
+        /// <summary>
+        /// Calculates the real duration based on the current time step and the time factor associated with it.
+        /// </summary>
+        /// <param name="now">The current time step of the simulation.</param>
+        /// <returns>The adjusted duration based on the time factor if available; otherwise, returns the default duration.</returns>
         public override int GetRealDuration(TimeStep now)
         {
             return _durations;
@@ -151,8 +154,6 @@ namespace CalculationEngine.HouseholdElements {
             _durations = duration;
         }
 
-        public override string ToString() => "Sub-Affordance:" + Name;
-
-        
+        public override string ToString() => "Sub-Affordance:" + Name;        
     }
 }

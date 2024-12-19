@@ -70,7 +70,6 @@ namespace CalculationEngine.HouseholdElements
         string? TimeLimitName { get; }
         bool AreThereDuplicateEnergyProfiles();
         int GetDuration();
-
         int GetRealDuration(TimeStep now);
         string? AreDeviceProfilesEmpty();
         

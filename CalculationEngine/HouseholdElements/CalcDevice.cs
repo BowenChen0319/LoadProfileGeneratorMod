@@ -31,7 +31,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -376,17 +375,12 @@ namespace CalculationEngine.HouseholdElements {
                 throw new LPGException("ODAP was null. Please report");
             }
             var totalDuration = calcProfile.StepValues.Count; //.GetNewLengthAfterCompressExpand(timefactor);
-            
-            //Debug.WriteLine("Setting time profile for " + affordanceName +  " for " + totalDuration + " steps");
-            
             //calcProfile.CompressExpandDoubleArray(timefactor,allProfiles),
                 var key = _keyByLoad[cdl.LoadType];
 
                 RandomValueProfile rvp = GetRandomValueProfile(calcProfile.StepValues.Count,cdl,startTimeStep);
                 StepValues sv = StepValues.MakeStepValues(calcProfile,
                     multiplier, rvp, cdl );
-                
-                //Debug.WriteLine(" name "+ affordanceName+ "sv: " + sv.Values.Count);
                 CalcRepo.Odap.AddNewStateMachine(
                     startTimeStep,
                     cdl.LoadType.ConvertToDto(),

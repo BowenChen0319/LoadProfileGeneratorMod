@@ -210,8 +210,6 @@ namespace CalculationEngine.HouseElements {
         [ItemNotNull]
         public List<CalcEnergyStorage>? EnergyStorages => _energyStorages;
 
-
-
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public void RunOneStep(TimeStep timestep, DateTime now, bool runProcessing)
         {

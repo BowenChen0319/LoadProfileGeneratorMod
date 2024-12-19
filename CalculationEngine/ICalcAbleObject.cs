@@ -42,7 +42,6 @@ namespace CalculationEngine
         string Name { get; }
         [NotNull]
         HouseholdKey HouseholdKey { get;  }
-
         
         [NotNull]
         [ItemNotNull]

@@ -26,15 +26,11 @@
 
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Automation;
 using Automation.ResultFiles;
-using CalculationEngine.HouseholdElements;
 using CalculationEngine.Transportation;
 using Common;
 using Common.CalcDto;
@@ -43,8 +39,7 @@ using Common.JSON;
 using Common.SQLResultLogging.Loggers;
 using JetBrains.Annotations;
 
-namespace CalculationEngine.HouseholdElements
-{
+namespace CalculationEngine.HouseholdElements{
     [SuppressMessage("ReSharper", "ConvertToAutoProperty")]
     public abstract class CalcAffordanceBase : CalcBase, ICalcAffordanceBase, IHouseholdKey {
         private static int _calcAffordanceBaseSerialTracker;
@@ -117,8 +112,17 @@ namespace CalculationEngine.HouseholdElements
 
         public abstract bool AreThereDuplicateEnergyProfiles();
 
+        /// <summary>
+        /// Abstract method to retrieve the total duration of an object.
+        /// </summary>
+        /// <returns>The total duration as an integer.</returns>
         public abstract int GetDuration();
 
+        /// <summary>
+        /// Abstract method to calculate the real duration based on a given time step.
+        /// </summary>
+        /// <param name="now">The current time step used to calculate the duration.</param>
+        /// <returns>The adjusted duration as an integer.</returns>
         public abstract int GetRealDuration(TimeStep now);
         public int CalcAffordanceSerial { get; }
 
