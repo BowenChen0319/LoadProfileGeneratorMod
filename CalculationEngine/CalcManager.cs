@@ -171,7 +171,7 @@ namespace CalculationEngine {
                         now += CalcRepo.CalcParameters.InternalStepsize;
                         timestep = timestep.AddSteps(1);
                     }
-                    
+
                     Logger.Info("Finished the simulation");
                 }
                 finally {

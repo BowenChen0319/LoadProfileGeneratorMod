@@ -39,7 +39,7 @@ using Common.JSON;
 using Common.SQLResultLogging.Loggers;
 using JetBrains.Annotations;
 
-namespace CalculationEngine.HouseholdElements{
+namespace CalculationEngine.HouseholdElements {
     [SuppressMessage("ReSharper", "ConvertToAutoProperty")]
     public abstract class CalcAffordanceBase : CalcBase, ICalcAffordanceBase, IHouseholdKey {
         private static int _calcAffordanceBaseSerialTracker;

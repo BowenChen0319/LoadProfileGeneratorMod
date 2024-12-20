@@ -50,7 +50,6 @@ namespace CalculationEngine.HouseholdElements {
 
     public class CalcDesire {
         private readonly decimal _decayRate;
-
         private readonly bool _isSharedValue;
         [NotNull]
         private readonly string _name;
@@ -162,14 +161,14 @@ namespace CalculationEngine.HouseholdElements {
 
         private decimal GetRate(decimal decayTime)
         {
-            var logVal = (decimal)Math.Log(0.5);
+            var logVal = (decimal) Math.Log(0.5);
             var decayTimesteps = decayTime * _timestepsPerHour;
-            var exponent = (double)(logVal / decayTimesteps);
-            var factor = (decimal)Math.Exp(exponent);
+            var exponent = (double) (logVal / decayTimesteps);
+            var factor = (decimal) Math.Exp(exponent);
             return factor;
         }
 
         [NotNull]
-        public override string ToString() => "desire:" + _name;        
+        public override string ToString() => "desire:" + _name;
     }
 }

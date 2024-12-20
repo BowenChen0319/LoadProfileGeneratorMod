@@ -72,6 +72,8 @@ namespace CalculationEngine.HouseholdElements {
         private DateTime _lastDisplay = DateTime.MinValue;
         private DateTime _startSimulation = DateTime.MinValue;
 
+
+
         private int _simulationSeed;
         [NotNull] private readonly string _description;
         private readonly CalcRepo _calcRepo;

@@ -72,7 +72,7 @@ namespace CalculationEngine.HouseholdElements
         int GetDuration();
         int GetRealDuration(TimeStep now);
         string? AreDeviceProfilesEmpty();
-        
+
         CalcSite? Site { get; }
 
         BodilyActivityLevel BodilyActivityLevel { get; }

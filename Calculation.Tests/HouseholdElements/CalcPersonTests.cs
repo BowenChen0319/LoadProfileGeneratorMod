@@ -220,7 +220,7 @@ namespace Calculation.Tests.HouseholdElements {
                 };
                 //var variableOperator = new VariableOperator();
                 TimeStep ts = new TimeStep(0, 0, true);
-                for (var i = 0; i < 100; i++) {                    
+                for (var i = 0; i < 100; i++) {
                     cp.NextStep(ts, clocs, dls, hhkey, persons, 1);
                     ts = ts.AddSteps(1);
                 }
